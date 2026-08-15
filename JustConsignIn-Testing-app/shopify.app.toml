@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "2ade9402d146f861a8bc4d523428a2c3"
+client_id = "2f0a1a68cd577674aa945d19764319f4"
 name = "JustConsignIn"
 application_url = "https://justconsignin-shopify-app.onrender.com"
 embedded = true
