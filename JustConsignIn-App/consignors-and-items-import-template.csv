@@ -1,0 +1,4 @@
+﻿consignor_import_key,first_name,last_name,phone,email,address,city,province,postal_code,date_joined,commission_pct,unsold_preference,consignor_notes,item_import_key,item_description,price,category,brand,size,condition,item_notes,status,sale_price,sale_date,payout_status
+jane-smith-9055550100,Jane,Smith,905-555-0100,jane@example.com,123 Main Street,Hamilton,Ontario,L8E 1A1,2026-07-30,50,Please return,,jane-001,Blue winter coat,45.0,Clothing,Gap,Medium,Like new,,Available,,,Unpaid
+jane-smith-9055550100,Jane,Smith,905-555-0100,jane@example.com,123 Main Street,Hamilton,Ontario,L8E 1A1,2026-07-30,50,Please return,,jane-002,Leather handbag,60.0,Handbags,Coach,,Good,,Available,,,Unpaid
+michael-brown-9055550101,Michael,Brown,905-555-0101,michael@example.com,45 King Street,Hamilton,Ontario,L8P 1A1,2026-08-01,50,Donate,Example consignor with no imported item. Leave item columns blank.,,,,,,,,,,,,

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pricing — JustConsignIn</title>
+<style>
+  :root {
+    --ink: #17181c;
+    --muted: #5b606c;
+    --line: #e4e6ea;
+    --blue: #2952d9;
+    --blue-dark: #1f3fae;
+    --green-bg: #e7f6ec;
+    --green-text: #1c7a3e;
+    --card-bg: #ffffff;
+    --page-bg: #fafafa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 96px 32px 120px;
+  }
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: clamp(34px, 5vw, 52px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin: 0 0 22px;
+    max-width: 18ch;
+  }
+  .sub {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 56ch;
+    margin: 0 0 64px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+    .wrap { padding: 64px 20px 80px; }
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 32px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .card.featured {
+    border: 2px solid var(--blue);
+    box-shadow: 0 1px 2px rgba(23, 24, 28, 0.04);
+  }
+  .card.featured .card-name { color: var(--blue-dark); }
+  .kicker {
+    position: absolute;
+    top: -11px;
+    left: 24px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .card-name {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .lock {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #f1f2f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green-text);
+    background: var(--green-bg);
+    padding: 5px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .trial-line {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 6px 0 2px;
+  }
+  .price-line {
+    font-size: 15px;
+    color: var(--ink);
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+  .price-line span {
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0 0 20px;
+    min-height: 42px;
+  }
+  ul.features {
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+    flex-grow: 1;
+  }
+  ul.features li {
+    font-size: 14.5px;
+    color: var(--ink);
+    padding: 7px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  ul.features li svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .card.muted {
+    background: #fbfbfc;
+  }
+  .card.muted .card-name { color: var(--muted); }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 13px 20px;
+    border-radius: 9px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+  .cta.primary {
+    background: var(--blue);
+    color: #fff;
+  }
+  .cta.primary:hover { background: var(--blue-dark); }
+  .cta.disabled {
+    background: #fff;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    cursor: not-allowed;
+  }
+  .fineprint {
+    margin-top: 56px;
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="eyebrow">Pricing</p>
+    <h1>Start with the manual consignment workflow.</h1>
+    <p class="sub">
+      Try JustConsignIn free for 14 days on either plan below. A payment
+      method is collected at signup, and billing starts only after the
+      trial unless you cancel first.
+    </p>
+
+    <div class="grid">
+
+      <!-- Manual -->
+      <div class="card">
+        <div class="card-top">
+          <h3 class="card-name">Manual</h3>
+          <span class="badge">14 days free</span>
+        </div>
+        <p class="trial-line">14-day free trial, then</p>
+        <p class="price-line">$9 <span>/ 30 days</span></p>
+        <p class="desc">Payment method required at signup. Billing starts after the trial unless cancelled.</p>
+        <ul class="features">
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Consignors</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Items</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Manual sales</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Payouts</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Transactions</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Reports</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>CSV import / export</li>
+        </ul>
+        <a class="cta primary" href="#">Start free trial</a>
+      </div>
+
+      <!-- Shopify -->
+      <div class="card featured">
+        <span class="kicker">Best value</span>
+        <div class="card-top">
+          <h3 class="card-name">Shopify</h3>
+          <span class="badge">14 days free</span>
+        </div>
+        <p class="trial-line">14-day free trial, then</p>
+        <p class="price-line">$29 <span>/ 30 days</span></p>
+        <p class="desc">Turn every item you take on consignment into a real, sellable Shopify listing — photo, price, and inventory live in minutes, not spreadsheets.</p>
+        <ul class="features">
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Manual</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Real Shopify products, not just line items</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Snap or upload a photo — it's on the listing instantly</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>POS sync, so in-store sales update inventory everywhere</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Publish to your Online Store with one click</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Sold anywhere, marked sold everywhere — automatically</li>
+        </ul>
+        <a class="cta primary" href="#">Start free trial</a>
+      </div>
+
+      <!-- Advanced -->
+      <div class="card muted">
+        <div class="card-top">
+          <h3 class="card-name">Advanced</h3>
+          <div class="lock">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 7V5a4 4 0 0 1 8 0v2" stroke="#5b606c" stroke-width="1.4" stroke-linecap="round"/><rect x="3" y="7" width="10" height="7" rx="1.4" stroke="#5b606c" stroke-width="1.4"/></svg>
+          </div>
+        </div>
+        <p class="trial-line" style="margin-bottom: 20px;">Coming later</p>
+        <p class="desc">For larger operations and additional workflows.</p>
+        <ul class="features">
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Multi-location</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Consignor portal</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Advanced reporting</li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 4L6 11.5L2.5 8" stroke="#2952d9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Additional integrations</li>
+        </ul>
+        <button class="cta disabled" disabled>Not available yet</button>
+      </div>
+
+    </div>
+
+    <p class="fineprint">
+      Prices shown in USD, billed every 30 days after your 14-day trial ends.
+      Cancel anytime before the trial ends and you won't be charged.
+    </p>
+  </div>
+</body>
+</html>
