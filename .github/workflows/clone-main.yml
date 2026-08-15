@@ -1,0 +1,39 @@
+name: Clone working main into testing
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  clone-working-app:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out testing repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone working app main
+        run: |
+          git clone --depth 1 --branch main https://github.com/Justindema76/JustConsignIn-Shopify-App.git /tmp/working-app
+
+      - name: Replace testing contents with working app
+        run: |
+          rsync -a --delete --exclude='.git' /tmp/working-app/ ./
+
+      - name: Commit cloned working app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Testing already matches working main."
+            exit 0
+          fi
+          git commit -m "Clone working app main into testing"
+          git push origin HEAD:main
