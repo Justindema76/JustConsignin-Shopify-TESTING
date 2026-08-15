@@ -1,2 +1,0 @@
-Source snapshot: Justindema76/JustConsignIn-Shopify-App main at d58fc78e2dbbdd9315d1bdc76e4931aef400909a
-Refactor target: separate page components + one global stylesheet.
