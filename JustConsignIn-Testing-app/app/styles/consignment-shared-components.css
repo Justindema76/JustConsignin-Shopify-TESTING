@@ -7,7 +7,7 @@
 .consignment-stat-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -21,37 +21,201 @@
   letter-spacing: .04em;
 }
 .consignment-stat-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
 }
 
 .consignment-toolbar-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin: 2px 0 16px;
 }
 .consignment-toolbar-row {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
 }
 .consignment-toolbar-row .consignment-search {
+  height: 40px;
+  min-height: 0;
   margin: 0;
-  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 12px;
+  background: var(--surface);
+  gap: 8px;
 }
+.consignment-toolbar-row .consignment-search input {
+  font-size: 14px;
+}
+.consignment-view-toggle {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.consignment-view-toggle button {
+  height: 40px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.consignment-view-toggle button:last-child { border-right: 0; }
+.consignment-view-toggle button.active { background: #E6F0FB; color: #0F4D8A; }
 
-.consignment-entity-card {
+/* Filters & sorting panel, styled to match the reference site's
+   collapsible filter block. */
+.consignment-items-filter-details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.consignment-items-filter-summary {
+  height: 42px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.consignment-items-filter-summary::-webkit-details-marker { display: none; }
+.consignment-items-toolbar-top {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+.consignment-tool-field {
   display: flex;
   flex-direction: column;
+  gap: 7px;
   min-width: 0;
-  min-height: 250px;
-  padding: 16px;
+}
+.consignment-tool-field > span {
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  color: var(--muted);
+  font-weight: 800;
+}
+.consignment-tool-field .consignment-select,
+.consignment-filter-select {
+  height: 42px;
+  min-height: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 9px;
+  padding: 0 12px;
   background: var(--surface);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+  font-size: 14px;
+  width: 100%;
+}
+
+/* Pill badges — used for both status (Available/Sold/Paid/Unpaid) and
+   product/source labels (Manual/POS/Online). One shared pill shape,
+   colored by variant class, matching the reference site exactly. */
+.consignment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  min-width: 82px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.consignment-badge.available,
+.consignment-badge.active,
+.consignment-badge.paid,
+.consignment-badge.pos { background: #DFF3E6; color: #146C43; }
+.consignment-badge.sold,
+.consignment-badge.unpaid,
+.consignment-badge.draft { background: #FFE7A8; color: #765313; }
+.consignment-badge.manual { background: #FDE68A; color: #713F12; }
+.consignment-badge.online { background: #DFF3E6; color: #146C43; }
+.consignment-badge.returned,
+.consignment-badge.donated { background: #F2F4F7; color: #667085; }
+
+/* Solid action button — matches the reference site's single blue
+   button style, used for both "Open item" and "Mark sold"/"Pay
+   consignor" actions instead of the app's previous mix of outlined
+   and filled buttons. */
+.consignment-quick-sold-btn,
+.consignment-grid-open-btn,
+.consignment-sales-pay-btn {
+  height: 36px;
+  box-sizing: border-box;
+  border: 0;
+  background: #1F67B2;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.consignment-quick-sold-btn:disabled { opacity: .6; cursor: wait; }
+.consignment-sales-paid-note { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+/* Entity card — no image by default. A thumbnail only renders when a
+   real photo exists (Shopify-synced items); manual items skip it
+   entirely rather than showing an empty placeholder. */
+.consignment-entity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.consignment-entity-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+}
+.consignment-entity-card.no-image { min-height: 170px; }
+.consignment-entity-thumb {
+  height: 92px;
+  background: #F1F4F7;
+  display: grid;
+  place-items: center;
+}
+.consignment-entity-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.consignment-entity-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
 }
 .consignment-entity-card-top {
   display: flex;
@@ -59,87 +223,59 @@
   align-items: flex-start;
   gap: 10px;
 }
-.consignment-entity-thumb-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-}
-.consignment-entity-thumb {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--green-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.consignment-entity-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .consignment-entity-card-top strong {
   display: block;
-  overflow: hidden;
+  font-weight: 800;
+  font-size: 14px;
   color: var(--ink);
-  font-size: 15px;
-  line-height: 1.25;
-  white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .consignment-entity-subtitle {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .consignment-entity-consignor-link {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--green);
+  color: #1264B0;
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 750;
   text-align: left;
   cursor: pointer;
-  margin-top: 12px;
   width: fit-content;
 }
 .consignment-entity-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 14px 0 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  font-size: 12px;
 }
-.consignment-entity-meta span { display: flex; flex-direction: column; gap: 3px; }
-.consignment-entity-meta small { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.consignment-entity-meta strong { color: var(--ink); font-size: 18px; line-height: 1.1; }
+.consignment-entity-meta span { display: flex; flex-direction: column; gap: 2px; }
+.consignment-entity-meta small { color: var(--muted); font-size: 11px; }
+.consignment-entity-meta strong { display: block; font-size: 14px; color: var(--ink); }
 .consignment-entity-details {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
 }
-.consignment-entity-details small { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.consignment-entity-details strong { display: block; color: var(--ink); font-size: 13px; margin-top: 2px; }
-.consignment-entity-footnote { margin-bottom: 12px; color: var(--muted); font-size: 11px; }
+.consignment-entity-details small { display: block; color: var(--muted); font-size: 11px; }
+.consignment-entity-details strong { display: block; color: var(--ink); font-size: 13px; margin-top: 1px; }
+.consignment-entity-footnote { color: var(--muted); font-size: 11px; }
 .consignment-entity-actions { margin-top: auto; display: flex; gap: 8px; }
-.consignment-entity-actions > * { flex: 1; min-height: 42px; }
-
-.consignment-entity-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
+.consignment-entity-actions > * { flex: 1; }
 
 /* iPad portrait and similar */
 @media (max-width: 900px) {
   .consignment-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .consignment-entity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .consignment-items-toolbar-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .consignment-toolbar-row { grid-template-columns: 1fr; }
   .consignment-toolbar-row .consignment-view-toggle { width: 100%; }
   .consignment-toolbar-row .consignment-view-toggle button { flex: 1; }
@@ -149,7 +285,8 @@
 @media (max-width: 480px) {
   .consignment-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .consignment-stat-card { padding: 10px 12px; }
-  .consignment-stat-value { font-size: 19px; }
+  .consignment-stat-value { font-size: 18px; }
   .consignment-entity-grid { grid-template-columns: 1fr; gap: 10px; }
-  .consignment-entity-card { min-height: 0; padding: 13px; }
+  .consignment-entity-card { min-height: 0; }
+  .consignment-items-toolbar-top { grid-template-columns: 1fr; }
 }

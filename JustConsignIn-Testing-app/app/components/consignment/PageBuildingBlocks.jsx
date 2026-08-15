@@ -1,4 +1,4 @@
-import { Search, Tag } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 // Shared across every screen that shows a row of headline numbers
 // (dashboard, items, sales, payouts). `stats` is [{ label, value }].
@@ -33,7 +33,7 @@ export function PageToolbar({
       {filtersSlot}
       <div className="consignment-toolbar-row">
         <div className="consignment-search">
-          <Search size={19} />
+          <Search size={18} />
           <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={placeholder} />
         </div>
         {viewOptions && (
@@ -57,10 +57,12 @@ export function PageToolbar({
 }
 
 // The one card layout shared by the Items grid and the Sales grid.
-// Both screens were rendering their own near-duplicate card before —
-// this is that card, generalized: a photo, a title, a top-right badge,
-// an optional consignor link, up to two metric rows, one status row,
-// an optional footnote line, and one action.
+// No thumbnail is rendered unless a real photo exists — manual items
+// never have one (only Shopify-synced items get a photo, via
+// ShopifyProductSection), so there is nothing useful to show in its
+// place. Showing an empty placeholder box for every manual item was
+// the actual problem; omitting it entirely is the fix, not a fallback
+// icon.
 export function EntityCard({
   photo,
   title,
@@ -76,66 +78,68 @@ export function EntityCard({
   action,
 }) {
   return (
-    <article className="consignment-entity-card">
-      <div className="consignment-entity-card-top">
-        <div className="consignment-entity-thumb-row">
-          <div className="consignment-entity-thumb">
-            {photo ? <img src={photo} alt="" /> : <Tag size={16} color="var(--muted)" />}
-          </div>
+    <article className={`consignment-entity-card${photo ? '' : ' no-image'}`}>
+      {photo && (
+        <div className="consignment-entity-thumb">
+          <img src={photo} alt="" />
+        </div>
+      )}
+      <div className="consignment-entity-body">
+        <div className="consignment-entity-card-top">
           <div style={{ minWidth: 0 }}>
             <strong>{title}</strong>
             {subtitle && <small className="consignment-entity-subtitle">{subtitle}</small>}
           </div>
+          {topBadge && (
+            <span className={`consignment-badge ${topBadge.className}`}>{topBadge.text}</span>
+          )}
         </div>
-        {topBadge && (
-          <span className={`consignment-product-badge ${topBadge.className}`}>{topBadge.text}</span>
+
+        {consignor !== undefined && (
+          consignor ? (
+            <button
+              type="button"
+              className="consignment-entity-consignor-link"
+              onClick={() => onOpenConsignor?.(consignor.id)}
+            >
+              {consignor.firstName} {consignor.lastName}
+            </button>
+          ) : (
+            <span className="consignment-entity-consignor-link" style={{ cursor: 'default', color: 'var(--muted)' }}>
+              Unassigned
+            </span>
+          )
         )}
+
+        {metrics.length > 0 && (
+          <div className="consignment-entity-meta">
+            {metrics.map((metric) => (
+              <span key={metric.label}>
+                <small>{metric.label}</small>
+                <strong>{metric.value}</strong>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {(detailLabel || detailBadge) && (
+          <div className="consignment-entity-details">
+            {detailLabel && (
+              <span>
+                <small>{detailLabel}</small>
+                {detailValue && <strong>{detailValue}</strong>}
+              </span>
+            )}
+            {detailBadge && (
+              <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>
+            )}
+          </div>
+        )}
+
+        {footNote && <div className="consignment-entity-footnote">{footNote}</div>}
+
+        {action && <div className="consignment-entity-actions">{action}</div>}
       </div>
-
-      {consignor !== undefined && (
-        consignor ? (
-          <button
-            type="button"
-            className="consignment-entity-consignor-link"
-            onClick={() => onOpenConsignor?.(consignor.id)}
-          >
-            {consignor.firstName} {consignor.lastName}
-          </button>
-        ) : (
-          <span className="consignment-entity-consignor-link" style={{ cursor: 'default', color: 'var(--muted)' }}>
-            Unassigned
-          </span>
-        )
-      )}
-
-      {metrics.length > 0 && (
-        <div className="consignment-entity-meta">
-          {metrics.map((metric) => (
-            <span key={metric.label}>
-              <small>{metric.label}</small>
-              <strong>{metric.value}</strong>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {(detailLabel || detailBadge) && (
-        <div className="consignment-entity-details">
-          {detailLabel && (
-            <span>
-              <small>{detailLabel}</small>
-              {detailValue && <strong>{detailValue}</strong>}
-            </span>
-          )}
-          {detailBadge && (
-            <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>
-          )}
-        </div>
-      )}
-
-      {footNote && <div className="consignment-entity-footnote">{footNote}</div>}
-
-      {action && <div className="consignment-entity-actions">{action}</div>}
     </article>
   );
 }
