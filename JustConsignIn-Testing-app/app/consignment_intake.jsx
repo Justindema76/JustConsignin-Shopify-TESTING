@@ -45,6 +45,7 @@ import EditConsignorPage from './pages/consignment/EditConsignorPage';
 import ItemsScreen from './pages/consignment/ItemsScreen';
 import SalesScreen from './pages/consignment/SalesScreen';
 import AddConsignorItem from './pages/consignment/AddConsignorItem';
+import PayoutScreen from './pages/consignment/PayoutScreen';
 
 /* ---------- shared components now live in their own files:
    AppNavigation      -> ./components/consignment/AppNavigation.jsx
@@ -736,8 +737,17 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {ready && view === 'home' && <ConsignorsScreen consignors={consignors} items={items} query={query} setQuery={setQuery} onOpenConsignor={openConsignor} onOpenItem={openItem} onMarkSold={(itemId, details) => handleUpdateItemStatus(itemId, 'Sold', details)} onNewConsignor={() => startNewConsignor('consignor', 'home')} onNewItem={startNewItem} onImport={() => startImport('consignors', 'home')} onExport={() => exportConsignors(consignors)} />}
       {ready && view === 'items' && <ItemsScreen items={items} consignors={consignors} onOpenItem={openItem} onOpenConsignor={openConsignor} onMarkSold={(itemId, details) => handleUpdateItemStatus(itemId, 'Sold', details)} onNewItem={startNewItem} />}
       {ready && view === 'sales' && <SalesScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
-      {ready && view === 'payouts' && <PayoutsScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
-      {ready && view === 'reports' && <ReportsScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
+{ready && view === 'payouts' && (
+  <PayoutScreen
+    items={items}
+    consignors={consignors}
+    onOpenConsignor={openConsignor}
+    onStartPayout={(consignorId) => {
+      setActiveId(consignorId);
+      setView('createPayout');
+    }}
+  />
+)}      {ready && view === 'reports' && <ReportsScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
       {ready && view === 'createPayout' && activeConsignor && <CreatePayoutScreen consignor={activeConsignor} items={items} onBack={() => setView('payouts')} onRecordPayout={handleRecordPayout} />}
       {ready && view === 'import' && <ImportScreen kind={importKind} fixedConsignor={consignors.find((entry) => entry.id === importConsignorId) || null} onBack={() => setView(importBack)} onImport={handleImport} />}
       {ready && view === 'newConsignor' && <NewConsignorPage onBack={() => setView(newConsignorBack)} onSave={handleNewConsignor} nextNumber={nextConsignorNumber} />}
