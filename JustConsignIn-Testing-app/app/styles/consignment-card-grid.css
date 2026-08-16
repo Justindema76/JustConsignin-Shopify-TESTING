@@ -90,55 +90,62 @@
   font-size: 10px;
 }
 
-/* Consignor cards follow the same density */
+/* Consignor cards — larger and easier to read */
 .consignment-consignor-card {
-  padding: 10px;
-  gap: 7px;
-  border-radius: 10px;
+  padding: 16px;
+  gap: 12px;
+  border-radius: 12px;
+  min-height: 220px;
 }
 
 .consignment-consignor-card-top {
-  gap: 7px;
+  gap: 10px;
 }
 
 .consignment-consignor-card .consignment-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  font-size: 11px;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  font-size: 15px;
 }
 
 .consignment-consignor-card-name strong {
-  font-size: 12px;
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .consignment-consignor-card-name small {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .consignment-consignor-card-stats {
-  gap: 5px;
+  gap: 8px;
 }
 
 .consignment-consignor-card-stats > span {
-  padding: 6px 4px;
+  padding: 12px 8px;
 }
 
 .consignment-consignor-card-stats strong {
-  font-size: 13px;
+  font-size: 20px;
 }
 
 .consignment-consignor-card-stats small {
-  font-size: 8px;
-}
-
-.consignment-consignor-card-due,
-.consignment-consignor-card-open {
   font-size: 10px;
 }
 
+.consignment-consignor-card-due {
+  font-size: 12px;
+}
+
+.consignment-consignor-card-due strong {
+  font-size: 20px;
+}
+
 .consignment-consignor-card-open {
-  height: 31px;
+  height: 42px;
+  font-size: 13px;
+  border-radius: 9px;
 }
 
 /* Individual consignor item grid uses the same card proportions */
@@ -217,5 +224,31 @@
   .consignment-entity-card-top strong,
   .consignment-consignor-item-list.grid .consignment-consignor-item-title {
     font-size: 13px;
+  }
+
+  .consignment-consignor-card {
+    min-height: 0;
+    padding: 12px;
+    gap: 9px;
+  }
+
+  .consignment-consignor-card .consignment-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .consignment-consignor-card-name strong {
+    font-size: 14px;
+  }
+
+  .consignment-consignor-card-stats strong,
+  .consignment-consignor-card-due strong {
+    font-size: 16px;
+  }
+
+  .consignment-consignor-card-open {
+    height: 38px;
+    font-size: 12px;
   }
 }
