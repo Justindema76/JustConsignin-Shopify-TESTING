@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import '../../styles/consignment-card-grid.css';
 
 export function SummaryStatRow({ stats }) {
   return (
