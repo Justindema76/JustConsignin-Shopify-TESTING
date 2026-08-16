@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types, jsx-a11y/label-has-associated-control */
 import { useState, useEffect } from 'react';
 import {
-  Search, Plus, ArrowLeft, Camera, X, ChevronRight, ChevronDown,
-  Loader2, Tag, Check, Trash2, ShoppingBag, LayoutDashboard,
-  Users, ReceiptText, WalletCards, PackageSearch, TrendingUp, CircleDollarSign,
+  Search, Plus, X, ChevronRight, ChevronDown,
+  Loader2, Tag, Check, Trash2, ShoppingBag,
+  Users, WalletCards, PackageSearch, TrendingUp, CircleDollarSign,
   CalendarDays, FileUp, Download, List, Grid3X3, ArrowUp,
 } from 'lucide-react';
 import {
@@ -27,14 +27,9 @@ import {
   CATEGORIES,
   CONDITIONS,
   money,
-  productLabel,
-  statusClass,
-  statusLabel,
   productAdminUrl,
   parseCsv,
-  downloadCsv,
   exportConsignors,
-  exportItems,
 } from './lib/consignmentHelpers';
 import { Header, PhotoPicker, MetricCard } from './components/consignment/SharedPieces';
 import AppNavigation from './components/consignment/AppNavigation';
@@ -53,6 +48,7 @@ import AddConsignorItem from './pages/consignment/AddConsignorItem';
    ConsignorsDashboard -> ./pages/consignment/ConsignorsDashboard.jsx
    NewConsignorPage     -> ./pages/consignment/NewConsignorPage.jsx
    EditConsignorPage    -> ./pages/consignment/EditConsignorPage.jsx
+   AddConsignorItem      -> ./pages/consignment/AddConsignorItem.jsx
    ItemsScreen           -> ./pages/consignment/ItemsScreen.jsx
    SalesScreen           -> ./pages/consignment/SalesScreen.jsx
    CSS                -> ./styles/consignment-manager.css +
@@ -646,21 +642,6 @@ function ManualItemCore({ form, setForm, onSave, saveLabel = 'Save manual item',
 function ShopifyProductSection({ shopifyForm, setShopifyForm, linkedProductId = '', linkedStatus = '', disabled = false, onSync = null, syncing = false, tier2Enabled = true }) {
   const canSync = Boolean(onSync) && tier2Enabled;
   return <details className="consignment-card consignment-shopify-section" open={Boolean(linkedProductId)}><summary className="consignment-shopify-summary"><span><ShoppingBag size={17} /><strong>Shopify product</strong></span><span className="consignment-row-sub">{!tier2Enabled ? 'Requires Manual + Shopify Sync plan' : linkedProductId ? 'Connected' : 'Separate optional workflow'}</span></summary><div className="consignment-shopify-content">{!tier2Enabled && <div className="consignment-shopify-upsell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, padding: '10px 12px', borderRadius: 8, background: 'var(--surface-muted, #f5f5f5)', border: '1px solid var(--border, #e2e2e2)' }}><span style={{ fontSize: 13 }}>Creating and syncing Shopify products is part of the <strong>Manual + Shopify Sync</strong> plan.</span><a className="consignment-btn" style={{ flexShrink: 0 }} href="/app/plans" target="_top">Upgrade plan</a></div>}<p className="consignment-shopify-help">This section only controls the linked Shopify product. Manual item saving never creates or updates a Shopify product.</p><div className="consignment-shopify-photo-row"><PhotoPicker value={shopifyForm.photo} onChange={(value) => setShopifyForm((current) => ({ ...current, photo: value }))} /><ShopifyProductFields form={shopifyForm} setForm={setShopifyForm} /></div><label className="consignment-product-choice"><input type="checkbox" checked={shopifyForm.publishToPos !== false} onChange={(event) => setShopifyForm((current) => ({ ...current, publishToPos: event.target.checked }))} /><span><strong>Create Shopify product</strong><span>Creates or updates an Active product with inventory of one and publishes it to Point of Sale.</span></span></label><label className="consignment-product-choice online"><input type="checkbox" checked={shopifyForm.publishOnline === true} onChange={(event) => setShopifyForm((current) => ({ ...current, publishOnline: event.target.checked }))} /><span><strong>Also publish to Online Store</strong><span>Publishes the same synced product to the Online Store.</span></span></label>{linkedProductId && <p style={{ margin: '12px 0 0', color: 'var(--green-dark)', fontSize: 12 }}><Check size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} />Linked Shopify product · {linkedStatus || 'Connected'}</p>}{!linkedProductId ? <button className="consignment-btn" style={{ marginTop: 14 }} disabled={!canSync || disabled || syncing || shopifyForm.publishToPos === false || !String(shopifyForm.shopifyTitle || '').trim()} onClick={onSync}>{syncing ? <Loader2 className="consignment-spin" size={16} /> : <ShoppingBag size={16} />}Create Shopify product</button> : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}><button className="consignment-btn" disabled={!canSync || disabled || syncing || shopifyForm.publishToPos === false || !String(shopifyForm.shopifyTitle || '').trim()} onClick={onSync}>{syncing ? <Loader2 className="consignment-spin" size={16} /> : <Check size={16} />}Update Shopify product</button><a className="consignment-btn secondary" href={productAdminUrl(linkedProductId)} target="_top"><span aria-hidden="true">↗</span> Edit in Shopify</a></div>}{linkedProductId && <div className="consignment-row-sub" style={{ marginTop: 8 }}>Changes made in Shopify are loaded back into this section whenever the app refreshes. Changes made here are sent to Shopify with “Update Shopify product”.</div>}{tier2Enabled && !canSync && <div className="consignment-row-sub" style={{ marginTop: 8 }}>Fill in the item description and price above — the manual record saves automatically when you create the Shopify product here.</div>}</div></details>;
-}
-
-function IntakeScreen({ consignor, items, onBack, onSaveBatch, onSaveAndSync, tier2Enabled = false }) {
-  const emptyForm = { category: 'Clothing', type: '', description: '', size: '', condition: 'Good', price: '', brand: '', notes: '', consignmentTerm: '' };
-  const emptyShopifyForm = { photo: null, shopifyTitle: '', shopifyPrice: '', tags: '', vendor: '', productDescription: '', shopifyCategoryId: '', shopifyCategoryName: '', seoTitle: '', seoDescription: '', publishToPos: true, publishOnline: false };
-  const [form, setForm] = useState(emptyForm);
-  const [shopifyForm, setShopifyForm] = useState(emptyShopifyForm);
-  const [batch, setBatch] = useState([]);
-  const [syncing, setSyncing] = useState(false);
-  const canAdd = form.description.trim() && form.price !== '';
-  const saveCount = batch.length + (canAdd ? 1 : 0);
-  const savedSequence = items.filter((item) => item.consignorId === consignor.id && item.itemNumber.startsWith(`${consignor.number}-`)).reduce((max, item) => Math.max(max, Number(item.itemNumber.split('-').pop()) || 0), 0);
-  const nextItemNumber = `${consignor.number}-${String(savedSequence + batch.length + 1).padStart(3, '0')}`;
-  function addToBatch() { if (!canAdd) return; setBatch((current) => [...current, form]); setForm({ ...emptyForm, category: form.category, brand: form.brand }); }
-  return <><Header eyebrow={`For ${consignor.firstName} ${consignor.lastName} · #${consignor.number}`} title="Add items" onBack={onBack} /><div className="consignment-body">{batch.length > 0 && <div style={{ marginBottom: 18 }}><label className="consignment-label">Manual items ready to save ({batch.length})</label>{batch.map((entry, index) => <div key={`${entry.description}-${index}`} className="consignment-batch-item"><div className="consignment-batch-thumb"><Tag size={16} color="var(--green-dark)" /></div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 13 }}>{entry.description}</div><div style={{ fontSize: 12, color: 'var(--muted)' }}>{entry.category} · {money(entry.price)}</div></div><button className="consignment-batch-remove" onClick={() => setBatch((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Remove"><X size={14} /></button></div>)}</div>}<div className="consignment-section-heading"><label className="consignment-label">{batch.length > 0 ? 'Next manual item' : 'Manual consignment item'}</label><span className="consignment-item-number">{nextItemNumber}</span></div><ManualItemCore form={form} setForm={setForm} onSave={() => onSaveBatch(canAdd ? [...batch, form] : batch)} saveDisabled={saveCount === 0} saveLabel={saveCount === 1 ? 'Save manual item' : `Save ${saveCount} manual items`} /><button className="consignment-btn secondary consignment-add-another" disabled={!canAdd} onClick={addToBatch}><Plus size={16} /> Add another manual item</button><ShopifyProductSection shopifyForm={shopifyForm} setShopifyForm={setShopifyForm} tier2Enabled={tier2Enabled} syncing={syncing} onSync={canAdd ? async () => { setSyncing(true); try { await onSaveAndSync(form, batch, shopifyForm); } finally { setSyncing(false); } } : null} /></div></>;
 }
 
 function EditItemScreen({ item, onBack, onSave, onDelete, onSyncProduct, onUpdateStatus, tier2Enabled = false }) {
