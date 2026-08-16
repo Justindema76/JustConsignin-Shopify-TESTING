@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Download, Grid3X3, List, Tag, Users } from '
 import { Header } from '../../components/consignment/SharedPieces';
 import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
 import { money, downloadCsv } from '../../lib/consignmentHelpers';
+import '../../styles/consignment-live-items-sales.css';
 
 function saleSource(item) {
   if (!item.shopifyProductId && !item.shopifyProduct) return 'manual';
