@@ -615,6 +615,8 @@ export default function ConsignorsDashboard({
     </div>
   )}
 
+      </div>
+
       {/* DELETE CONFIRMATION */}
 
       {confirmingDeleteConsignor && (
