@@ -192,6 +192,122 @@
 .consignment-consignor-card-open { height:34px; border:1px solid #e1e3e5; border-radius:8px; background:#fff; color:#202223; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
 .consignment-consignor-card-open:hover { background:#fafbfc; border-color:#cfd3d7; }
 
+/* Consignor detail page: same action rhythm and card system */
+.consignment-header-actions:has(> button:nth-child(3)) {
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.consignment-header-actions:has(> button:nth-child(3)) > button:first-child {
+  grid-column:1 / -1;
+  width:100%;
+  min-height:42px;
+  justify-content:center;
+}
+.consignment-header-actions:has(> button:nth-child(3)) > button:nth-child(2),
+.consignment-header-actions:has(> button:nth-child(3)) > button:nth-child(3) {
+  width:100%;
+  min-height:42px;
+  justify-content:center;
+}
+
+.consignment-consignor-item-list.grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item {
+  padding:0;
+  margin:0;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #e1e3e5;
+  border-radius:13px;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-open {
+  width:100%;
+  min-width:0;
+  padding:14px;
+  border:0;
+  background:transparent;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+  text-align:left;
+  color:#202223;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item:has(.consignment-product-badge.manual) .consignment-batch-thumb {
+  display:none;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb {
+  order:-1;
+  width:calc(100% + 28px) !important;
+  height:180px !important;
+  margin:-14px -14px 2px;
+  border-radius:0 !important;
+  background:#f7f8f9;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-bottom:1px solid #e1e3e5;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb svg {
+  display:none;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-copy {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  gap:4px;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-title {
+  font-size:16px;
+  line-height:1.25;
+  font-weight:800;
+  color:#202223;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-meta {
+  font-size:12px;
+  line-height:1.35;
+  color:#6d7175;
+  white-space:normal;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions {
+  margin-top:auto;
+  padding:0 14px 14px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions .consignment-product-badge,
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions .consignment-badge {
+  flex:0 0 auto;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-pay-btn {
+  flex:0 0 100%;
+  width:100%;
+  min-height:38px;
+  margin-top:4px;
+}
+.consignment-consignor-item-list.grid .consignment-consignor-action-spacer {
+  display:none;
+}
+
 @media (max-width:1000px) {
   .consignment-items-toolbar-top { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
@@ -202,6 +318,7 @@
   .consignment-view-toggle { width:100%; overflow-x:auto; }
   .consignment-view-toggle button { flex:1; justify-content:center; }
   .consignment-entity-thumb { height:160px; }
+  .consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb { height:160px !important; }
 }
 @media (max-width:700px) {
   .consignment-items-toolbar-top { grid-template-columns:1fr; }
@@ -219,7 +336,8 @@
   .consignment-grouped-item-row > :last-child { display:block; justify-self:end; }
   .consignment-consignor-profile-link { font-size:16px; }
   .consignment-entity-grid,
-  .consignment-consignor-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .consignment-consignor-card-grid,
+  .consignment-consignor-item-list.grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .consignment-entity-body { padding:12px; gap:9px; }
   .consignment-entity-card-top strong { font-size:15px; }
   .consignment-entity-subtitle { font-size:12px; }
@@ -228,6 +346,14 @@
   .consignment-entity-row small { font-size:11px; }
   .consignment-entity-row strong { font-size:14px; }
   .consignment-entity-thumb { height:120px; }
+  .consignment-consignor-item-list.grid .consignment-consignor-item-open { padding:12px; gap:8px; }
+  .consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb {
+    width:calc(100% + 24px) !important;
+    height:120px !important;
+    margin:-12px -12px 2px;
+  }
+  .consignment-consignor-item-list.grid .consignment-consignor-item-actions { padding:0 12px 12px; }
+  .consignment-consignor-item-list.grid .consignment-consignor-item-title { font-size:15px; }
 }
 @media (max-width:480px) {
   .consignment-stat-row { gap:8px; }
@@ -238,4 +364,6 @@
   .consignment-product-badge { height:24px; padding:0 7px; font-size:9px; }
   .consignment-view-toggle button { padding:0 9px; font-size:12px; }
   .consignment-item-group-summary { gap:9px; padding:14px 12px; }
+  .consignment-header-actions:has(> button:nth-child(3)) { gap:8px; }
+  .consignment-consignor-item-list.grid { gap:8px; }
 }
