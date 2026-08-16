@@ -79,6 +79,22 @@ export default function ConsignorsDashboard({
     .filter(Boolean)
     .join(', ');
 
+
+  function handleAddItems() {
+    onStartIntake?.(consignor.id);
+  }
+
+  function handleEditConsignor() {
+    onEditConsignor?.(consignor.id);
+  }
+
+  async function handleDeleteConsignor() {
+    if (!onDeleteConsignor) return;
+
+    await onDeleteConsignor(consignor.id);
+    setConfirmingDeleteConsignor(false);
+  }
+
   return (
     <>
       <Header
@@ -90,7 +106,7 @@ export default function ConsignorsDashboard({
             <button
               type="button"
               className="consignment-btn"
-              onClick={onStartIntake}
+              onClick={handleAddItems}
             >
               <Plus size={17} />
               Add items
@@ -99,7 +115,7 @@ export default function ConsignorsDashboard({
             <button
               type="button"
               className="consignment-btn secondary"
-              onClick={onEditConsignor}
+              onClick={handleEditConsignor}
             >
               <Pencil size={17} />
               Edit
@@ -342,7 +358,7 @@ export default function ConsignorsDashboard({
             <button
               type="button"
               className="consignment-btn"
-              onClick={onStartIntake}
+              onClick={handleAddItems}
             >
               <Plus size={17} />
               Add items
@@ -655,15 +671,7 @@ export default function ConsignorsDashboard({
                 style={{
                   background: 'var(--danger)',
                 }}
-                onClick={() => {
-                  setConfirmingDeleteConsignor(
-                    false,
-                  );
-
-                  onDeleteConsignor(
-                    consignor.id,
-                  );
-                }}
+                onClick={handleDeleteConsignor}
               >
                 <Trash2 size={16} />
                 Delete consignor
