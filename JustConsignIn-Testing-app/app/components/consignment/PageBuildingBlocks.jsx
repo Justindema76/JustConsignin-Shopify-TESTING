@@ -51,9 +51,9 @@ export function PageToolbar({
   );
 }
 
-// Shared Items / Sales card using the same readable-card structure and
-// class names as the live site. Page-specific data/actions are passed in;
-// the visual card itself stays consistent everywhere it is used.
+// Shared Items / Sales card. Its markup and class names intentionally follow
+// the LIVE app's readable-card system so TESTING renders the same card design
+// on desktop, tablet, and mobile without touching the LIVE repository.
 export function EntityCard({
   photo,
   title,
@@ -68,6 +68,8 @@ export function EntityCard({
   footNote,
   action,
 }) {
+  const skuText = String(subtitle || '').replace(/^#/, '');
+
   return (
     <article className="consignment-readable-card">
       <div className="consignment-readable-card-top">
@@ -77,7 +79,12 @@ export function EntityCard({
           </div>
           <div className="consignment-readable-title-copy">
             <strong>{title}</strong>
-            {subtitle && <small className="consignment-readable-card-sku">{subtitle}</small>}
+            {skuText && (
+              <small className="consignment-readable-card-sku">
+                <b>SKU:</b>
+                <span>{skuText}</span>
+              </small>
+            )}
           </div>
         </div>
         {topBadge && <span className={`consignment-product-badge ${topBadge.className}`}>{topBadge.text}</span>}
