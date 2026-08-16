@@ -1,0 +1,230 @@
+/* Global compact card grid
+ * Desktop reference: five cards per row.
+ * Shared by Items, Sales, Consignors and consignor detail screens.
+ */
+
+/* Five across on full desktop */
+.consignment-entity-grid,
+.consignment-consignor-card-grid,
+.consignment-consignor-item-list.grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Compact shared entity cards — closer to the desktop reference */
+.consignment-entity-card {
+  min-height: 0;
+  border-radius: 10px;
+}
+
+.consignment-entity-card.media-hidden {
+  min-height: 0;
+}
+
+.consignment-entity-thumb {
+  height: 112px;
+}
+
+.consignment-entity-body {
+  padding: 10px;
+  gap: 7px;
+}
+
+.consignment-entity-card-top {
+  gap: 2px;
+}
+
+.consignment-entity-card-top strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.consignment-entity-subtitle {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.consignment-entity-consignor-link {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.consignment-entity-row {
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.consignment-entity-row small {
+  font-size: 10px;
+}
+
+.consignment-entity-row strong {
+  font-size: 12px;
+}
+
+.consignment-entity-status-row {
+  gap: 5px;
+  padding-top: 7px;
+}
+
+.consignment-entity-status-row .consignment-badge,
+.consignment-entity-status-row .consignment-product-badge {
+  height: 21px;
+  padding: 0 7px;
+  font-size: 8px;
+}
+
+.consignment-entity-actions {
+  gap: 6px;
+  padding-top: 0;
+}
+
+.consignment-entity-actions .consignment-list-action,
+.consignment-entity-actions .consignment-quick-sold-btn,
+.consignment-entity-actions .consignment-grid-open-btn,
+.consignment-entity-actions .consignment-sales-pay-btn,
+.consignment-entity-actions .consignment-item-open-btn {
+  height: 31px;
+  border-radius: 7px;
+  padding: 0 9px;
+  font-size: 10px;
+}
+
+/* Consignor cards follow the same density */
+.consignment-consignor-card {
+  padding: 10px;
+  gap: 7px;
+  border-radius: 10px;
+}
+
+.consignment-consignor-card-top {
+  gap: 7px;
+}
+
+.consignment-consignor-card .consignment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.consignment-consignor-card-name strong {
+  font-size: 12px;
+}
+
+.consignment-consignor-card-name small {
+  font-size: 10px;
+}
+
+.consignment-consignor-card-stats {
+  gap: 5px;
+}
+
+.consignment-consignor-card-stats > span {
+  padding: 6px 4px;
+}
+
+.consignment-consignor-card-stats strong {
+  font-size: 13px;
+}
+
+.consignment-consignor-card-stats small {
+  font-size: 8px;
+}
+
+.consignment-consignor-card-due,
+.consignment-consignor-card-open {
+  font-size: 10px;
+}
+
+.consignment-consignor-card-open {
+  height: 31px;
+}
+
+/* Individual consignor item grid uses the same card proportions */
+.consignment-consignor-item-list.grid .consignment-consignor-item {
+  border-radius: 10px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item-open {
+  padding: 10px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb {
+  width: calc(100% + 20px) !important;
+  height: 112px !important;
+  margin: -10px -10px 8px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item-title {
+  padding-bottom: 6px;
+  font-size: 13px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item-meta {
+  padding: 6px 0;
+  font-size: 10px;
+}
+
+.consignment-consignor-item-list.grid .consignment-paid-detail {
+  padding-top: 6px;
+  font-size: 9px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions {
+  padding: 7px 10px 10px;
+  gap: 5px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions .consignment-product-badge,
+.consignment-consignor-item-list.grid .consignment-consignor-item-actions .consignment-badge {
+  height: 21px;
+  padding: 0 7px;
+  font-size: 8px;
+}
+
+.consignment-consignor-item-list.grid .consignment-consignor-pay-btn {
+  min-height: 31px;
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+/* Step down cleanly before mobile instead of squeezing five tiny cards. */
+@media (max-width: 1200px) {
+  .consignment-entity-grid,
+  .consignment-consignor-card-grid,
+  .consignment-consignor-item-list.grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 950px) {
+  .consignment-entity-grid,
+  .consignment-consignor-card-grid,
+  .consignment-consignor-item-list.grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .consignment-entity-grid,
+  .consignment-consignor-card-grid,
+  .consignment-consignor-item-list.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .consignment-entity-thumb,
+  .consignment-consignor-item-list.grid .consignment-consignor-item:not(:has(.consignment-product-badge.manual)) .consignment-batch-thumb {
+    height: 105px !important;
+  }
+
+  .consignment-entity-body {
+    padding: 10px;
+  }
+
+  .consignment-entity-card-top strong,
+  .consignment-consignor-item-list.grid .consignment-consignor-item-title {
+    font-size: 13px;
+  }
+}
