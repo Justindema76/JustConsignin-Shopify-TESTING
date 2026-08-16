@@ -51,10 +51,9 @@ export function PageToolbar({
   );
 }
 
-// Shared Items / Sales entity card.
-// This intentionally follows the live site's compact readable-card layout:
-// small thumbnail beside the title, source badge at top right, consignor link,
-// clear money/detail rows, status, then the page-specific action area.
+// Shared Items / Sales card using the same readable-card structure and
+// class names as the live site. Page-specific data/actions are passed in;
+// the visual card itself stays consistent everywhere it is used.
 export function EntityCard({
   photo,
   title,
@@ -70,7 +69,7 @@ export function EntityCard({
   action,
 }) {
   return (
-    <article className="consignment-readable-card consignment-entity-card">
+    <article className="consignment-readable-card">
       <div className="consignment-readable-card-top">
         <div className="consignment-grid-thumb-row">
           <div className="consignment-grid-thumb">
@@ -94,7 +93,9 @@ export function EntityCard({
             {consignor.firstName} {consignor.lastName}
           </button>
         ) : (
-          <span className="consignment-readable-consignor-link consignment-entity-consignor-unassigned">Unassigned</span>
+          <span className="consignment-readable-consignor-link" style={{ cursor: 'default', color: 'var(--muted)' }}>
+            Unassigned
+          </span>
         )
       )}
 
@@ -119,9 +120,9 @@ export function EntityCard({
         </div>
       )}
 
-      {footNote && <div className="consignment-sales-grid-order consignment-entity-footnote">{footNote}</div>}
+      {footNote && <div className="consignment-sales-grid-order">{footNote}</div>}
 
-      {action && <div className="consignment-readable-card-actions consignment-entity-actions">{action}</div>}
+      {action && <div className="consignment-readable-card-actions">{action}</div>}
     </article>
   );
 }
