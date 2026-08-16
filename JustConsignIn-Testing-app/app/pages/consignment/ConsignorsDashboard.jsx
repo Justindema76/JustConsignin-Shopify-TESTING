@@ -482,140 +482,138 @@ export default function ConsignorsDashboard({
             </div>
           )}
 
-        {/* LIST VIEW */}
+       {/* LIST VIEW */}
 
-        {consignorItems.length > 0 &&
-          viewMode === 'list' && (
-            <div className="consignment-consignor-item-list">
-              {consignorItems.map((item) => {
-                const product = productLabel(item);
-
-                const photo =
-                  item.shopifyPhoto ||
-                  item.photo ||
-                  null;
-
-                const sold =
-                  item.status === 'Sold' ||
-                  Boolean(item.dateSold);
-
-                const paid =
-                  item.paidOut === true;
-
-                return (
-                  <article
-                    className="consignment-consignor-item"
-                    key={item.id}
-                  >
-                    <button
-                      type="button"
-                      className="consignment-consignor-item-open"
-                      onClick={() =>
-                        onOpenItem(item.id)
-                      }
-                    >
-                      {photo &&
-                        product.className !==
-                          'manual' && (
-                          <span className="consignment-batch-thumb">
-                            <img
-                              src={photo}
-                              alt=""
-                            />
-                          </span>
-                        )}
-
-                      <span className="consignment-consignor-item-copy">
-                        <strong className="consignment-consignor-item-title">
-                          {item.description ||
-                            item.type ||
-                            'Consignment item'}
-                        </strong>
-
-                        <span className="consignment-consignor-item-meta">
-                          {item.itemNumber}
-
-                          {item.size
-                            ? ` · Size ${item.size}`
-                            : ''}
-
-                          {item.brand
-                            ? ` · ${item.brand}`
-                            : ''}
-
-                          {' · '}
-
-                          {money(item.price)}
-                        </span>
-
-                        {item.category && (
-                          <span className="consignment-consignor-item-meta">
-                            Product type:{' '}
-                            {item.category}
-                          </span>
-                        )}
-
-                        {paid &&
-                          item.payoutDate && (
-                            <span className="consignment-paid-detail">
-                              Paid{' '}
-                              {item.payoutDate}
-
-                              {item.payoutMethod
-                                ? ` · ${item.payoutMethod}`
-                                : ''}
-                            </span>
-                          )}
-                      </span>
-                    </button>
-
-                    <div className="consignment-consignor-item-actions">
-                      <span
-                        className={`consignment-product-badge ${product.className}`}
-                      >
-                        {product.text}
-                      </span>
-
-                      <span
-                        className={`consignment-badge ${
-                          paid
-                            ? 'paid'
-                            : sold
-                              ? 'unpaid'
-                              : statusClass(
-                                  item.status,
-                                )
-                        }`}
-                      >
-                        {paid
-                          ? 'Paid'
-                          : sold
-                            ? 'Sold · unpaid'
-                            : statusLabel(
-                                item.status,
-                              )}
-                      </span>
-
-                      {sold && !paid && (
-                        <button
-                          type="button"
-                          className="consignment-btn consignment-consignor-pay-btn"
-                          onClick={() =>
-                            onStartPayout?.(
-                              consignor.id,
-                            )
-                          }
-                        >
-                          Review &amp; pay
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+{consignorItems.length > 0 &&
+  viewMode === 'list' && (
+    <div className="consignment-dashboard-list">
+      <div className="consignment-dashboard-list-head">
+        <span>Item</span>
+        <span>Price</span>
+        <span>Commission</span>
+        <span>Product</span>
+        <span>Status</span>
+        <span>Action</span>
       </div>
+
+      {consignorItems.map((item) => {
+        const product = productLabel(item);
+
+        const sold =
+          item.status === 'Sold' ||
+          Boolean(item.dateSold);
+
+        const paid = item.paidOut === true;
+
+        const salePrice = Number(
+          item.salePrice ?? item.price ?? 0,
+        );
+
+        const commissionPct = Number(
+          item.commissionPct ??
+            consignor.commissionPct ??
+            0,
+        );
+
+        return (
+          <div
+            className="consignment-dashboard-list-row"
+            key={item.id}
+          >
+            <button
+              type="button"
+              className="consignment-dashboard-list-item"
+              onClick={() => onOpenItem(item.id)}
+            >
+              <span className="consignment-dashboard-list-item-copy">
+                <strong>
+                  {item.description ||
+                    item.type ||
+                    'Consignment item'}
+                </strong>
+
+                <small>
+                  {[
+                    item.itemNumber,
+                    item.size
+                      ? `Size ${item.size}`
+                      : null,
+                    item.brand || null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </small>
+              </span>
+            </button>
+
+            <strong className="consignment-dashboard-list-value">
+              {money(
+                sold
+                  ? salePrice
+                  : item.price,
+              )}
+            </strong>
+
+            <span className="consignment-dashboard-list-value">
+              {commissionPct}%
+            </span>
+
+            <span>
+              <span
+                className={`consignment-product-badge ${product.className}`}
+              >
+                {product.text}
+              </span>
+            </span>
+
+            <span>
+              <span
+                className={`consignment-badge ${
+                  paid
+                    ? 'paid'
+                    : sold
+                      ? 'unpaid'
+                      : statusClass(item.status)
+                }`}
+              >
+                {paid
+                  ? 'Paid'
+                  : sold
+                    ? 'Sold · unpaid'
+                    : statusLabel(item.status)}
+              </span>
+            </span>
+
+            <span className="consignment-dashboard-list-action">
+              {sold && !paid ? (
+                <button
+                  type="button"
+                  className="consignment-grid-open-btn"
+                  onClick={() =>
+                    onStartPayout?.(
+                      consignor.id,
+                    )
+                  }
+                >
+                  Review &amp; pay
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="consignment-grid-open-btn"
+                  onClick={() =>
+                    onOpenItem(item.id)
+                  }
+                >
+                  Open item
+                </button>
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  )}
 
       {/* DELETE CONFIRMATION */}
 
