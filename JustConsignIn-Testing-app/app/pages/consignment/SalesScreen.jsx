@@ -24,7 +24,7 @@ function formatSaleDate(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function SalesScreen({ items, consignors, onStartPayout, onOpenConsignor }) {
+export default function SalesScreen({ items, consignors, onStartPayout, onOpenConsignor, onOpenItem }) {
   const [query, setQuery] = useState('');
   const [payoutFilter, setPayoutFilter] = useState('all');
   const [consignorFilter, setConsignorFilter] = useState('all');
@@ -90,7 +90,7 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
 
   function payoutAction(item, consignor) {
     return !item.paidOut && consignor
-      ? <button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Pay consignor</button>
+      ? <button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>
       : <span className="consignment-sales-paid-note">Paid</span>;
   }
 
@@ -113,7 +113,22 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
         detailValue={formatSaleDate(item.dateSold)}
         detailBadge={{ text: item.paidOut ? 'Paid' : 'Unpaid', className: item.paidOut ? 'paid' : 'unpaid' }}
         footNote={item.orderName || null}
-        action={payoutAction(item, consignor)}
+        action={
+          <>
+            <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem?.(item.id)}>
+              Edit item
+            </button>
+            {!item.paidOut && consignor ? (
+              <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>
+                Review &amp; pay
+              </button>
+            ) : (
+              <button type="button" className="consignment-grid-open-btn" disabled>
+                Paid
+              </button>
+            )}
+          </>
+        }
       />
     );
   }
