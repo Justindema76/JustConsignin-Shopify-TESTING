@@ -1,10 +1,10 @@
 /* eslint-disable react/prop-types, jsx-a11y/label-has-associated-control */
 import { useState, useEffect } from 'react';
 import {
-  Search, Plus, ArrowLeft, Camera, X, ChevronRight, ChevronDown, Phone, Mail,
+  Search, Plus, ArrowLeft, Camera, X, ChevronRight, ChevronDown,
   Loader2, Tag, Check, Trash2, ShoppingBag, LayoutDashboard,
   Users, ReceiptText, WalletCards, PackageSearch, TrendingUp, CircleDollarSign,
-  CalendarDays, FileUp, Download, MapPin, Pencil, List, Grid3X3, ArrowUp,
+  CalendarDays, FileUp, Download, List, Grid3X3, ArrowUp,
 } from 'lucide-react';
 import {
   createConsignor,
@@ -28,7 +28,6 @@ import {
   CONDITIONS,
   money,
   productLabel,
-  saleSourceLabel,
   statusClass,
   statusLabel,
   productAdminUrl,
@@ -40,15 +39,21 @@ import {
 import { Header, PhotoPicker, MetricCard } from './components/consignment/SharedPieces';
 import AppNavigation from './components/consignment/AppNavigation';
 import ConsignorsScreen from './pages/consignment/ConsignorsScreen';
+import ConsignorsDashboard from './pages/consignment/ConsignorsDashboard';
+import NewConsignorPage from './pages/consignment/NewConsignorPage';
+import EditConsignorPage from './pages/consignment/EditConsignorPage';
 import ItemsScreen from './pages/consignment/ItemsScreen';
 import SalesScreen from './pages/consignment/SalesScreen';
 
 /* ---------- shared components now live in their own files:
    AppNavigation      -> ./components/consignment/AppNavigation.jsx
    Header/PhotoPicker/MetricCard -> ./components/consignment/SharedPieces.jsx
-   ConsignorsScreen   -> ./pages/consignment/ConsignorsScreen.jsx
-   ItemsScreen        -> ./pages/consignment/ItemsScreen.jsx
-   SalesScreen        -> ./pages/consignment/SalesScreen.jsx
+   ConsignorsScreen      -> ./pages/consignment/ConsignorsScreen.jsx
+   ConsignorsDashboard -> ./pages/consignment/ConsignorsDashboard.jsx
+   NewConsignorPage     -> ./pages/consignment/NewConsignorPage.jsx
+   EditConsignorPage    -> ./pages/consignment/EditConsignorPage.jsx
+   ItemsScreen           -> ./pages/consignment/ItemsScreen.jsx
+   SalesScreen           -> ./pages/consignment/SalesScreen.jsx
    CSS                -> ./styles/consignment-manager.css +
                           ./styles/consignment-shared-components.css
    ---------- */
@@ -617,88 +622,6 @@ function ImportScreen({ kind, onBack, onImport, fixedConsignor = null }) {
   );
 }
 
-function NewConsignorScreen({ onBack, onSave, nextNumber }) {
-  const [form, setForm] = useState({ number: nextNumber, firstName: '', lastName: '', phone: '', email: '', address: '', city: '', province: 'Ontario', postalCode: '', commissionPct: 50, unsoldPreference: 'Please return', notes: '' });
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const valid = form.firstName.trim() && form.lastName.trim();
-  return (
-    <>
-      <Header eyebrow="New" title="Add consignor" onBack={onBack} />
-      <div className="consignment-body">
-        <div className="consignment-field"><label className="consignment-label">Consignor number</label><input className="consignment-input" type="number" inputMode="numeric" min="1" step="1" value={form.number} onChange={set('number')} /><div className="consignment-row-sub" style={{ marginTop: 6 }}>Automatically assigned, but you can change it.</div></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">First name</label><input className="consignment-input" value={form.firstName} onChange={set('firstName')} placeholder="Sarah" /></div><div className="consignment-field"><label className="consignment-label">Last name</label><input className="consignment-input" value={form.lastName} onChange={set('lastName')} placeholder="Lee" /></div></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">Phone</label><input className="consignment-input" type="tel" inputMode="tel" value={form.phone} onChange={set('phone')} placeholder="(416) 555-0134" /></div><div className="consignment-field"><label className="consignment-label">Email</label><input className="consignment-input" type="email" value={form.email} onChange={set('email')} placeholder="sarah@email.com" /></div></div>
-        <div className="consignment-field"><label className="consignment-label">Street address</label><input className="consignment-input" value={form.address} onChange={set('address')} placeholder="123 Main Street" autoComplete="street-address" /></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">City</label><input className="consignment-input" value={form.city} onChange={set('city')} placeholder="Hamilton" autoComplete="address-level2" /></div><div className="consignment-field"><label className="consignment-label">Province</label><input className="consignment-input" value={form.province} onChange={set('province')} placeholder="Ontario" autoComplete="address-level1" /></div></div>
-        <div className="consignment-field"><label className="consignment-label">Postal code</label><input className="consignment-input" value={form.postalCode} onChange={set('postalCode')} placeholder="L8E 1A1" autoCapitalize="characters" autoComplete="postal-code" /></div>
-        <div className="consignment-field"><label className="consignment-label">Commission split &mdash; consignor gets</label><input className="consignment-input" type="number" inputMode="decimal" value={form.commissionPct} onChange={set('commissionPct')} placeholder="50" /></div>
-        <div className="consignment-field"><label className="consignment-label">Unsold items</label><select className="consignment-select" value={form.unsoldPreference} onChange={set('unsoldPreference')}><option value="Please return">Please return</option><option value="Donation okay">Donation okay</option><option value="Ask me first">Ask me first</option></select></div>
-        <div className="consignment-field"><label className="consignment-label">Notes (optional)</label><textarea className="consignment-textarea" rows={2} value={form.notes} onChange={set('notes')} placeholder="Anything worth remembering" /></div>
-      </div>
-      <div className="consignment-fab-wrap"><button className="consignment-btn" disabled={!valid} onClick={() => onSave(form)}><Check size={18} /> Save consignor</button></div>
-    </>
-  );
-}
-
-function EditConsignorScreen({ consignor, onBack, onSave }) {
-  const [form, setForm] = useState({ number: consignor.number, firstName: consignor.firstName || '', lastName: consignor.lastName || '', phone: consignor.phone || '', email: consignor.email || '', address: consignor.address || '', city: consignor.city || '', province: consignor.province || 'Ontario', postalCode: consignor.postalCode || '', commissionPct: consignor.commissionPct ?? 50, unsoldPreference: consignor.unsoldPreference || 'Please return', notes: consignor.notes || '' });
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const valid = form.firstName.trim() && form.lastName.trim();
-  return (
-    <>
-      <Header eyebrow={`Consignor #${consignor.number}`} title="Edit consignor" onBack={onBack} />
-      <div className="consignment-body">
-        <div className="consignment-field"><label className="consignment-label">Consignor number</label><input className="consignment-input" type="number" inputMode="numeric" min="1" step="1" value={form.number} onChange={set('number')} /></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">First name</label><input className="consignment-input" value={form.firstName} onChange={set('firstName')} placeholder="Sarah" /></div><div className="consignment-field"><label className="consignment-label">Last name</label><input className="consignment-input" value={form.lastName} onChange={set('lastName')} placeholder="Lee" /></div></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">Phone</label><input className="consignment-input" type="tel" inputMode="tel" value={form.phone} onChange={set('phone')} placeholder="(416) 555-0134" /></div><div className="consignment-field"><label className="consignment-label">Email</label><input className="consignment-input" type="email" value={form.email} onChange={set('email')} placeholder="sarah@email.com" /></div></div>
-        <div className="consignment-field"><label className="consignment-label">Street address</label><input className="consignment-input" value={form.address} onChange={set('address')} placeholder="123 Main Street" autoComplete="street-address" /></div>
-        <div className="consignment-row2"><div className="consignment-field"><label className="consignment-label">City</label><input className="consignment-input" value={form.city} onChange={set('city')} placeholder="Hamilton" autoComplete="address-level2" /></div><div className="consignment-field"><label className="consignment-label">Province</label><input className="consignment-input" value={form.province} onChange={set('province')} placeholder="Ontario" autoComplete="address-level1" /></div></div>
-        <div className="consignment-field"><label className="consignment-label">Postal code</label><input className="consignment-input" value={form.postalCode} onChange={set('postalCode')} placeholder="L8E 1A1" autoCapitalize="characters" autoComplete="postal-code" /></div>
-        <div className="consignment-field"><label className="consignment-label">Commission split &mdash; consignor gets</label><input className="consignment-input" type="number" inputMode="decimal" value={form.commissionPct} onChange={set('commissionPct')} placeholder="50" /></div>
-        <div className="consignment-field"><label className="consignment-label">Unsold items</label><select className="consignment-select" value={form.unsoldPreference} onChange={set('unsoldPreference')}><option value="Please return">Please return</option><option value="Donation okay">Donation okay</option><option value="Ask me first">Ask me first</option></select></div>
-        <div className="consignment-field"><label className="consignment-label">Notes (optional)</label><textarea className="consignment-textarea" rows={2} value={form.notes} onChange={set('notes')} placeholder="Anything worth remembering" /></div>
-      </div>
-      <div className="consignment-fab-wrap"><button className="consignment-btn" disabled={!valid} onClick={() => onSave(consignor.id, form)}><Check size={18} /> Save changes</button></div>
-    </>
-  );
-}
-
-function ConsignorScreen({ consignor, items, onBack, onStartIntake, onOpenItem, onDeleteConsignor, onEditConsignor, onStartPayout }) {
-  const [viewMode, setViewMode] = useState('grid');
-  const consignorItems = items.filter((item) => item.consignorId === consignor.id);
-  const draftCount = consignorItems.filter((item) => item.status === 'Draft').length;
-  const soldItems = consignorItems.filter((item) => item.status === 'Sold' || item.dateSold);
-  const unpaidItems = soldItems.filter((item) => !item.paidOut);
-  const totalSales = soldItems.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-  const activeCount = consignorItems.filter((item) => ['Available', 'Active'].includes(item.status)).length;
-  const [confirmingDeleteConsignor, setConfirmingDeleteConsignor] = useState(false);
-  const amountDue = unpaidItems.reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor.commissionPct ?? 0)) / 100, 0);
-  const fullAddress = [consignor.address, consignor.city, consignor.province, consignor.postalCode].filter(Boolean).join(', ');
-  return (
-    <>
-      <Header eyebrow={`Consignor #${consignor.number}`} title={`${consignor.firstName} ${consignor.lastName}`} onBack={onBack} action={<div className="consignment-header-actions"><button className="consignment-btn" onClick={onStartIntake}><Plus size={17} /> Add items</button><button className="consignment-btn secondary" onClick={onEditConsignor}><Pencil size={17} /> Edit</button><button className="consignment-btn secondary" style={{ color: 'var(--danger)', borderColor: 'var(--danger-soft)' }} onClick={() => setConfirmingDeleteConsignor(true)}><Trash2 size={17} /> Delete</button></div>} />
-      <div className="consignment-body">
-        <section className="consignment-card consignment-consignor-profile" aria-label="Consignor profile information">
-          <div className="consignment-profile-column"><div className="consignment-profile-title">Contact</div><div className="consignment-profile-row"><span className="consignment-profile-icon"><Phone size={17} /></span><span className="consignment-profile-copy"><span className="consignment-profile-label">Phone</span>{consignor.phone ? <a className="consignment-profile-value consignment-profile-link" href={`tel:${String(consignor.phone).replace(/[^\d+]/g, '')}`}>{consignor.phone}</a> : <span className="consignment-profile-value">—</span>}</span></div><div className="consignment-profile-row"><span className="consignment-profile-icon"><Mail size={17} /></span><span className="consignment-profile-copy"><span className="consignment-profile-label">Email</span>{consignor.email ? <a className="consignment-profile-value consignment-profile-link" href={`mailto:${consignor.email}`}>{consignor.email}</a> : <span className="consignment-profile-value">—</span>}</span></div><div className="consignment-profile-row"><span className="consignment-profile-icon"><MapPin size={17} /></span><span className="consignment-profile-copy"><span className="consignment-profile-label">Address</span>{fullAddress ? <a className="consignment-profile-value consignment-profile-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`} target="_blank" rel="noopener noreferrer">{fullAddress}</a> : <span className="consignment-profile-value">—</span>}</span></div></div>
-          <div className="consignment-profile-column"><div className="consignment-profile-title">Account details</div><div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Commission split</span><span className="consignment-profile-value">Consignor gets {consignor.commissionPct}%</span></span></div><div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Joined</span><span className="consignment-profile-value">{consignor.dateJoined || '—'}</span></span></div><div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Unsold items</span><span className="consignment-profile-value">{consignor.unsoldPreference || 'Please return'}</span></span></div></div>
-        </section>
-        <div className="consignment-consignor-stats"><div className="consignment-consignor-stat"><span>Amount due</span><strong>{money(amountDue)}</strong></div><div className="consignment-consignor-stat"><span>Total sales</span><strong>{money(totalSales)}</strong></div><div className="consignment-consignor-stat"><span>Active items</span><strong>{activeCount}</strong></div><div className="consignment-consignor-stat"><span>Store credit</span><strong aria-label="Not available yet">&nbsp;</strong></div></div>
-        <div className="consignment-consignor-items-head"><h3>Items on file</h3><div className="consignment-consignor-items-tools"><span className="consignment-consignor-items-count">{consignorItems.length} total · {draftCount} draft</span><div className="consignment-consignor-view-toggle" aria-label="Choose item view"><button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} aria-pressed={viewMode === 'list'}><List size={14} /> List</button><button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')} aria-pressed={viewMode === 'grid'}><Grid3X3 size={14} /> Grid</button></div></div></div>
-        {consignorItems.length === 0 && <div className="consignment-empty"><h3>No items yet</h3><p>Add what they brought in today.</p></div>}
-        <div className={`consignment-consignor-item-list ${viewMode === 'grid' ? 'grid' : ''}`}>
-          {consignorItems.map((item) => {
-            const product = productLabel(item);
-            const saleSource = saleSourceLabel(item);
-            const soldUnpaid = (item.status === 'Sold' || item.dateSold) && !item.paidOut;
-            return <article key={item.id} className="consignment-card consignment-consignor-item"><button type="button" className="consignment-consignor-item-open" onClick={() => onOpenItem(item.id)}><span className="consignment-batch-thumb" style={{ width: 48, height: 48, borderRadius: 10 }}>{item.photo ? <img src={item.photo} alt="" /> : <Tag size={18} color="var(--green-dark)" />}</span><span className="consignment-consignor-item-copy"><span className="consignment-consignor-item-title">{item.description || item.category}</span><span className="consignment-consignor-item-meta">{item.itemNumber} · {item.size ? `Size ${item.size} · ` : ''}{money(item.price)}</span><span className="consignment-consignor-item-meta">Product type: {item.type || item.category || 'Not set'}</span>{item.paidOut && <span className="consignment-paid-detail">Paid {item.payoutDate || ''} · {item.payoutMethod || 'Method not recorded'} · {money(item.payoutAmount)}</span>}</span></button><div className="consignment-consignor-item-actions"><span className={`consignment-product-badge ${(saleSource || product).className}`}>{(saleSource || product).text}</span><span className={`consignment-badge ${item.paidOut ? 'paid' : item.status === 'Sold' ? 'unpaid' : statusClass(item.status)}`}>{item.paidOut ? 'Paid' : item.status === 'Sold' ? 'Sold · unpaid' : statusLabel(item.status)}</span>{soldUnpaid ? <button type="button" className="consignment-consignor-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button> : <span className="consignment-consignor-action-spacer" aria-hidden="true" />}</div></article>;
-          })}
-        </div>
-        {confirmingDeleteConsignor && <div className="consignment-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span style={{ fontSize: 13 }}>Delete {consignor.firstName} {consignor.lastName} for good?</span><div style={{ display: 'flex', gap: 8 }}><button className="consignment-btn secondary" style={{ padding: '8px 14px' }} onClick={() => setConfirmingDeleteConsignor(false)}>Cancel</button><button className="consignment-btn danger" style={{ padding: '8px 14px' }} onClick={() => onDeleteConsignor(consignor.id)}>Delete</button></div></div>}
-      </div>
-    </>
-  );
-}
-
 function ShopifyProductFields({ form, setForm }) {
   const [categorySearch, setCategorySearch] = useState(form.shopifyCategoryName || '');
   const [categoryResults, setCategoryResults] = useState([]);
@@ -816,10 +739,10 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {ready && view === 'reports' && <ReportsScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
       {ready && view === 'createPayout' && activeConsignor && <CreatePayoutScreen consignor={activeConsignor} items={items} onBack={() => setView('payouts')} onRecordPayout={handleRecordPayout} />}
       {ready && view === 'import' && <ImportScreen kind={importKind} fixedConsignor={consignors.find((entry) => entry.id === importConsignorId) || null} onBack={() => setView(importBack)} onImport={handleImport} />}
-      {ready && view === 'newConsignor' && <NewConsignorScreen onBack={() => setView(newConsignorBack)} onSave={handleNewConsignor} nextNumber={nextConsignorNumber} />}
+      {ready && view === 'newConsignor' && <NewConsignorPage onBack={() => setView(newConsignorBack)} onSave={handleNewConsignor} nextNumber={nextConsignorNumber} />}
       {ready && view === 'chooseConsignor' && <ChooseConsignorScreen consignors={consignors} onBack={() => setView('dashboard')} onChoose={(consignorId) => { setActiveId(consignorId); setView('intake'); }} onCreate={() => startNewConsignor('intake', 'chooseConsignor')} />}
-      {ready && view === 'consignor' && activeConsignor && <ConsignorScreen consignor={activeConsignor} items={items} onBack={() => setView('home')} onStartIntake={() => setView('intake')} onOpenItem={openItem} onDeleteConsignor={handleDeleteConsignor} onEditConsignor={() => setView('editConsignor')} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
-      {ready && view === 'editConsignor' && activeConsignor && <EditConsignorScreen consignor={activeConsignor} onBack={() => setView('consignor')} onSave={handleUpdateConsignor} />}
+      {ready && view === 'consignor' && activeConsignor && <ConsignorsDashboard consignor={activeConsignor} items={items} onBack={() => setView('home')} onStartIntake={() => setView('intake')} onOpenItem={openItem} onDeleteConsignor={handleDeleteConsignor} onEditConsignor={() => setView('editConsignor')} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
+      {ready && view === 'editConsignor' && activeConsignor && <EditConsignorPage consignor={activeConsignor} onBack={() => setView('consignor')} onSave={handleUpdateConsignor} />}
       {ready && view === 'intake' && activeConsignor && <IntakeScreen consignor={activeConsignor} items={items} onBack={() => setView('consignor')} onSaveBatch={handleSaveBatch} onSaveAndSync={handleSaveAndSync} tier2Enabled={tier2Enabled} />}
       {ready && view === 'editItem' && activeItem && <EditItemScreen item={activeItem} onBack={() => setView('consignor')} onSave={handleUpdateItem} onDelete={handleDeleteItemFromEdit} onSyncProduct={handleSyncProduct} onUpdateStatus={handleUpdateItemStatus} tier2Enabled={tier2Enabled} />}
       {ready && showBackToTop && <button className="consignment-back-to-top" type="button" onClick={scrollToTop} aria-label="Back to top" title="Back to top"><ArrowUp size={20} aria-hidden="true" /></button>}
