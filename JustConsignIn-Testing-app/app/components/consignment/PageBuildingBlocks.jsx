@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Search, Tag } from 'lucide-react';
 import '../../styles/consignment-card-grid.css';
 
 export function SummaryStatRow({ stats }) {
@@ -51,9 +51,10 @@ export function PageToolbar({
   );
 }
 
-// One global card for Items, Sales, and Payouts. Media is only shown when an
-// actual photo exists. Manual/no-photo cards use the existing media-hidden
-// class instead of reserving an empty image area.
+// Shared Items / Sales entity card.
+// This intentionally follows the live site's compact readable-card layout:
+// small thumbnail beside the title, source badge at top right, consignor link,
+// clear money/detail rows, status, then the page-specific action area.
 export function EntityCard({
   photo,
   title,
@@ -68,66 +69,59 @@ export function EntityCard({
   footNote,
   action,
 }) {
-  const isManual = topBadge?.className === 'manual';
-  const showMedia = Boolean(photo) && !isManual;
-
   return (
-    <article className={`consignment-entity-card${showMedia ? ' has-media' : ' media-hidden'}`}>
-      {showMedia && (
-        <div className="consignment-entity-thumb has-photo">
-          <img src={photo} alt="" />
+    <article className="consignment-readable-card consignment-entity-card">
+      <div className="consignment-readable-card-top">
+        <div className="consignment-grid-thumb-row">
+          <div className="consignment-grid-thumb">
+            {photo ? <img src={photo} alt="" /> : <Tag size={17} color="var(--muted)" />}
+          </div>
+          <div className="consignment-readable-title-copy">
+            <strong>{title}</strong>
+            {subtitle && <small className="consignment-readable-card-sku">{subtitle}</small>}
+          </div>
+        </div>
+        {topBadge && <span className={`consignment-product-badge ${topBadge.className}`}>{topBadge.text}</span>}
+      </div>
+
+      {consignor !== undefined && (
+        consignor ? (
+          <button
+            type="button"
+            className="consignment-readable-consignor-link"
+            onClick={() => onOpenConsignor?.(consignor.id)}
+          >
+            {consignor.firstName} {consignor.lastName}
+          </button>
+        ) : (
+          <span className="consignment-readable-consignor-link consignment-entity-consignor-unassigned">Unassigned</span>
+        )
+      )}
+
+      {metrics.length > 0 && (
+        <div className="consignment-readable-card-meta consignment-sales-money-rows">
+          {metrics.map((metric) => (
+            <span key={metric.label}>
+              <small>{metric.label}</small>
+              <strong>{metric.value}</strong>
+            </span>
+          ))}
         </div>
       )}
 
-      <div className="consignment-entity-body">
-        <div className="consignment-entity-card-top">
-          <strong>{title}</strong>
-          {subtitle && <small className="consignment-entity-subtitle">{subtitle}</small>}
-        </div>
-
-        {consignor !== undefined && (
-          consignor ? (
-            <button
-              type="button"
-              className="consignment-entity-consignor-link"
-              onClick={() => onOpenConsignor?.(consignor.id)}
-            >
-              {consignor.firstName} {consignor.lastName}
-            </button>
-          ) : (
-            <span className="consignment-entity-consignor-link consignment-entity-consignor-unassigned">Unassigned</span>
-          )
-        )}
-
-        {metrics.length > 0 && (
-          <div className="consignment-entity-meta">
-            {metrics.map((metric) => (
-              <div className="consignment-entity-row" key={metric.label}>
-                <small>{metric.label}</small>
-                <strong>{metric.value}</strong>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {detailLabel && (
-          <div className="consignment-entity-row consignment-entity-detail-row">
-            <small>{detailLabel}</small>
+      {(detailLabel || detailBadge) && (
+        <div className="consignment-readable-card-details">
+          <span>
+            {detailLabel && <small>{detailLabel}</small>}
             {detailValue && <strong>{detailValue}</strong>}
-          </div>
-        )}
+          </span>
+          {detailBadge && <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>}
+        </div>
+      )}
 
-        {footNote && <div className="consignment-entity-footnote">{footNote}</div>}
+      {footNote && <div className="consignment-sales-grid-order consignment-entity-footnote">{footNote}</div>}
 
-        {(topBadge || detailBadge) && (
-          <div className="consignment-entity-status-row">
-            {topBadge && <span className={`consignment-badge ${topBadge.className}`}>{topBadge.text}</span>}
-            {detailBadge && <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>}
-          </div>
-        )}
-
-        {action && <div className="consignment-entity-actions">{action}</div>}
-      </div>
+      {action && <div className="consignment-readable-card-actions consignment-entity-actions">{action}</div>}
     </article>
   );
 }
