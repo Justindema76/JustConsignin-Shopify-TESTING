@@ -104,6 +104,48 @@ export default function ConsignorsDashboard({
     }
   }
 
+  function itemActions(item, { isManualAvailable, sold, paid }) {
+    if (paid) {
+      return <span className="consignment-sales-paid-note">Archived</span>;
+    }
+
+    return (
+      <>
+        <button
+          type="button"
+          className="consignment-grid-open-btn"
+          style={{ flex: '1 1 0', minWidth: 0 }}
+          onClick={() => onOpenItem(item.id)}
+        >
+          Edit item
+        </button>
+
+        {isManualAvailable && (
+          <button
+            type="button"
+            className="consignment-list-action"
+            style={{ flex: '1 1 0', minWidth: 0 }}
+            disabled={sellingItemId === item.id}
+            onClick={() => quickMarkSold(item)}
+          >
+            {sellingItemId === item.id ? 'Saving…' : 'Mark sold'}
+          </button>
+        )}
+
+        {sold && (
+          <button
+            type="button"
+            className="consignment-sales-pay-btn"
+            style={{ flex: '1 1 0', minWidth: 0 }}
+            onClick={() => onStartPayout?.(consignor.id)}
+          >
+            Review &amp; pay
+          </button>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <Header
@@ -319,41 +361,7 @@ export default function ConsignorsDashboard({
                     text: paid ? 'Paid' : sold ? 'Unpaid' : statusLabel(item.status),
                     className: paid ? 'paid' : sold ? 'unpaid' : statusClass(item.status),
                   }}
-                  action={
-                    <>
-                      <button
-                        type="button"
-                        className="consignment-grid-open-btn"
-                        style={{ flex: '1 1 0', minWidth: 0 }}
-                        onClick={() => onOpenItem(item.id)}
-                      >
-                        Edit item
-                      </button>
-
-                      {isManualAvailable && (
-                        <button
-                          type="button"
-                          className="consignment-list-action"
-                          style={{ flex: '1 1 0', minWidth: 0 }}
-                          disabled={sellingItemId === item.id}
-                          onClick={() => quickMarkSold(item)}
-                        >
-                          {sellingItemId === item.id ? 'Saving…' : 'Mark sold'}
-                        </button>
-                      )}
-
-                      {sold && !paid && (
-                        <button
-                          type="button"
-                          className="consignment-sales-pay-btn"
-                          style={{ flex: '1 1 0', minWidth: 0 }}
-                          onClick={() => onStartPayout?.(consignor.id)}
-                        >
-                          Review &amp; pay
-                        </button>
-                      )}
-                    </>
-                  }
+                  action={itemActions(item, { isManualAvailable, sold, paid })}
                 />
               );
             })}
@@ -428,37 +436,7 @@ export default function ConsignorsDashboard({
                     className="consignment-dashboard-list-action"
                     style={{ display: 'flex', gap: 6 }}
                   >
-                    <button
-                      type="button"
-                      className="consignment-grid-open-btn"
-                      style={{ flex: '1 1 0', minWidth: 0 }}
-                      onClick={() => onOpenItem(item.id)}
-                    >
-                      Edit item
-                    </button>
-
-                    {isManualAvailable && (
-                      <button
-                        type="button"
-                        className="consignment-list-action"
-                        style={{ flex: '1 1 0', minWidth: 0 }}
-                        disabled={sellingItemId === item.id}
-                        onClick={() => quickMarkSold(item)}
-                      >
-                        {sellingItemId === item.id ? 'Saving…' : 'Mark sold'}
-                      </button>
-                    )}
-
-                    {sold && !paid && (
-                      <button
-                        type="button"
-                        className="consignment-sales-pay-btn"
-                        style={{ flex: '1 1 0', minWidth: 0 }}
-                        onClick={() => onStartPayout?.(consignor.id)}
-                      >
-                        Review &amp; pay
-                      </button>
-                    )}
+                    {itemActions(item, { isManualAvailable, sold, paid })}
                   </span>
                 </div>
               );
