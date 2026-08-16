@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Download, FileUp, Grid3X3, Plus, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Grid3X3, Plus, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import { PageToolbar } from '../../components/consignment/PageBuildingBlocks';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
@@ -14,8 +14,6 @@ export default function ConsignorsScreen({
   onMarkSold,
   onNewConsignor,
   onNewItem,
-  onImport,
-  onExport,
 }) {
   const [filter, setFilter] = useState('All');
   const [consignorFilter, setConsignorFilter] = useState('All');
@@ -134,15 +132,8 @@ export default function ConsignorsScreen({
         eyebrow="Accounts"
         title="Consignors"
         action={(
-          <div className="consignment-header-actions">
-            <details className="consignment-data-menu">
-              <summary><FileUp size={16} /> Data</summary>
-              <div className="consignment-data-menu-popover">
-                <button type="button" onClick={onImport}><FileUp size={15} /> Import CSV</button>
-                <button type="button" onClick={onExport}><Download size={15} /> Export CSV</button>
-              </div>
-            </details>
-            <button className="consignment-btn secondary" type="button" onClick={onNewItem}><Plus size={16} /> New item</button>
+          <div className="consignment-header-actions consignment-header-actions-full">
+            <button className="consignment-btn secondary" type="button" onClick={onNewItem}><Plus size={17} /> New item</button>
             <button className="consignment-btn" type="button" onClick={onNewConsignor}><Plus size={17} /> New consignor</button>
           </div>
         )}
