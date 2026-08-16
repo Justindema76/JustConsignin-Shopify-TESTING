@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Download, FileUp, Grid3X3, Plus, Search, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FileUp, Grid3X3, Plus, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
+import { PageToolbar } from '../../components/consignment/PageBuildingBlocks';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
 
 export default function ConsignorsScreen({
@@ -115,6 +116,18 @@ export default function ConsignorsScreen({
     return <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem(item.id)}>Open item</button>;
   }
 
+  const filtersSlot = (
+    <details className="consignment-items-filter-details">
+      <summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary>
+      <div className="consignment-items-toolbar-top">
+        <label className="consignment-tool-field"><span>Consignor</span><select className="consignment-select consignment-filter-select" value={consignorFilter} onChange={(event) => setConsignorFilter(event.target.value)}><option value="All">All consignors</option>{consignors.map((consignor) => <option key={consignor.id} value={consignor.id}>#{consignor.number} · {consignor.firstName} {consignor.lastName}</option>)}</select></label>
+        <label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="consignor">Consignor name</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="ticket">SKU / item number</option><option value="priceHigh">Price high to low</option><option value="priceLow">Price low to high</option></select></label>
+        <label className="consignment-tool-field"><span>Product type</span><select className="consignment-select consignment-filter-select" value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option value="All">All product types</option><option value="Manual">Manual</option><option value="POS">POS</option><option value="Online">Online</option><option value="POS + Online">POS + Online</option></select></label>
+        <label className="consignment-tool-field"><span>Status</span><select className="consignment-select consignment-filter-select" value={filter} onChange={(event) => setFilter(event.target.value)}>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
+      </div>
+    </details>
+  );
+
   return (
     <>
       <Header
@@ -135,21 +148,18 @@ export default function ConsignorsScreen({
         )}
       />
       <div className="consignment-body consignment-online-layout">
-        <div className="consignment-items-toolbar">
-          <details className="consignment-items-filter-details">
-            <summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary>
-            <div className="consignment-items-toolbar-top">
-              <label className="consignment-tool-field"><span>Consignor</span><select className="consignment-select consignment-filter-select" value={consignorFilter} onChange={(event) => setConsignorFilter(event.target.value)}><option value="All">All consignors</option>{consignors.map((consignor) => <option key={consignor.id} value={consignor.id}>#{consignor.number} · {consignor.firstName} {consignor.lastName}</option>)}</select></label>
-              <label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="consignor">Consignor name</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="ticket">SKU / item number</option><option value="priceHigh">Price high to low</option><option value="priceLow">Price low to high</option></select></label>
-              <label className="consignment-tool-field"><span>Product type</span><select className="consignment-select consignment-filter-select" value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option value="All">All product types</option><option value="Manual">Manual</option><option value="POS">POS</option><option value="Online">Online</option><option value="POS + Online">POS + Online</option></select></label>
-              <label className="consignment-tool-field"><span>Status</span><select className="consignment-select consignment-filter-select" value={filter} onChange={(event) => setFilter(event.target.value)}>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
-            </div>
-          </details>
-          <div className="consignment-items-toolbar-bottom">
-            <div className="consignment-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, SKU, brand, or consignor" /></div>
-            <div className="consignment-tool-view"><span>View</span><div className="consignment-view-toggle consignment-finder-toggle"><button type="button" className={viewMode === 'grouped' ? 'active' : ''} onClick={() => setViewMode('grouped')}><Users size={16} /> By consignor</button><button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}><Grid3X3 size={16} /> Grid</button></div></div>
-          </div>
-        </div>
+        <PageToolbar
+          query={query}
+          onQueryChange={setQuery}
+          placeholder="Search name, SKU, brand, or consignor"
+          filtersSlot={filtersSlot}
+          viewOptions={[
+            { key: 'grouped', label: 'By consignor', icon: Users },
+            { key: 'grid', label: 'Grid', icon: Grid3X3 },
+          ]}
+          activeView={viewMode}
+          onViewChange={setViewMode}
+        />
 
         {groupedEntries.length === 0 && <div className="consignment-empty-small">No consignors match these filters.</div>}
 
