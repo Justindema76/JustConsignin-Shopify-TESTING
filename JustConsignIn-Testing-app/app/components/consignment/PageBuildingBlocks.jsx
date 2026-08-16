@@ -56,13 +56,10 @@ export function PageToolbar({
   );
 }
 
-// The one card layout shared by the Items grid and the Sales grid.
-// No thumbnail is rendered unless a real photo exists — manual items
-// never have one (only Shopify-synced items get a photo, via
-// ShopifyProductSection), so there is nothing useful to show in its
-// place. Showing an empty placeholder box for every manual item was
-// the actual problem; omitting it entirely is the fix, not a fallback
-// icon.
+// One global card layout for item/sale grids. The media section is part of
+// the card structure so Shopify/POS/Online cards never need a different card.
+// Manual cards simply hide the media section entirely. Tier 2 cards keep the
+// media area reserved and display the real Shopify image when one is present.
 export function EntityCard({
   photo,
   title,
@@ -77,11 +74,14 @@ export function EntityCard({
   footNote,
   action,
 }) {
+  const isManual = topBadge?.className === 'manual';
+  const showMedia = !isManual;
+
   return (
-    <article className={`consignment-entity-card${photo ? '' : ' no-image'}`}>
-      {photo && (
-        <div className="consignment-entity-thumb">
-          <img src={photo} alt="" />
+    <article className={`consignment-entity-card${showMedia ? ' has-media' : ' media-hidden'}`}>
+      {showMedia && (
+        <div className={`consignment-entity-thumb${photo ? ' has-photo' : ' empty'}`} aria-hidden={!photo}>
+          {photo && <img src={photo} alt="" />}
         </div>
       )}
       <div className="consignment-entity-body">
