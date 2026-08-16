@@ -1,4 +1,3 @@
-
 // app/billing.server.js
 //
 // Central plan definitions + helpers for JustConsignIn's two-tier pricing:
@@ -128,9 +127,6 @@ export async function createSubscription(admin, planKey, { returnUrl, isTest = f
 
   const data = await response.json();
   if (data?.errors?.length) {
-    // Top-level GraphQL errors (bad input types, auth issues, etc.) land
-    // here, separate from userErrors. A common cause: returnUrl wasn't a
-    // valid absolute URL — check that SHOPIFY_APP_URL is set correctly.
     throw new Error(data.errors.map((error) => error.message).join(', '));
   }
   const result = data?.data?.appSubscriptionCreate;
@@ -145,19 +141,13 @@ export async function createSubscription(admin, planKey, { returnUrl, isTest = f
 }
 
 /**
- * Route/action guard: throws a 402 Response if the shop isn't on Tier 2.
- * Use inside any loader/action that touches Shopify product sync, e.g.:
- *   await requireTier2(admin);
+ * TESTING REPOSITORY ONLY:
+ * Tier 2 server actions are intentionally unlocked while the Tier 2 workflow
+ * is being built and tested. Restore the subscription check before using this
+ * behavior in production.
  */
-export async function requireTier2(admin) {
-  const plan = await getActivePlan(admin);
-  if (plan !== 'TIER2') {
-    throw new Response(
-      JSON.stringify({ error: 'This feature requires the Manual + Shopify Sync plan.' }),
-      { status: 402, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-  return plan;
+export async function requireTier2() {
+  return 'TIER2';
 }
 
 /**
