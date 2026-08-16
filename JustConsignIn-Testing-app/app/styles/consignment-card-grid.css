@@ -84,10 +84,15 @@
 .consignment-entity-actions .consignment-grid-open-btn,
 .consignment-entity-actions .consignment-sales-pay-btn,
 .consignment-entity-actions .consignment-item-open-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
   height: 31px;
   border-radius: 7px;
-  padding: 0 9px;
+  padding: 0 6px;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 /* Consignor cards — larger and easier to read */
@@ -333,12 +338,16 @@
 .consignment-dashboard-list-action {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
 }
 
-.consignment-dashboard-list-action
-  .consignment-grid-open-btn {
-  width: 100%;
-  max-width: 130px;
+.consignment-dashboard-list-action .consignment-grid-open-btn,
+.consignment-dashboard-list-action .consignment-list-action,
+.consignment-dashboard-list-action .consignment-sales-pay-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
 }
 
 @media (max-width: 800px) {
@@ -358,10 +367,5 @@
 
   .consignment-dashboard-list-action {
     grid-column: 1 / -1;
-  }
-
-  .consignment-dashboard-list-action
-    .consignment-grid-open-btn {
-    max-width: none;
   }
 }
