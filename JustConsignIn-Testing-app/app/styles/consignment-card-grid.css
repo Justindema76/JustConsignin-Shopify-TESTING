@@ -252,3 +252,116 @@
     font-size: 12px;
   }
 }
+
+/* Consignor dashboard item list */
+
+.consignment-dashboard-list {
+  display: grid;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.consignment-dashboard-list-head,
+.consignment-dashboard-list-row {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 2fr)
+    minmax(90px, 0.7fr)
+    minmax(90px, 0.7fr)
+    minmax(110px, 0.9fr)
+    minmax(110px, 0.9fr)
+    minmax(120px, 0.9fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.consignment-dashboard-list-head {
+  padding: 10px 14px;
+  background: var(--surface-muted, #f7f7f7);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.consignment-dashboard-list-row {
+  min-height: 64px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.consignment-dashboard-list-row:last-child {
+  border-bottom: 0;
+}
+
+.consignment-dashboard-list-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.consignment-dashboard-list-item-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.consignment-dashboard-list-item-copy strong {
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.consignment-dashboard-list-item-copy small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.consignment-dashboard-list-value {
+  font-size: 12px;
+}
+
+.consignment-dashboard-list-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.consignment-dashboard-list-action
+  .consignment-grid-open-btn {
+  width: 100%;
+  max-width: 130px;
+}
+
+@media (max-width: 800px) {
+  .consignment-dashboard-list-head {
+    display: none;
+  }
+
+  .consignment-dashboard-list-row {
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    padding: 12px;
+  }
+
+  .consignment-dashboard-list-item {
+    grid-column: 1 / -1;
+  }
+
+  .consignment-dashboard-list-action {
+    grid-column: 1 / -1;
+  }
+
+  .consignment-dashboard-list-action
+    .consignment-grid-open-btn {
+    max-width: none;
+  }
+}
