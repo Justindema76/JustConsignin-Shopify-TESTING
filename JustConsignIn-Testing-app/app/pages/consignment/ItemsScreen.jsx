@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Grid3X3, List, Plus, Tag, Users } from 'luci
 import { Header } from '../../components/consignment/SharedPieces';
 import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
+import '../../styles/consignment-live-items-sales.css';
 
 function ItemThumb({ item }) {
   const photo = item.shopifyPhoto || item.photo;
