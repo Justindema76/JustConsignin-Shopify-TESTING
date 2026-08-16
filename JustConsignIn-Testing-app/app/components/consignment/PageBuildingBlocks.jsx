@@ -51,9 +51,9 @@ export function PageToolbar({
   );
 }
 
-// One global card for Items and Sales. Manual hides media. Tier 2 keeps the
-// same card and reveals the media area. Source + status are shown once,
-// together at the bottom of the card.
+// One global card for Items, Sales, and Payouts. Media is only shown when an
+// actual photo exists. Manual/no-photo cards use the existing media-hidden
+// class instead of reserving an empty image area.
 export function EntityCard({
   photo,
   title,
@@ -69,13 +69,13 @@ export function EntityCard({
   action,
 }) {
   const isManual = topBadge?.className === 'manual';
-  const showMedia = !isManual;
+  const showMedia = Boolean(photo) && !isManual;
 
   return (
     <article className={`consignment-entity-card${showMedia ? ' has-media' : ' media-hidden'}`}>
       {showMedia && (
-        <div className={`consignment-entity-thumb${photo ? ' has-photo' : ' empty'}`} aria-hidden={!photo}>
-          {photo && <img src={photo} alt="" />}
+        <div className="consignment-entity-thumb has-photo">
+          <img src={photo} alt="" />
         </div>
       )}
 
