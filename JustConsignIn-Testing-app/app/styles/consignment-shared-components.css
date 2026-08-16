@@ -44,7 +44,7 @@
 
 /* Shared badges */
 .consignment-badge,
-.consignment-product-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; min-width:82px; height:28px; box-sizing:border-box; padding:0 12px; font-size:10px; font-weight:800; text-transform:uppercase; white-space:nowrap; }
+.consignment-product-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; min-width:0; height:26px; box-sizing:border-box; padding:0 9px; font-size:10px; font-weight:800; text-transform:uppercase; white-space:nowrap; }
 .consignment-badge.available,
 .consignment-badge.active,
 .consignment-badge.paid,
@@ -116,27 +116,33 @@
 .consignment-sales-table td:not(:first-child) { text-align:center; }
 
 /* One global card system for Items/Sales grids */
-.consignment-entity-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-.consignment-entity-card { background:#fff; border:1px solid #e1e3e5; border-radius:13px; overflow:hidden; display:flex; flex-direction:column; min-height:250px; }
+.consignment-entity-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.consignment-entity-card { background:#fff; border:1px solid #e1e3e5; border-radius:13px; overflow:hidden; display:flex; flex-direction:column; min-height:250px; min-width:0; }
 .consignment-entity-card.media-hidden { min-height:250px; }
-.consignment-entity-thumb { width:100%; height:150px; background:#f1f4f7; display:grid; place-items:center; overflow:hidden; border-bottom:1px solid #e1e3e5; }
+.consignment-entity-thumb { width:100%; height:180px; background:#f1f4f7; display:grid; place-items:center; overflow:hidden; border-bottom:1px solid #e1e3e5; }
 .consignment-entity-thumb.empty { background:#f7f8f9; }
 .consignment-entity-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-.consignment-entity-body { padding:16px; display:flex; flex-direction:column; gap:12px; flex:1; }
-.consignment-entity-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
-.consignment-entity-card-top strong { display:block; font-weight:800; font-size:15px; line-height:1.25; color:#202223; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.consignment-entity-subtitle { display:block; margin-top:3px; color:#6d7175; font-size:12px; }
-.consignment-entity-consignor-link { align-self:center; font-size:15px; }
-.consignment-entity-meta { display:grid; grid-template-columns:1fr 1fr; gap:14px; font-size:12px; }
-.consignment-entity-meta span { display:flex; flex-direction:column; gap:3px; }
-.consignment-entity-meta small { color:#6d7175; font-size:11px; }
-.consignment-entity-meta strong { display:block; font-size:15px; color:#202223; }
-.consignment-entity-details { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.consignment-entity-details small { display:block; color:#6d7175; font-size:11px; }
-.consignment-entity-details strong { display:block; color:#202223; font-size:13px; margin-top:2px; }
+.consignment-entity-body { padding:16px; display:flex; flex-direction:column; gap:12px; flex:1; min-width:0; }
+.consignment-entity-card-top { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.consignment-entity-card-top strong { display:block; font-weight:800; font-size:17px; line-height:1.25; color:#202223; overflow-wrap:anywhere; }
+.consignment-entity-subtitle { display:block; color:#6d7175; font-size:13px; line-height:1.35; }
+.consignment-entity-consignor-link { align-self:flex-start; font-size:16px; line-height:1.2; }
+.consignment-entity-consignor-unassigned { color:#6d7175; cursor:default; }
+.consignment-entity-meta { display:flex; flex-direction:column; gap:0; }
+.consignment-entity-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid #eceef0; }
+.consignment-entity-meta .consignment-entity-row:first-child { border-top:0; }
+.consignment-entity-row small { color:#6d7175; font-size:12px; line-height:1.3; }
+.consignment-entity-row strong { color:#202223; font-size:15px; line-height:1.2; text-align:right; }
+.consignment-entity-detail-row { margin-top:-2px; }
 .consignment-entity-footnote { color:#6d7175; font-size:11px; }
+.consignment-entity-status-row { display:flex; align-items:center; justify-content:center; gap:6px; padding-top:10px; border-top:1px solid #eceef0; }
 .consignment-entity-actions { margin-top:auto; display:flex; gap:8px; padding-top:2px; }
 .consignment-entity-actions > * { flex:1; }
+.consignment-entity-actions .consignment-list-action,
+.consignment-entity-actions .consignment-quick-sold-btn,
+.consignment-entity-actions .consignment-grid-open-btn,
+.consignment-entity-actions .consignment-sales-pay-btn,
+.consignment-entity-actions .consignment-item-open-btn { width:100%; }
 .consignment-empty-small { background:#fff; border:1px solid #e1e3e5; border-radius:13px; color:#6d7175; padding:36px 20px; text-align:center; }
 
 /* Consignors page — copied from Main Site Consignors/legacy styles and mapped to Shopify classes */
@@ -166,13 +172,12 @@
 .consignment-grouped-item-open > span:last-child { min-width:0; display:flex; flex-direction:column; }
 .consignment-grouped-item-open strong { font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .consignment-grouped-item-open > span:last-child > span { margin-top:2px; color:#6d7175; font-size:12px; }
-/* Manual items do not get a fake thumbnail/icon. A real photo may still show for Tier 2. */
 .consignment-grouped-item-open .consignment-batch-thumb:not(:has(img)) { display:none; }
 .consignment-grouped-item-open .consignment-batch-thumb:has(img) { width:36px; height:36px; border-radius:8px; overflow:hidden; flex:0 0 auto; }
 .consignment-grouped-item-open .consignment-batch-thumb img { width:100%; height:100%; object-fit:cover; }
 .consignment-item-quick-action { display:flex; justify-content:center; }
 
-.consignment-consignor-card-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.consignment-consignor-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .consignment-consignor-card { background:#fff; border:1px solid #e1e3e5; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; min-width:0; }
 .consignment-consignor-card-top { display:flex; align-items:center; gap:10px; }
 .consignment-consignor-card-name { min-width:0; display:flex; flex-direction:column; }
@@ -189,8 +194,6 @@
 
 @media (max-width:1000px) {
   .consignment-items-toolbar-top { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .consignment-entity-grid,
-  .consignment-consignor-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:900px) {
   .consignment-stat-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -198,11 +201,10 @@
   .consignment-items-toolbar-bottom { grid-template-columns:1fr; }
   .consignment-view-toggle { width:100%; overflow-x:auto; }
   .consignment-view-toggle button { flex:1; justify-content:center; }
+  .consignment-entity-thumb { height:160px; }
 }
 @media (max-width:700px) {
   .consignment-items-toolbar-top { grid-template-columns:1fr; }
-  .consignment-entity-grid,
-  .consignment-consignor-card-grid { grid-template-columns:1fr; }
   .consignment-list-group-head,
   .consignment-item-group-summary { grid-template-columns:auto 38px minmax(0,1fr); }
   .consignment-list-stat,
@@ -216,13 +218,24 @@
   .consignment-list-row > :last-child,
   .consignment-grouped-item-row > :last-child { display:block; justify-self:end; }
   .consignment-consignor-profile-link { font-size:16px; }
+  .consignment-entity-grid,
+  .consignment-consignor-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .consignment-entity-body { padding:12px; gap:9px; }
+  .consignment-entity-card-top strong { font-size:15px; }
+  .consignment-entity-subtitle { font-size:12px; }
+  .consignment-entity-consignor-link { font-size:14px; }
+  .consignment-entity-row { padding:8px 0; }
+  .consignment-entity-row small { font-size:11px; }
+  .consignment-entity-row strong { font-size:14px; }
+  .consignment-entity-thumb { height:120px; }
 }
 @media (max-width:480px) {
   .consignment-stat-row { gap:8px; }
   .consignment-stat-card { padding:10px 12px; }
   .consignment-stat-value { font-size:18px; }
   .consignment-entity-card { min-height:0; }
-  .consignment-entity-thumb { height:140px; }
+  .consignment-badge,
+  .consignment-product-badge { height:24px; padding:0 7px; font-size:9px; }
   .consignment-view-toggle button { padding:0 9px; font-size:12px; }
   .consignment-item-group-summary { gap:9px; padding:14px 12px; }
 }
