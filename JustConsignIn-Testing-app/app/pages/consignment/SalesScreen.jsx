@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Download, Grid3X3, List, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Grid3X3, List, Tag, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
 import { money, downloadCsv } from '../../lib/consignmentHelpers';
@@ -24,6 +24,15 @@ function formatSaleDate(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function SaleThumb({ item }) {
+  const photo = item.shopifyPhoto || item.photo;
+  return (
+    <div className="consignment-grid-thumb">
+      {photo ? <img src={photo} alt="" /> : <Tag size={17} color="var(--muted)" />}
+    </div>
+  );
+}
+
 export default function SalesScreen({ items, consignors, onStartPayout, onOpenConsignor, onOpenItem }) {
   const [query, setQuery] = useState('');
   const [payoutFilter, setPayoutFilter] = useState('all');
@@ -39,7 +48,7 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
   const filteredSales = allSales.filter((item) => {
     const consignor = consignorById[item.consignorId];
     const q = query.trim().toLowerCase();
-    const searchable = `${item.description || ''} ${item.itemNumber || ''} ${item.orderName || ''} ${item.brand || ''} ${consignor?.firstName || ''} ${consignor?.lastName || ''}`.toLowerCase();
+    const searchable = `${item.description || ''} ${item.itemNumber || ''} ${item.orderName || ''} ${item.brand || ''} ${item.size || ''} ${consignor?.firstName || ''} ${consignor?.lastName || ''}`.toLowerCase();
     if (q && !searchable.includes(q)) return false;
     if (payoutFilter === 'paid' && !item.paidOut) return false;
     if (payoutFilter === 'unpaid' && item.paidOut) return false;
@@ -88,10 +97,17 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
     downloadCsv(`sales-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   }
 
-  function payoutAction(item, consignor) {
-    return !item.paidOut && consignor
-      ? <button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>
-      : <span className="consignment-sales-paid-note">Paid</span>;
+  function saleAction(item, consignor) {
+    return (
+      <div className="consignment-row-actions">
+        <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem?.(item.id)}>Edit item</button>
+        {!item.paidOut && consignor ? (
+          <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>
+        ) : (
+          <button type="button" className="consignment-grid-open-btn" disabled>Paid</button>
+        )}
+      </div>
+    );
   }
 
   function saleCard(item, showConsignor) {
@@ -104,59 +120,54 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
         key={item.id}
         photo={item.shopifyPhoto || item.photo}
         title={item.description || item.itemNumber}
-        subtitle={`#${item.itemNumber || '—'}${item.brand ? ` · ${item.brand}` : ''}`}
+        subtitle={`#${item.itemNumber || '—'}${item.size ? ` · ${item.size}` : ''}${item.brand ? ` · ${item.brand}` : ''}`}
         topBadge={source}
         consignor={showConsignor ? (consignor || null) : undefined}
         onOpenConsignor={onOpenConsignor}
-        metrics={[{ label: 'Sale price', value: money(salePrice) }, { label: 'Consignor due', value: money(due) }]}
+        metrics={[
+          { label: 'Sale price', value: money(salePrice) },
+          { label: 'Consignor due', value: money(due) },
+        ]}
         detailLabel="Sale date"
         detailValue={formatSaleDate(item.dateSold)}
         detailBadge={{ text: item.paidOut ? 'Paid' : 'Unpaid', className: item.paidOut ? 'paid' : 'unpaid' }}
-        footNote={item.orderName || null}
-        action={
-          <>
-            <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem?.(item.id)}>
-              Edit item
-            </button>
-            {!item.paidOut && consignor ? (
-              <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>
-                Review &amp; pay
-              </button>
-            ) : (
-              <button type="button" className="consignment-grid-open-btn" disabled>
-                Paid
-              </button>
-            )}
-          </>
-        }
+        footNote={item.orderName || (source.text === 'Manual' ? 'Manual sale' : 'Shopify order')}
+        action={saleAction(item, consignor)}
       />
     );
   }
 
-  function tableView() {
+  function allSalesView() {
     return (
-      <div className="consignment-list-table-wrap">
-        <table className="consignment-list-table consignment-sales-table">
-          <thead><tr><th>Item</th><th>Consignor</th><th>Sale price</th><th>Consignor due</th><th>Source</th><th>Payout</th><th>Sold</th><th>Action</th></tr></thead>
-          <tbody>{filteredSales.map((item) => {
-            const consignor = consignorById[item.consignorId];
-            const salePrice = Number(item.salePrice ?? item.price ?? 0);
-            const due = (salePrice * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100;
-            const source = sourceLabel(item);
-            return (
-              <tr key={item.id}>
-                <td><strong>{item.description || item.itemNumber}</strong><small>#{item.itemNumber || '—'}{item.orderName ? ` · ${item.orderName}` : ''}</small></td>
-                <td>{consignor ? <button className="consignment-consignor-link" type="button" onClick={() => onOpenConsignor?.(consignor.id)}>{consignor.firstName} {consignor.lastName}</button> : 'Unknown'}</td>
-                <td className="consignment-money">{money(salePrice)}</td>
-                <td className="consignment-money">{money(due)}</td>
-                <td><span className={`consignment-badge ${source.className}`}>{source.text}</span></td>
-                <td><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Paid' : 'Unpaid'}</span></td>
-                <td>{formatSaleDate(item.dateSold)}</td>
-                <td>{payoutAction(item, consignor)}</td>
-              </tr>
-            );
-          })}</tbody>
-        </table>
+      <div className="consignment-live-list consignment-sales-all-view">
+        <div className="consignment-live-list-head consignment-sales-live-columns">
+          <span>Item</span><span>Consignor</span><span>Sale price</span><span>Consignor due</span><span>Source</span><span>Payout</span><span>Sold</span><span>Action</span>
+        </div>
+        {filteredSales.map((item) => {
+          const consignor = consignorById[item.consignorId];
+          const salePrice = Number(item.salePrice ?? item.price ?? 0);
+          const due = (salePrice * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100;
+          const source = sourceLabel(item);
+          return (
+            <div className="consignment-live-list-row consignment-sales-live-columns" key={item.id}>
+              <div className="consignment-live-item-cell">
+                <SaleThumb item={item} />
+                <div className="consignment-live-item-copy">
+                  <button className="consignment-title-link" type="button" onClick={() => onOpenItem?.(item.id)}>{item.description || item.itemNumber}</button>
+                  <small>#{item.itemNumber || '—'}{item.size ? ` · ${item.size}` : ''}{item.brand ? ` · ${item.brand}` : ''}</small>
+                  {item.orderName && <small>{item.orderName}</small>}
+                </div>
+              </div>
+              <div>{consignor ? <button className="consignment-consignor-link" type="button" onClick={() => onOpenConsignor?.(consignor.id)}>{consignor.firstName} {consignor.lastName}</button> : 'Unknown'}</div>
+              <strong className="consignment-money">{money(salePrice)}</strong>
+              <strong className="consignment-money">{money(due)}</strong>
+              <span><span className={`consignment-product-badge ${source.className}`}>{source.text}</span></span>
+              <span><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Paid' : 'Unpaid'}</span></span>
+              <span>{formatSaleDate(item.dateSold)}</span>
+              <span>{saleAction(item, consignor)}</span>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -171,13 +182,16 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
       }, 0);
       const paid = sales.filter((item) => item.paidOut).length;
       const initials = `${consignor?.firstName?.[0] || ''}${consignor?.lastName?.[0] || ''}` || '—';
+
       return (
-        <section className="consignment-list-group" key={key}>
-          <button type="button" className="consignment-list-group-head consignment-sales-summary-head" onClick={() => setOpenGroups((current) => ({ ...current, [key]: !isOpen }))}>
+        <section className="consignment-live-group" key={key}>
+          <button type="button" className="consignment-live-group-head" onClick={() => setOpenGroups((current) => ({ ...current, [key]: !isOpen }))}>
             <span className="consignment-list-chevron"><ChevronRight size={15} style={{ transform: isOpen ? 'rotate(90deg)' : 'none' }} /></span>
             <span className="consignment-list-avatar">{initials}</span>
             <span className="consignment-list-person">
-              <button type="button" onClick={(event) => { event.stopPropagation(); if (consignor) onOpenConsignor?.(consignor.id); }}>{consignor ? `${consignor.firstName} ${consignor.lastName}` : 'Unknown consignor'}</button>
+              <span className="consignment-list-person-name" role="button" tabIndex={0} onClick={(event) => { event.stopPropagation(); if (consignor) onOpenConsignor?.(consignor.id); }} onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && consignor) { event.preventDefault(); event.stopPropagation(); onOpenConsignor?.(consignor.id); } }}>
+                {consignor ? `${consignor.firstName} ${consignor.lastName}` : 'Unknown consignor'}
+              </span>
               <small>Consignor #{consignor?.number || '—'}</small>
             </span>
             <span className="consignment-list-stat"><strong>{sales.length}</strong><small>Sales</small></span>
@@ -186,20 +200,28 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
             <span className="consignment-list-stat"><strong>{money(due)}</strong><small>Due</small></span>
           </button>
           {isOpen && (
-            <div className="consignment-list-group-body">
-              <div className="consignment-list-labels consignment-sales-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Action</span></div>
+            <div className="consignment-live-group-body">
+              <div className="consignment-live-list-head consignment-sales-grouped-live-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Sold</span><span>Action</span></div>
               {sales.map((item) => {
                 const salePrice = Number(item.salePrice ?? item.price ?? 0);
                 const itemDue = (salePrice * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100;
                 const source = sourceLabel(item);
                 return (
-                  <div className="consignment-list-row consignment-sales-columns" key={item.id}>
-                    <div className="consignment-list-item-main"><strong>{item.description || item.itemNumber}</strong><small>#{item.itemNumber || '—'} · {formatSaleDate(item.dateSold)}{item.orderName ? ` · ${item.orderName}` : ''}</small></div>
+                  <div className="consignment-live-list-row consignment-sales-grouped-live-columns" key={item.id}>
+                    <div className="consignment-live-item-cell">
+                      <SaleThumb item={item} />
+                      <div className="consignment-live-item-copy">
+                        <button className="consignment-title-link" type="button" onClick={() => onOpenItem?.(item.id)}>{item.description || item.itemNumber}</button>
+                        <small>#{item.itemNumber || '—'}{item.size ? ` · ${item.size}` : ''}{item.brand ? ` · ${item.brand}` : ''}</small>
+                        {item.orderName && <small>{item.orderName}</small>}
+                      </div>
+                    </div>
                     <strong className="consignment-money">{money(salePrice)}</strong>
                     <strong className="consignment-money">{money(itemDue)}</strong>
-                    <span><span className={`consignment-badge ${source.className}`}>{source.text}</span></span>
+                    <span><span className={`consignment-product-badge ${source.className}`}>{source.text}</span></span>
                     <span><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Paid' : 'Unpaid'}</span></span>
-                    <span>{payoutAction(item, consignor)}</span>
+                    <span>{formatSaleDate(item.dateSold)}</span>
+                    <span>{saleAction(item, consignor)}</span>
                   </div>
                 );
               })}
@@ -225,13 +247,13 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
   return (
     <>
       <Header eyebrow="Sales ledger" title="Sales" action={<button type="button" className="consignment-btn secondary" onClick={exportSales}><Download size={16} /> Export</button>} />
-      <div className="consignment-body consignment-online-layout">
+      <div className="consignment-body consignment-online-layout consignment-sales-page">
         <SummaryStatRow stats={[{ label: 'Total sales', value: money(totalSales) }, { label: 'Unpaid to consignors', value: money(totalUnpaid) }, { label: 'Unpaid sales', value: unpaidCount }, { label: 'Paid sales', value: paidCount }]} />
         <PageToolbar query={query} onQueryChange={setQuery} placeholder="Search name, SKU, brand, or consignor" filtersSlot={filtersSlot} viewOptions={[{ key: 'all', label: 'All sales', icon: List }, { key: 'grouped', label: 'By consignor', icon: Users }, { key: 'grid', label: 'Grid', icon: Grid3X3 }]} activeView={viewMode} onViewChange={setViewMode} />
         {filteredSales.length === 0 && <div className="consignment-empty-small">No sales match the selected filters.</div>}
-        {viewMode === 'all' && filteredSales.length > 0 && tableView()}
+        {viewMode === 'all' && filteredSales.length > 0 && allSalesView()}
         {viewMode === 'grouped' && filteredSales.length > 0 && groupedView()}
-        {viewMode === 'grid' && filteredSales.length > 0 && <div className="consignment-entity-grid">{filteredSales.map((item) => saleCard(item, true))}</div>}
+        {viewMode === 'grid' && filteredSales.length > 0 && <div className="consignment-readable-grid">{filteredSales.map((item) => saleCard(item, true))}</div>}
       </div>
     </>
   );
