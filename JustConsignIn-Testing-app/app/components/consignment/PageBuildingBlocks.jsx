@@ -1,7 +1,5 @@
 import { Search } from 'lucide-react';
 
-// Shared across every screen that shows a row of headline numbers
-// (dashboard, items, sales, payouts). `stats` is [{ label, value }].
 export function SummaryStatRow({ stats }) {
   return (
     <div className="consignment-stat-row">
@@ -15,10 +13,6 @@ export function SummaryStatRow({ stats }) {
   );
 }
 
-// Shared search + filters + view-toggle bar. `filtersSlot` is whatever
-// filter controls the calling screen needs (each screen's filters differ,
-// so this stays a passthrough rather than a fixed set of props) — the
-// bar itself, spacing, and responsive collapse are what's shared.
 export function PageToolbar({
   query,
   onQueryChange,
@@ -56,10 +50,9 @@ export function PageToolbar({
   );
 }
 
-// One global card layout for item/sale grids. The media section is part of
-// the card structure so Shopify/POS/Online cards never need a different card.
-// Manual cards simply hide the media section entirely. Tier 2 cards keep the
-// media area reserved and display the real Shopify image when one is present.
+// One global card for Items and Sales. Manual hides media. Tier 2 keeps the
+// same card and reveals the media area. Source + status are shown once,
+// together at the bottom of the card.
 export function EntityCard({
   photo,
   title,
@@ -84,15 +77,11 @@ export function EntityCard({
           {photo && <img src={photo} alt="" />}
         </div>
       )}
+
       <div className="consignment-entity-body">
         <div className="consignment-entity-card-top">
-          <div style={{ minWidth: 0 }}>
-            <strong>{title}</strong>
-            {subtitle && <small className="consignment-entity-subtitle">{subtitle}</small>}
-          </div>
-          {topBadge && (
-            <span className={`consignment-badge ${topBadge.className}`}>{topBadge.text}</span>
-          )}
+          <strong>{title}</strong>
+          {subtitle && <small className="consignment-entity-subtitle">{subtitle}</small>}
         </div>
 
         {consignor !== undefined && (
@@ -105,38 +94,36 @@ export function EntityCard({
               {consignor.firstName} {consignor.lastName}
             </button>
           ) : (
-            <span className="consignment-entity-consignor-link" style={{ cursor: 'default', color: 'var(--muted)' }}>
-              Unassigned
-            </span>
+            <span className="consignment-entity-consignor-link consignment-entity-consignor-unassigned">Unassigned</span>
           )
         )}
 
         {metrics.length > 0 && (
           <div className="consignment-entity-meta">
             {metrics.map((metric) => (
-              <span key={metric.label}>
+              <div className="consignment-entity-row" key={metric.label}>
                 <small>{metric.label}</small>
                 <strong>{metric.value}</strong>
-              </span>
+              </div>
             ))}
           </div>
         )}
 
-        {(detailLabel || detailBadge) && (
-          <div className="consignment-entity-details">
-            {detailLabel && (
-              <span>
-                <small>{detailLabel}</small>
-                {detailValue && <strong>{detailValue}</strong>}
-              </span>
-            )}
-            {detailBadge && (
-              <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>
-            )}
+        {detailLabel && (
+          <div className="consignment-entity-row consignment-entity-detail-row">
+            <small>{detailLabel}</small>
+            {detailValue && <strong>{detailValue}</strong>}
           </div>
         )}
 
         {footNote && <div className="consignment-entity-footnote">{footNote}</div>}
+
+        {(topBadge || detailBadge) && (
+          <div className="consignment-entity-status-row">
+            {topBadge && <span className={`consignment-badge ${topBadge.className}`}>{topBadge.text}</span>}
+            {detailBadge && <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>}
+          </div>
+        )}
 
         {action && <div className="consignment-entity-actions">{action}</div>}
       </div>
