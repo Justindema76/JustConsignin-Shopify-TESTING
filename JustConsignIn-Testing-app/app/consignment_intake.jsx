@@ -744,6 +744,16 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {ready && view === 'chooseConsignor' && <ChooseConsignorScreen consignors={consignors} onBack={() => setView('dashboard')} onChoose={(consignorId) => { setActiveId(consignorId); setView('intake'); }} onCreate={() => startNewConsignor('intake', 'chooseConsignor')} />}
       {ready && view === 'consignor' && activeConsignor && <ConsignorsDashboard consignor={activeConsignor} items={items} onBack={() => setView('home')} onStartIntake={() => setView('intake')} onOpenItem={openItem} onDeleteConsignor={handleDeleteConsignor} onEditConsignor={() => setView('editConsignor')} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
       {ready && view === 'editConsignor' && activeConsignor && <EditConsignorPage consignor={activeConsignor} onBack={() => setView('consignor')} onSave={handleUpdateConsignor} />}
+{ready && view === 'intake' && activeConsignor && (
+  <AddConsignorItem
+    consignor={activeConsignor}
+    items={items}
+    onBack={() => setView('consignor')}
+    onSaveBatch={handleSaveBatch}
+    onSaveAndSync={handleSaveAndSync}
+    tier2Enabled={tier2Enabled}
+  />
+)}
       {ready && view === 'editItem' && activeItem && <EditItemScreen item={activeItem} onBack={() => setView('consignor')} onSave={handleUpdateItem} onDelete={handleDeleteItemFromEdit} onSyncProduct={handleSyncProduct} onUpdateStatus={handleUpdateItemStatus} tier2Enabled={tier2Enabled} />}
       {ready && showBackToTop && <button className="consignment-back-to-top" type="button" onClick={scrollToTop} aria-label="Back to top" title="Back to top"><ArrowUp size={20} aria-hidden="true" /></button>}
     </div>
