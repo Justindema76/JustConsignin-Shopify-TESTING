@@ -4,7 +4,7 @@ import { Header } from '../../components/consignment/SharedPieces';
 import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
 
-export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsignor, onMarkSold, onNewItem }) {
+export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsignor, onMarkSold, onStartPayout, onNewItem }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('Current');
   const [consignorFilter, setConsignorFilter] = useState('All');
@@ -81,14 +81,33 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
   }
 
   function itemAction(item) {
+    const consignor = consignorById[item.consignorId];
     const product = productLabel(item);
-    const isManualAvailable = product.className === 'manual' && (item.status === 'Available' || item.status === 'Active') && !item.paidOut;
-    return isManualAvailable ? (
-      <button type="button" className="consignment-list-action" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>
-        {sellingItemId === item.id ? 'Saving…' : 'Mark sold'}
-      </button>
-    ) : (
-      <button type="button" className="consignment-list-action" onClick={() => onOpenItem(item.id)}>Open item</button>
+    const sold = item.status === 'Sold' || Boolean(item.dateSold);
+    const paid = item.paidOut === true;
+    const isManualAvailable = product.className === 'manual' && !sold && !paid && (item.status === 'Available' || item.status === 'Active');
+
+    return (
+      <>
+        <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem(item.id)}>
+          Edit item
+        </button>
+        {isManualAvailable && (
+          <button type="button" className="consignment-list-action" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>
+            {sellingItemId === item.id ? 'Saving…' : 'Mark sold'}
+          </button>
+        )}
+        {sold && !paid && consignor && (
+          <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout?.(consignor.id)}>
+            Review &amp; pay
+          </button>
+        )}
+        {paid && (
+          <button type="button" className="consignment-grid-open-btn" disabled>
+            Paid
+          </button>
+        )}
+      </>
     );
   }
 
