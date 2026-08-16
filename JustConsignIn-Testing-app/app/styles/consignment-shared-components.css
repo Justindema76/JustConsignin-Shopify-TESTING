@@ -5,6 +5,10 @@
 
 .consignment-online-layout { font-size: 14px; }
 
+/* Shared full-width header actions */
+.consignment-header-actions-full { width:100%; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.consignment-header-actions-full .consignment-btn { width:100%; min-height:42px; justify-content:center; }
+
 /* Shared summary cards */
 .consignment-stat-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
 .consignment-stat-card { background:#fff; border:1px solid #e1e3e5; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
