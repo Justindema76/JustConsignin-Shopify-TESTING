@@ -112,7 +112,7 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
         detailLabel="Sale date"
         detailValue={formatSaleDate(item.dateSold)}
         detailBadge={{ text: item.paidOut ? 'Paid' : 'Unpaid', className: item.paidOut ? 'paid' : 'unpaid' }}
-        footNote={item.orderName || (source.text === 'Manual' ? 'Manual sale' : 'Shopify order')}
+        footNote={item.orderName || null}
         action={payoutAction(item, consignor)}
       />
     );
