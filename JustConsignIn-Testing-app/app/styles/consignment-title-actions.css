@@ -1,0 +1,49 @@
+/* Items + Sales interaction cleanup.
+ * Product titles are the edit/detail links in all three views.
+ * The action area is reserved for workflow actions only.
+ */
+
+.consignment-items-page .consignment-live-list .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
+.consignment-sales-page .consignment-live-list .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
+.consignment-items-page .consignment-live-group .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
+.consignment-sales-page .consignment-live-group .consignment-row-actions > .consignment-grid-open-btn:not(:disabled) {
+  display: none;
+}
+
+.consignment-readable-title-link {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.consignment-readable-title-link:hover,
+.consignment-live-item-copy .consignment-title-link:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
+
+.consignment-readable-title-link:focus-visible,
+.consignment-live-item-copy .consignment-title-link:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (max-width: 700px) {
+  .consignment-readable-title-link {
+    font-size: 13px;
+  }
+}
