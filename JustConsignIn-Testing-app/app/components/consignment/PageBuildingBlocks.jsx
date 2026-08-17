@@ -1,3 +1,4 @@
+import { Children } from 'react';
 import { Search, Tag } from 'lucide-react';
 import '../../styles/consignment-card-grid.css';
 
@@ -51,9 +52,10 @@ export function PageToolbar({
   );
 }
 
-// Shared Items / Sales card. Its markup and class names intentionally follow
-// the LIVE app's readable-card system so TESTING renders the same card design
-// on desktop, tablet, and mobile without touching the LIVE repository.
+// Shared Items / Sales card. The first enabled grid-open action is the item
+// detail/edit destination. We promote that handler to the title and remove the
+// duplicate Edit item button from the card action area. The remaining action
+// is only the workflow action: Mark sold, Review & pay, Paid, etc.
 export function EntityCard({
   photo,
   title,
@@ -69,6 +71,20 @@ export function EntityCard({
   action,
 }) {
   const skuText = String(subtitle || '').replace(/^#/, '');
+  const actionWrapper = action?.props?.className === 'consignment-row-actions' ? action : null;
+  const actionChildren = actionWrapper ? Children.toArray(actionWrapper.props.children).filter(Boolean) : [];
+  const editActionIndex = actionChildren.findIndex((child) => (
+    child?.props?.className === 'consignment-grid-open-btn'
+    && !child?.props?.disabled
+    && typeof child?.props?.onClick === 'function'
+  ));
+  const editAction = editActionIndex >= 0 ? actionChildren[editActionIndex] : null;
+  const remainingActions = editActionIndex >= 0
+    ? actionChildren.filter((_, index) => index !== editActionIndex)
+    : actionChildren;
+  const renderedAction = actionWrapper
+    ? (remainingActions.length > 0 ? <div className="consignment-row-actions">{remainingActions}</div> : null)
+    : action;
 
   return (
     <article className="consignment-readable-card">
@@ -78,7 +94,13 @@ export function EntityCard({
             {photo ? <img src={photo} alt="" /> : <Tag size={17} color="var(--muted)" />}
           </div>
           <div className="consignment-readable-title-copy">
-            <strong>{title}</strong>
+            {editAction ? (
+              <button type="button" className="consignment-title-link consignment-readable-title-link" onClick={editAction.props.onClick}>
+                {title}
+              </button>
+            ) : (
+              <strong>{title}</strong>
+            )}
             {skuText && (
               <small className="consignment-readable-card-sku">
                 <b>SKU:</b>
@@ -129,7 +151,7 @@ export function EntityCard({
 
       {footNote && <div className="consignment-sales-grid-order">{footNote}</div>}
 
-      {action && <div className="consignment-readable-card-actions">{action}</div>}
+      {renderedAction && <div className="consignment-readable-card-actions">{renderedAction}</div>}
     </article>
   );
 }
