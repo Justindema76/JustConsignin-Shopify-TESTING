@@ -235,7 +235,7 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onSta
             )}
 
             {viewMode === 'grid' && (
-              <div className="consignment-entity-grid">
+              <div className="consignment-readable-grid">
                 {allConsignorRows.map(payoutCard)}
               </div>
             )}
