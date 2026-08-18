@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Grid3X3, List, Tag, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
-import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
+import { SummaryStatRow, PageToolbar } from '../../components/consignment/PageBuildingBlocks';
 import ByConsignorContainer from '../../components/consignment/ByConsignorContainer';
+import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
 import { money } from '../../lib/consignmentHelpers';
 
 export default function PayoutScreen({ items, consignors, onOpenConsignor, onOpenItem, onStartPayout }) {
@@ -47,6 +48,10 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onOpe
       return `${a.consignor.lastName} ${a.consignor.firstName}`.localeCompare(`${b.consignor.lastName} ${b.consignor.firstName}`);
     });
 
+  // Flat item list across all consignors, for the item-level Grid tab
+  // (same shared card used on Items/Sales grids).
+  const allItemsFlat = allConsignorRows.flatMap(({ sales }) => sales);
+
   const totalDue = outstandingRows.reduce((sum, entry) => sum + entry.due, 0);
 
   const payoutHistory = Object.values(items.filter((item) => item.paidOut && item.payoutId).reduce((groups, item) => {
@@ -56,13 +61,6 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onOpe
   }, {})).sort((a, b) => String(b.payoutDate || '').localeCompare(String(a.payoutDate || '')));
 
   const filtersSlot = <details className="consignment-items-filter-details"><summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} aria-hidden="true" /></summary><div className="consignment-items-toolbar-top"><label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="amount">Highest amount due</option><option value="name">Consignor name</option><option value="oldest">Oldest unpaid sale</option></select></label></div></details>;
-
-  function payoutCard({ consignor, sales, due }) {
-    const availableCount = sales.filter((item) => item.status === 'Available' || item.status === 'Active').length;
-    const unpaidCount = sales.filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut).length;
-    const paidCount = sales.filter((item) => item.paidOut).length;
-    return <EntityCard key={consignor.id} title={`${consignor.firstName} ${consignor.lastName}`} subtitle={`Consignor #${consignor.number} · ${sales.length} item${sales.length === 1 ? '' : 's'}`} subtitleLabel={null} onOpen={() => onOpenConsignor(consignor.id)} metrics={[{ label: 'Available', value: availableCount }, { label: 'Unpaid', value: unpaidCount }]} detailLabel="Paid items" detailValue={String(paidCount)} action={due > 0 ? <button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button> : paidCount > 0 ? <span className="consignment-archive-note">Archived</span> : null} footNote={`Total due ${money(due)}`} />;
-  }
 
   function groupedView() {
     return (
@@ -94,7 +92,13 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onOpe
 
         {viewMode === 'grouped' && groupedView()}
 
-        {viewMode === 'grid' && <div className="consignment-readable-grid">{allConsignorRows.map(payoutCard)}</div>}
+        {viewMode === 'grid' && (
+          <div className="consignment-readable-grid">
+            {allItemsFlat.map((item) => (
+              <ItemGridCardContainer key={item.id} item={item} consignor={consignorById[item.consignorId]} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout} />
+            ))}
+          </div>
+        )}
         {outstandingRows.length === 0 && <div className="consignment-empty-small">There are no eligible unpaid sales.</div>}
       </>}
 

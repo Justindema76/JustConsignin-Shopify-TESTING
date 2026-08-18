@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Grid3X3, List, Mail, MapPin, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
-import { EntityCard } from '../../components/consignment/PageBuildingBlocks';
+import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
 import { updateConsignmentItemStatus } from '../../consignmentApi';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
 
@@ -33,6 +33,12 @@ export default function ConsignorsDashboard({
 
   function handleAddItems() { onStartIntake?.(consignor.id); }
   function handleEditConsignor() { onEditConsignor?.(consignor.id); }
+
+  // Shared with ItemGridCardContainer's onMarkSold contract: (itemId, { salePrice, dateSold }).
+  async function markItemSold(itemId, { salePrice, dateSold }) {
+    await updateConsignmentItemStatus(itemId, 'Sold', { salePrice, dateSold });
+    window.location.reload();
+  }
 
   async function handleDeleteConsignor() {
     if (!onDeleteConsignor) return;
@@ -148,31 +154,18 @@ export default function ConsignorsDashboard({
         )}
 
         {consignorItems.length > 0 && viewMode === 'grid' && (
-          <div className="consignment-entity-grid">
-            {consignorItems.map((item) => {
-              const state = itemState(item);
-              return (
-                <EntityCard
-                  key={item.id}
-                  photo={item.shopifyPhoto || item.photo || null}
-                  title={item.description || item.type || 'Consignment item'}
-                  subtitle={[item.itemNumber, item.size ? `Size ${item.size}` : null, item.brand || null].filter(Boolean).join(' · ')}
-                  onOpen={() => onOpenItem(item.id)}
-                  topBadge={state.product}
-                  metrics={state.sold ? [
-                    { label: 'Sale price', value: money(state.salePrice) },
-                    { label: 'Consignor due', value: money(state.consignorDue) },
-                  ] : [
-                    { label: 'Price', value: money(item.price) },
-                    { label: 'Commission', value: `${state.commissionPct}%` },
-                  ]}
-                  detailLabel={state.sold ? 'Sale date' : 'Status'}
-                  detailValue={state.sold ? item.dateSold || 'Sold' : undefined}
-                  detailBadge={{ text: state.paid ? 'Archived' : state.sold ? 'Unpaid' : statusLabel(item.status), className: state.paid ? 'paid' : state.sold ? 'unpaid' : statusClass(item.status) }}
-                  action={itemActions(item, state)}
-                />
-              );
-            })}
+          <div className="consignment-readable-grid">
+            {consignorItems.map((item) => (
+              <ItemGridCardContainer
+                key={item.id}
+                item={item}
+                consignor={consignor}
+                showConsignor={false}
+                onOpenItem={onOpenItem}
+                onMarkSold={markItemSold}
+                onStartPayout={onStartPayout}
+              />
+            ))}
           </div>
         )}
 
