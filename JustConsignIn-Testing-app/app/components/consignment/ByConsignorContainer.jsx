@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import '../../styles/by-consignor-container.css';
 
 export default function ByConsignorContainer({
   consignor,
@@ -16,7 +17,7 @@ export default function ByConsignorContainer({
     : '—';
 
   return (
-    <section className="consignment-item-group">
+    <section className="consignment-item-group consignment-by-consignor-container">
       <div className="consignment-item-group-summary">
         <button
           type="button"
@@ -44,9 +45,7 @@ export default function ByConsignorContainer({
           )}
           <span className="consignment-item-group-meta">
             <strong className="consignment-item-group-number">#{consignor?.number || '—'}</strong>
-            <span className="consignment-item-group-count">
-              {' '}· {itemCount} {itemLabel}
-            </span>
+            <span className="consignment-item-group-count">{' '}· {itemCount} {itemLabel}</span>
           </span>
         </span>
 
