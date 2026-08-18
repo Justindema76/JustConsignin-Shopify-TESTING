@@ -737,3 +737,155 @@
     font-size: 16px;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   Sales: small-screen behavior copied from the working intake pattern.
+   Desktop/tablet rules above are intentionally left alone.
+
+   On smaller screens the Sales list remains a real sales table and becomes
+   horizontally scrollable instead of being restacked into a different card
+   design. The Grid view remains two columns, matching the working intake.
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .consignment-sales-page .consignment-sales-all-view {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset -14px 0 14px -16px rgba(20, 63, 115, .75);
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-live-list-head,
+  .consignment-sales-page .consignment-sales-all-view .consignment-live-list-row {
+    display: grid;
+    min-width: 1000px;
+    grid-template-columns:
+      minmax(210px, 1.35fr)
+      minmax(130px, 1fr)
+      95px
+      110px
+      95px
+      85px
+      108px
+      120px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-live-list-head {
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-live-list-row {
+    min-height: 72px;
+    padding: 10px 12px;
+  }
+
+  /* Undo the generic mobile "stack every sales cell" treatment above. */
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > * {
+    display: initial;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(2) {
+    color: inherit;
+    font-weight: inherit;
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(3)::before,
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(4)::before {
+    content: none;
+  }
+
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(5),
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(6),
+  .consignment-sales-page .consignment-sales-all-view .consignment-sales-live-columns > :nth-child(7) {
+    display: block;
+    width: auto;
+    max-width: none;
+  }
+
+  /* By consignor: keep the consignor summary compact, then let its sales rows
+     scroll like the working intake rather than turning every field into a
+     stacked mobile card. */
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-summary {
+    grid-template-columns: 28px 36px minmax(0, 1fr);
+    grid-template-areas: none;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-chevron,
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-avatar,
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-person {
+    grid-area: auto;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-stat {
+    display: none;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-item-group-items {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset -14px 0 14px -16px rgba(20, 63, 115, .75);
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-grouped-item-row {
+    display: grid;
+    min-width: 760px;
+    grid-template-columns: minmax(250px, 2fr) 88px 88px 112px 104px 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-grouped-item-row.consignment-list-head {
+    display: grid;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-grouped-item-row > * {
+    display: initial;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .consignment-sales-page .consignment-by-consignor-container .consignment-grouped-item-row > :nth-child(2)::before,
+  .consignment-sales-page .consignment-by-consignor-container .consignment-grouped-item-row > :nth-child(3)::before {
+    content: none;
+  }
+
+  .consignment-sales-page .consignment-readable-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    justify-content: stretch;
+  }
+
+  .consignment-sales-page .consignment-readable-card {
+    min-height: 250px;
+    padding: 13px;
+  }
+
+  .consignment-sales-page .consignment-readable-card-meta strong {
+    font-size: 18px;
+  }
+
+  /* Shared action text is intentionally short on small screens. */
+  .consignment-sales-page .consignment-sales-pay-btn,
+  .consignment-sales-page .consignment-quick-sold-btn {
+    white-space: nowrap;
+  }
+}

@@ -61,13 +61,13 @@ export default function ByConsignorContainer({
 
     if (isPaid) return <span className="consignment-archive-note">Archived</span>;
     if (isSold && consignor && onStartPayout) {
-      return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>;
+      return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Pay</button>;
     }
     if (isManualAvailable && onMarkSold) {
       return <button type="button" className="consignment-quick-sold-btn" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>{sellingItemId === item.id ? 'Saving…' : 'Mark sold'}</button>;
     }
     if (!isSold && hasShopifyProduct) {
-      return <a className="consignment-sales-pay-btn" href={productAdminUrl(item.shopifyProductId)} target="_top" rel="noreferrer">View Shopify Product</a>;
+      return <a className="consignment-sales-pay-btn" href={productAdminUrl(item.shopifyProductId)} target="_top" rel="noreferrer">View Product</a>;
     }
     return null;
   }

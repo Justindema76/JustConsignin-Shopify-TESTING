@@ -6,7 +6,7 @@ import { money, productLabel, statusClass, statusLabel, productAdminUrl } from '
  * Single shared "item card" used by every grid view in the app:
  * Items grid, Sales grid, Payouts grid, and the Consignor dashboard grid.
  * Mirrors the same 4-branch action logic as ByConsignorContainer so the
- * buttons (Review & pay / Mark sold / View Shopify Product / Archived)
+ * buttons (Pay / Mark sold / View Product / Archived)
  * behave identically everywhere.
  */
 export default function ItemGridCardContainer({
@@ -50,13 +50,13 @@ export default function ItemGridCardContainer({
   function renderAction() {
     if (isPaid) return <span className="consignment-archive-note">Archived</span>;
     if (isSold && consignor && onStartPayout) {
-      return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>;
+      return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Pay</button>;
     }
     if (isManualAvailable && onMarkSold) {
       return <button type="button" className="consignment-quick-sold-btn" disabled={saving} onClick={quickMarkSold}>{saving ? 'Saving…' : 'Mark sold'}</button>;
     }
     if (!isSold && hasShopifyProduct) {
-      return <a className="consignment-sales-pay-btn" href={productAdminUrl(item.shopifyProductId)} target="_top" rel="noreferrer">View Shopify Product</a>;
+      return <a className="consignment-sales-pay-btn" href={productAdminUrl(item.shopifyProductId)} target="_top" rel="noreferrer">View Product</a>;
     }
     return null;
   }
