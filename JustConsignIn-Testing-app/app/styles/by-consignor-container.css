@@ -1,0 +1,46 @@
+.consignment-by-consignor-container .consignment-item-group-summary {
+  grid-template-columns: 30px 38px minmax(0, 1fr) repeat(4, minmax(72px, 92px));
+}
+
+.consignment-by-consignor-container .consignment-item-group-chevron.open {
+  transform: rotate(90deg);
+}
+
+@media (max-width: 900px) {
+  .consignment-by-consignor-container .consignment-item-group-summary {
+    grid-template-columns: 28px 36px minmax(0, 1fr) repeat(4, minmax(58px, 76px));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .consignment-by-consignor-container .consignment-item-group-summary {
+    grid-template-columns: 28px 36px minmax(0, 1fr);
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .consignment-by-consignor-container .consignment-item-group-stat {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+
+  .consignment-by-consignor-container .consignment-item-group-stat:nth-of-type(1) {
+    grid-column: 1;
+  }
+
+  .consignment-by-consignor-container .consignment-item-group-stat:nth-of-type(2) {
+    grid-column: 2;
+  }
+
+  .consignment-by-consignor-container .consignment-item-group-stat:nth-of-type(3) {
+    grid-column: 3;
+  }
+
+  .consignment-by-consignor-container .consignment-item-group-stat:nth-of-type(4) {
+    grid-column: 3;
+  }
+}
