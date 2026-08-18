@@ -1,15 +1,32 @@
 .consignment-by-consignor-container .consignment-item-group-summary {
-  grid-template-columns: 30px 38px minmax(0, 1fr) repeat(4, minmax(72px, 92px));
+  grid-template-columns: 30px 38px minmax(0, 1fr) repeat(4, minmax(72px, 92px)) minmax(118px, auto);
 }
 
 .consignment-by-consignor-container .consignment-item-group-chevron.open {
   transform: rotate(90deg);
 }
 
+.consignment-by-consignor-action {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.consignment-by-consignor-action .consignment-list-action {
+  width: 100%;
+  min-width: 118px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .consignment-by-consignor-container .consignment-item-group-summary {
-    grid-template-columns: 28px 36px minmax(0, 1fr) repeat(4, minmax(58px, 76px));
+    grid-template-columns: 28px 36px minmax(0, 1fr) repeat(4, minmax(58px, 76px)) minmax(104px, auto);
     gap: 8px;
+  }
+
+  .consignment-by-consignor-action .consignment-list-action {
+    min-width: 104px;
   }
 }
 
@@ -42,5 +59,13 @@
 
   .consignment-by-consignor-container .consignment-item-group-stat:nth-of-type(4) {
     grid-column: 3;
+  }
+
+  .consignment-by-consignor-action {
+    grid-column: 1 / -1;
+  }
+
+  .consignment-by-consignor-action .consignment-list-action {
+    width: 100%;
   }
 }
