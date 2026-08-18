@@ -572,13 +572,14 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {!ready && <div className="consignment-loading"><Loader2 className="consignment-spin" size={22} /></div>}
       {ready && view === 'dashboard' && <DashboardScreen consignors={consignors} items={items} onOpenConsignor={openConsignor} onNavigate={navigate} onNewConsignor={() => startNewConsignor('consignor', 'dashboard')} onNewItem={startNewItem} onImport={() => startImport('consignors', 'dashboard')} onExport={() => exportConsignors(consignors)} />}
       {ready && view === 'home' && <ConsignorsScreen consignors={consignors} items={items} query={query} setQuery={setQuery} onOpenConsignor={openConsignor} onOpenItem={openItem} onMarkSold={(itemId, details) => handleUpdateItemStatus(itemId, 'Sold', details)} onNewConsignor={() => startNewConsignor('consignor', 'home')} onNewItem={startNewItem} onImport={() => startImport('consignors', 'home')} onExport={() => exportConsignors(consignors)} />}
-      {ready && view === 'items' && <ItemsScreen items={items} consignors={consignors} onOpenItem={openItem} onOpenConsignor={openConsignor} onMarkSold={(itemId, details) => handleUpdateItemStatus(itemId, 'Sold', details)} onNewItem={startNewItem} />}
+      {ready && view === 'items' && <ItemsScreen items={items} consignors={consignors} onOpenItem={openItem} onOpenConsignor={openConsignor} onMarkSold={(itemId, details) => handleUpdateItemStatus(itemId, 'Sold', details)} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} onNewItem={startNewItem} />}
       {ready && view === 'sales' && <SalesScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId) => { setActiveId(consignorId); setView('createPayout'); }} />}
       {ready && view === 'payouts' && (
         <PayoutScreen
           items={items}
           consignors={consignors}
           onOpenConsignor={openConsignor}
+          onOpenItem={openItem}
           onStartPayout={(consignorId) => {
             setActiveId(consignorId);
             setView('createPayout');
