@@ -123,20 +123,21 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
   }
 
   function groupedView() {
-    return <div className="consignment-item-groups">{groupedSales.map(({ key, consignor, sales }) => {
-      const total = sales.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-      const due = sales.filter((item) => !item.paidOut).reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100, 0);
-      const paid = sales.filter((item) => item.paidOut).length;
-      return <ByConsignorContainer key={key} consignor={consignor} itemCount={sales.length} itemLabel={`sale${sales.length === 1 ? '' : 's'}`} onOpenConsignor={onOpenConsignor} stats={[{ label: 'Sales', value: sales.length }, { label: 'Archived', value: paid }, { label: 'Total sales', value: money(total) }, { label: 'Due', value: money(due) }]}>
-        <div className="consignment-live-list-head consignment-sales-grouped-live-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Sold</span><span>Action</span></div>
-        {sales.map((item) => {
-          const salePrice = Number(item.salePrice ?? item.price ?? 0);
-          const itemDue = (salePrice * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100;
-          const source = sourceLabel(item);
-          return <div className="consignment-live-list-row consignment-sales-grouped-live-columns" key={item.id}>{saleCell(item)}<strong className="consignment-money">{money(salePrice)}</strong><strong className="consignment-money">{money(itemDue)}</strong><span><span className={`consignment-product-badge ${source.className}`}>{source.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Archived' : 'Unpaid'}</span></span><span>{formatSaleDate(item.dateSold)}</span><span>{saleAction(item, consignor)}</span></div>;
-        })}
-      </ByConsignorContainer>;
-    })}</div>;
+    return (
+      <div className="consignment-item-groups">
+        {groupedSales.map(({ key, consignor, sales }) => (
+          <ByConsignorContainer
+            key={key}
+            consignor={consignor}
+            items={sales}
+            itemLabel={`sale${sales.length === 1 ? '' : 's'}`}
+            onOpenConsignor={onOpenConsignor}
+            onOpenItem={onOpenItem}
+            onStartPayout={onStartPayout}
+          />
+        ))}
+      </div>
+    );
   }
 
   const filtersSlot = <details className="consignment-items-filter-details"><summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary><div className="consignment-items-toolbar-top"><label className="consignment-tool-field"><span>Payout status</span><select className="consignment-select consignment-filter-select" value={payoutFilter} onChange={(event) => setPayoutFilter(event.target.value)}><option value="all">All payout statuses</option><option value="unpaid">Unpaid</option><option value="paid">Archived</option></select></label><label className="consignment-tool-field"><span>Consignor</span><select className="consignment-select consignment-filter-select" value={consignorFilter} onChange={(event) => setConsignorFilter(event.target.value)}><option value="all">All consignors</option>{consignors.slice().sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)).map((consignor) => <option key={consignor.id} value={consignor.id}>{consignor.firstName} {consignor.lastName}</option>)}</select></label><label className="consignment-tool-field"><span>Sale source</span><select className="consignment-select consignment-filter-select" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="all">All sale sources</option><option value="manual">Manual</option><option value="pos">POS</option><option value="online">Online</option></select></label><label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sortMode} onChange={(event) => setSortMode(event.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="price">Highest sale price</option><option value="due">Highest consignor due</option><option value="consignor">Consignor name</option><option value="sku">SKU</option></select></label></div></details>;
