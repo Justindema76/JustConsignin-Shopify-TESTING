@@ -41,6 +41,12 @@ export default function ByConsignorContainer({
     { label: 'Due', value: money(due) },
   ];
 
+  const handlePayout = () => {
+    if (!consignor) return;
+    if (onStartPayout) onStartPayout(consignor.id);
+    else onOpenConsignor?.(consignor.id);
+  };
+
   return (
     <section className="consignment-item-group consignment-by-consignor-container">
       <div className="consignment-item-group-summary">
@@ -84,11 +90,11 @@ export default function ByConsignorContainer({
         ))}
 
         <span className="consignment-by-consignor-action">
-          {due > 0 && onStartPayout ? (
+          {due > 0 ? (
             <button
               type="button"
               className="consignment-list-action"
-              onClick={() => onStartPayout(consignor?.id)}
+              onClick={handlePayout}
             >
               Review &amp; pay
             </button>
