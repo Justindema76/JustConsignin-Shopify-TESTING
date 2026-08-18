@@ -87,7 +87,7 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
     }
   }
 
-  function itemAction(item, { grouped = false } = {}) {
+  function itemAction(item) {
     const consignor = consignorById[item.consignorId];
     const product = productLabel(item);
     const sold = item.status === 'Sold' || Boolean(item.dateSold);
@@ -95,7 +95,7 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
     const isManualAvailable = product.className === 'manual' && !sold && !paid && (item.status === 'Available' || item.status === 'Active');
     if (paid) return <span className="consignment-archive-note">Archived</span>;
     if (isManualAvailable) return <button type="button" className="consignment-list-action" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>{sellingItemId === item.id ? 'Saving…' : 'Mark sold'}</button>;
-    if (!grouped && sold && consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout?.(consignor.id)}>Review &amp; pay</button>;
+    if (sold && consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout?.(consignor.id)}>Review &amp; pay</button>;
     return null;
   }
 
@@ -118,17 +118,18 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
   }
 
   function groupedView() {
-    return <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => {
-      const consignor = consignorById[consignorId];
-      const summaryItems = items.filter((item) => item.consignorId === consignorId);
-      return <ByConsignorContainer key={consignorId} consignor={consignor} summaryItems={summaryItems} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout}>
-        <div className="consignment-live-list-head consignment-grouped-live-columns"><span>Item</span><span>Price</span><span>Commission</span><span>Source</span><span>Status</span><span>Action</span></div>
-        {consignorItems.map((item) => {
-          const product = productLabel(item);
-          return <div className="consignment-live-list-row consignment-grouped-live-columns" key={item.id}>{itemCell(item)}<strong className="consignment-money">{money(item.price)}</strong><span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span><span><span className={`consignment-product-badge ${product.className}`}>{product.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Archived' : statusLabel(item.status)}</span></span><span>{itemAction(item, { grouped: true })}</span></div>;
-        })}
-      </ByConsignorContainer>;
-    })}</div>;
+    return <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => (
+      <ByConsignorContainer
+        key={consignorId}
+        consignor={consignorById[consignorId]}
+        items={consignorItems}
+        variant="inventory"
+        onOpenConsignor={onOpenConsignor}
+        onOpenItem={onOpenItem}
+        onMarkSold={onMarkSold}
+        onStartPayout={onStartPayout}
+      />
+    ))}</div>;
   }
 
   const filtersSlot = <details className="consignment-items-filter-details"><summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary><div className="consignment-items-toolbar-top"><label className="consignment-tool-field"><span>Consignor</span><select className="consignment-select consignment-filter-select" value={consignorFilter} onChange={(event) => setConsignorFilter(event.target.value)}><option value="All">All consignors</option>{consignors.map((consignor) => <option key={consignor.id} value={consignor.id}>#{consignor.number} · {consignor.firstName} {consignor.lastName}</option>)}</select></label><label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="consignor">Consignor name</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="ticket">SKU / item number</option><option value="priceHigh">Price high to low</option><option value="priceLow">Price low to high</option></select></label><label className="consignment-tool-field"><span>Product type</span><select className="consignment-select consignment-filter-select" value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option value="All">All product types</option><option value="Manual">Manual</option><option value="POS">POS</option><option value="Online">Online</option><option value="POS + Online">POS + Online</option></select></label><label className="consignment-tool-field"><span>Status</span><select className="consignment-select consignment-filter-select" value={filter} onChange={(event) => setFilter(event.target.value)}>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label></div></details>;
