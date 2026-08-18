@@ -1,7 +1,11 @@
-/* Shared interaction rules for Consignors, Items and Sales.
+/* Shared interaction rules for Consignors, Items, Sales and the consignor dashboard.
  * Item/product titles are the edit/detail link. Action areas are reserved for
  * workflow actions only: Mark sold, Review & pay, or Archived.
  */
+
+.consignment-dashboard-list-action > .consignment-grid-open-btn:not(:disabled) {
+  display: none;
+}
 
 .consignment-readable-title-link {
   display: block;
@@ -24,20 +28,23 @@
 
 .consignment-readable-title-link:hover,
 .consignment-live-item-copy .consignment-title-link:hover,
-.consignment-grouped-item-open:hover strong {
+.consignment-grouped-item-open:hover strong,
+.consignment-dashboard-list-item:hover strong {
   color: var(--green);
   text-decoration: underline;
 }
 
 .consignment-readable-title-link:focus-visible,
 .consignment-live-item-copy .consignment-title-link:focus-visible,
-.consignment-grouped-item-open:focus-visible {
+.consignment-grouped-item-open:focus-visible,
+.consignment-dashboard-list-item:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 2px;
   border-radius: 3px;
 }
 
-.consignment-archive-note {
+.consignment-archive-note,
+.consignment-sales-paid-note {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -54,13 +61,15 @@
   white-space: nowrap;
 }
 
-.consignment-readable-card-actions > .consignment-archive-note {
+.consignment-readable-card-actions > .consignment-archive-note,
+.consignment-readable-card-actions > .consignment-sales-paid-note {
   width: 100%;
   min-height: 42px;
   font-size: 11px;
 }
 
-.consignment-item-quick-action .consignment-archive-note {
+.consignment-item-quick-action .consignment-archive-note,
+.consignment-dashboard-list-action .consignment-sales-paid-note {
   width: 100%;
 }
 
@@ -69,7 +78,8 @@
     font-size: 13px;
   }
 
-  .consignment-archive-note {
+  .consignment-archive-note,
+  .consignment-sales-paid-note {
     min-width: 0;
     width: 100%;
   }
