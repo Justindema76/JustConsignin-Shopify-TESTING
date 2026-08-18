@@ -3,7 +3,7 @@ import { ChevronDown, Grid3X3, Plus, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import { PageToolbar } from '../../components/consignment/PageBuildingBlocks';
 import ByConsignorContainer from '../../components/consignment/ByConsignorContainer';
-import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
+import { money, productLabel, statusLabel } from '../../lib/consignmentHelpers';
 
 export default function ConsignorsScreen({
   consignors,
@@ -22,7 +22,6 @@ export default function ConsignorsScreen({
   const [productFilter, setProductFilter] = useState('All');
   const [sort, setSort] = useState('consignor');
   const [viewMode, setViewMode] = useState('grouped');
-  const [sellingItemId, setSellingItemId] = useState(null);
   const statuses = ['All', 'Draft', 'Available', 'Sold', 'Archived', 'Returned', 'Donated'];
   const consignorById = Object.fromEntries(consignors.map((entry) => [entry.id, entry]));
 
@@ -81,32 +80,6 @@ export default function ConsignorsScreen({
     return `${a?.lastName || ''} ${a?.firstName || ''}`.localeCompare(`${b?.lastName || ''} ${b?.firstName || ''}`);
   });
 
-  async function quickMarkSold(item) {
-    if (sellingItemId) return;
-    const amount = window.prompt(`Sale price for ${item.description || item.itemNumber}`, String(item.price ?? ''));
-    if (amount === null) return;
-    const salePrice = Number(amount);
-    if (!Number.isFinite(salePrice) || salePrice < 0) {
-      window.alert('Enter a valid sale price.');
-      return;
-    }
-    setSellingItemId(item.id);
-    try {
-      await onMarkSold(item.id, { salePrice, dateSold: new Date().toISOString().slice(0, 10) });
-    } finally {
-      setSellingItemId(null);
-    }
-  }
-
-  function ItemAction({ item, product }) {
-    const isManualAvailable = product.className === 'manual' && (item.status === 'Available' || item.status === 'Active') && !item.paidOut;
-    if (item.paidOut) return <span className="consignment-archive-note">Archived</span>;
-    if (isManualAvailable) {
-      return <button type="button" className="consignment-quick-sold-btn" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>{sellingItemId === item.id ? 'Saving…' : 'Mark sold'}</button>;
-    }
-    return null;
-  }
-
   const filtersSlot = (
     <details className="consignment-items-filter-details">
       <summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary>
@@ -129,35 +102,18 @@ export default function ConsignorsScreen({
 
         {viewMode === 'grouped' && (
           <div className="consignment-item-groups">
-            {groupedEntries.map(([consignorId, consignorItems]) => {
-              const consignor = consignorById[consignorId];
-              const summaryItems = items.filter((item) => item.consignorId === consignorId);
-              return (
-                <ByConsignorContainer
-                  key={consignorId}
-                  consignor={consignor}
-                  summaryItems={summaryItems}
-                  onOpenConsignor={onOpenConsignor}
-                  onStartPayout={onStartPayout}
-                >
-                  <div className="consignment-grouped-item-row consignment-list-head"><span>Item</span><span>Price</span><span>Commission</span><span>Product</span><span>Status</span><span>Action</span></div>
-                  {consignorItems.map((item) => {
-                    const product = productLabel(item);
-                    const photo = item.shopifyPhoto || item.photo;
-                    return (
-                      <div className="consignment-grouped-item-row" key={item.id}>
-                        <button type="button" className="consignment-grouped-item-open" onClick={() => onOpenItem(item.id)}>{photo && <span className="consignment-batch-thumb"><img src={photo} alt="" /></span>}<span><strong>{item.description || item.type || 'Consignment item'}</strong><span>{item.itemNumber}{item.size ? ` · ${item.size}` : ''}{item.brand ? ` · ${item.brand}` : ''}</span></span></button>
-                        <strong>{money(item.price)}</strong>
-                        <span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span>
-                        <span className={`consignment-product-badge ${product.className}`}>{product.text}</span>
-                        <span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Paid · archived' : statusLabel(item.status)}</span>
-                        <span className="consignment-item-quick-action"><ItemAction item={item} product={product} /></span>
-                      </div>
-                    );
-                  })}
-                </ByConsignorContainer>
-              );
-            })}
+            {groupedEntries.map(([consignorId, consignorItems]) => (
+              <ByConsignorContainer
+                key={consignorId}
+                consignor={consignorById[consignorId]}
+                items={consignorItems}
+                variant="inventory"
+                onOpenConsignor={onOpenConsignor}
+                onOpenItem={onOpenItem}
+                onMarkSold={onMarkSold}
+                onStartPayout={onStartPayout}
+              />
+            ))}
           </div>
         )}
 
