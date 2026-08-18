@@ -1,3 +1,4 @@
+import { Children } from 'react';
 import { Search } from 'lucide-react';
 import '../../styles/consignment-card-grid.css';
 import '../../styles/consignment-title-actions.css';
@@ -38,8 +39,37 @@ export function PageToolbar({ query, onQueryChange, placeholder = 'Search', filt
   );
 }
 
-export function EntityCard({ photo, title, subtitle, onOpen, topBadge, consignor, onOpenConsignor, metrics = [], detailLabel, detailValue, detailBadge, footNote, action }) {
+export function EntityCard({
+  photo,
+  title,
+  subtitle,
+  subtitleLabel = 'SKU:',
+  onOpen,
+  topBadge,
+  consignor,
+  onOpenConsignor,
+  metrics = [],
+  detailLabel,
+  detailValue,
+  detailBadge,
+  footNote,
+  action,
+}) {
   const skuText = String(subtitle || '').replace(/^#/, '');
+  const actionChildren = action ? Children.toArray(action.props?.children ?? action).filter(Boolean) : [];
+  const editActionIndex = actionChildren.findIndex((child) => (
+    child?.props?.className === 'consignment-grid-open-btn'
+    && !child?.props?.disabled
+    && typeof child?.props?.onClick === 'function'
+  ));
+  const fallbackOpen = editActionIndex >= 0 ? actionChildren[editActionIndex]?.props?.onClick : null;
+  const openHandler = onOpen || fallbackOpen;
+  const remainingActions = editActionIndex >= 0
+    ? actionChildren.filter((_, index) => index !== editActionIndex)
+    : actionChildren;
+  const renderedAction = remainingActions.length > 0
+    ? (action?.props?.className ? <div className={action.props.className}>{remainingActions}</div> : remainingActions)
+    : null;
 
   return (
     <article className="consignment-readable-card">
@@ -47,8 +77,13 @@ export function EntityCard({ photo, title, subtitle, onOpen, topBadge, consignor
         <div className="consignment-grid-thumb-row">
           {photo && <div className="consignment-grid-thumb"><img src={photo} alt="" /></div>}
           <div className="consignment-readable-title-copy">
-            {onOpen ? <button type="button" className="consignment-title-link consignment-readable-title-link" onClick={onOpen}>{title}</button> : <strong>{title}</strong>}
-            {skuText && <small className="consignment-readable-card-sku"><b>SKU:</b><span>{skuText}</span></small>}
+            {openHandler ? <button type="button" className="consignment-title-link consignment-readable-title-link" onClick={openHandler}>{title}</button> : <strong>{title}</strong>}
+            {skuText && (
+              <small className="consignment-readable-card-sku">
+                {subtitleLabel && <b>{subtitleLabel}</b>}
+                <span>{skuText}</span>
+              </small>
+            )}
           </div>
         </div>
         {topBadge && <span className={`consignment-product-badge ${topBadge.className}`}>{topBadge.text}</span>}
@@ -63,7 +98,7 @@ export function EntityCard({ photo, title, subtitle, onOpen, topBadge, consignor
       {(detailLabel || detailBadge) && <div className="consignment-readable-card-details"><span>{detailLabel && <small>{detailLabel}</small>}{detailValue && <strong>{detailValue}</strong>}</span>{detailBadge && <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>}</div>}
 
       {footNote && <div className="consignment-sales-grid-order">{footNote}</div>}
-      {action && <div className="consignment-readable-card-actions">{action}</div>}
+      {renderedAction && <div className="consignment-readable-card-actions">{renderedAction}</div>}
     </article>
   );
 }
