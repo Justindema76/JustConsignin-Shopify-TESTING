@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronRight, Grid3X3, List, Tag, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Grid3X3, List, Tag, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import { SummaryStatRow, PageToolbar, EntityCard } from '../../components/consignment/PageBuildingBlocks';
 import { money } from '../../lib/consignmentHelpers';
@@ -95,8 +95,8 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onSta
         key={consignor.id}
         title={`${consignor.firstName} ${consignor.lastName}`}
         subtitle={`Consignor #${consignor.number} · ${sales.length} item${sales.length === 1 ? '' : 's'}`}
-        consignor={consignor}
-        onOpenConsignor={onOpenConsignor}
+        subtitleLabel={null}
+        onOpen={() => onOpenConsignor(consignor.id)}
         metrics={[
           { label: 'Available', value: availableCount },
           { label: 'Unpaid', value: unpaidCount },
@@ -108,11 +108,9 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onSta
             <button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>
               Review &amp; pay
             </button>
-          ) : (
-            <button type="button" className="consignment-list-action" onClick={() => onOpenConsignor(consignor.id)}>
-              View consignor
-            </button>
-          )
+          ) : paidCount > 0 ? (
+            <span className="consignment-archive-note">Archived</span>
+          ) : null
         }
         footNote={`Total due ${money(due)}`}
       />
