@@ -75,16 +75,13 @@ export default function PayoutScreen({ items, consignors, onOpenConsignor, onSta
 
         {viewMode === 'all' && <section className="consignment-list-table-wrap"><table className="consignment-list-table"><thead><tr><th>Consignor</th><th>Eligible sales</th><th>Amount due</th><th>Action</th></tr></thead><tbody>{outstandingRows.map(({ consignor, sales, due }) => <tr key={consignor.id}><td><button type="button" className="consignment-consignor-link" onClick={() => onOpenConsignor(consignor.id)}>{consignor.firstName} {consignor.lastName}</button><small>Consignor #{consignor.number}</small></td><td>{sales.length}</td><td className="consignment-money">{money(due)}</td><td><button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button></td></tr>)}</tbody></table></section>}
 
-        {viewMode === 'grouped' && <div className="consignment-item-groups">{allConsignorRows.map(({ consignor, sales, due }) => {
+        {viewMode === 'grouped' && <div className="consignment-item-groups">{allConsignorRows.map(({ consignor, sales }) => {
           const unpaid = sales.filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut);
-          const unpaidCount = unpaid.length;
-          const availableCount = sales.filter((item) => item.status === 'Available' || item.status === 'Active').length;
-          const total = sales.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-          return <ByConsignorContainer key={consignor.id} consignor={consignor} itemCount={sales.length} itemLabel={`item${sales.length === 1 ? '' : 's'}`} onOpenConsignor={onOpenConsignor} stats={[{ label: 'Available', value: availableCount }, { label: 'Unpaid', value: unpaidCount }, { label: 'Total', value: money(total) }, { label: 'Due', value: money(due) }]}>
-            {unpaidCount > 0 && <><div className="consignment-list-labels consignment-sales-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Action</span></div>{unpaid.map((item) => {
+          return <ByConsignorContainer key={consignor.id} consignor={consignor} summaryItems={sales} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout}>
+            {unpaid.length > 0 && <><div className="consignment-list-labels consignment-sales-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Action</span></div>{unpaid.map((item) => {
               const salePrice = Number(item.salePrice ?? item.price ?? 0);
               const itemDue = (salePrice * Number(item.commissionPct ?? consignor.commissionPct ?? 0)) / 100;
-              return <div className="consignment-list-row consignment-sales-columns" key={item.id}><div className="consignment-list-item-main"><strong>{item.description || item.itemNumber}</strong><small>#{item.itemNumber || '—'} · {item.dateSold || 'Sold'}</small></div><strong className="consignment-money">{money(salePrice)}</strong><strong className="consignment-money">{money(itemDue)}</strong><span><span className="consignment-badge manual">Manual</span></span><span><span className="consignment-badge unpaid">Unpaid</span></span><span><button type="button" className="consignment-list-action" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button></span></div>;
+              return <div className="consignment-list-row consignment-sales-columns" key={item.id}><div className="consignment-list-item-main"><strong>{item.description || item.itemNumber}</strong><small>#{item.itemNumber || '—'} · {item.dateSold || 'Sold'}</small></div><strong className="consignment-money">{money(salePrice)}</strong><strong className="consignment-money">{money(itemDue)}</strong><span><span className="consignment-badge manual">Manual</span></span><span><span className="consignment-badge unpaid">Unpaid</span></span><span /></div>;
             })}</>}
           </ByConsignorContainer>;
         })}</div>}
