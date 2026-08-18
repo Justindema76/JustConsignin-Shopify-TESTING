@@ -84,6 +84,15 @@ export default function ByConsignorContainer({
     }
   }
 
+  function handleReviewPay() {
+    if (!consignor) return;
+    if (onStartPayout) {
+      onStartPayout(consignor.id);
+      return;
+    }
+    onOpenConsignor?.(consignor.id);
+  }
+
   function renderAction(item) {
     const sold = item.status === 'Sold' || Boolean(item.dateSold);
     const paid = item.paidOut === true;
@@ -95,12 +104,12 @@ export default function ByConsignorContainer({
 
     if (paid) return <span className="consignment-archive-note">Archived</span>;
 
-    if (sold && consignor && onStartPayout) {
+    if (sold && consignor) {
       return (
         <button
           type="button"
           className="consignment-sales-pay-btn"
-          onClick={() => onStartPayout(consignor.id)}
+          onClick={handleReviewPay}
         >
           Review &amp; pay
         </button>
