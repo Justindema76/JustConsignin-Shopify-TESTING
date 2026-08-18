@@ -94,9 +94,9 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
     downloadCsv(`sales-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   }
 
-  function saleAction(item, consignor) {
+  function saleAction(item, consignor, { grouped = false } = {}) {
     if (item.paidOut) return <span className="consignment-archive-note">Archived</span>;
-    if (consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>;
+    if (!grouped && consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout(consignor.id)}>Review &amp; pay</button>;
     return null;
   }
 
@@ -124,16 +124,14 @@ export default function SalesScreen({ items, consignors, onStartPayout, onOpenCo
 
   function groupedView() {
     return <div className="consignment-item-groups">{groupedSales.map(({ key, consignor, sales }) => {
-      const total = sales.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-      const due = sales.filter((item) => !item.paidOut).reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100, 0);
-      const paid = sales.filter((item) => item.paidOut).length;
-      return <ByConsignorContainer key={key} consignor={consignor} itemCount={sales.length} itemLabel={`sale${sales.length === 1 ? '' : 's'}`} onOpenConsignor={onOpenConsignor} stats={[{ label: 'Sales', value: sales.length }, { label: 'Archived', value: paid }, { label: 'Total sales', value: money(total) }, { label: 'Due', value: money(due) }]}>
+      const summaryItems = items.filter((item) => item.consignorId === key);
+      return <ByConsignorContainer key={key} consignor={consignor} summaryItems={summaryItems} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout}>
         <div className="consignment-live-list-head consignment-sales-grouped-live-columns"><span>Item</span><span>Sale price</span><span>Due</span><span>Source</span><span>Payout</span><span>Sold</span><span>Action</span></div>
         {sales.map((item) => {
           const salePrice = Number(item.salePrice ?? item.price ?? 0);
           const itemDue = (salePrice * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100;
           const source = sourceLabel(item);
-          return <div className="consignment-live-list-row consignment-sales-grouped-live-columns" key={item.id}>{saleCell(item)}<strong className="consignment-money">{money(salePrice)}</strong><strong className="consignment-money">{money(itemDue)}</strong><span><span className={`consignment-product-badge ${source.className}`}>{source.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Archived' : 'Unpaid'}</span></span><span>{formatSaleDate(item.dateSold)}</span><span>{saleAction(item, consignor)}</span></div>;
+          return <div className="consignment-live-list-row consignment-sales-grouped-live-columns" key={item.id}>{saleCell(item)}<strong className="consignment-money">{money(salePrice)}</strong><strong className="consignment-money">{money(itemDue)}</strong><span><span className={`consignment-product-badge ${source.className}`}>{source.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'paid' : 'unpaid'}`}>{item.paidOut ? 'Archived' : 'Unpaid'}</span></span><span>{formatSaleDate(item.dateSold)}</span><span>{saleAction(item, consignor, { grouped: true })}</span></div>;
         })}
       </ByConsignorContainer>;
     })}</div>;
