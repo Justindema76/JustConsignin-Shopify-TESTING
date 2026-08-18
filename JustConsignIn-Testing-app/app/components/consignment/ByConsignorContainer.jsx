@@ -50,14 +50,12 @@ export default function ByConsignorContainer({
           </span>
         </span>
 
-        <span className="consignment-by-consignor-running-totals">
-          {stats.map((stat) => (
-            <span className="consignment-item-group-stat" key={stat.label}>
-              <strong>{stat.value}</strong>
-              <span>{stat.label}</span>
-            </span>
-          ))}
-        </span>
+        {stats.map((stat) => (
+          <span className="consignment-item-group-stat" key={stat.label}>
+            <strong>{stat.value}</strong>
+            <span>{stat.label}</span>
+          </span>
+        ))}
       </div>
 
       {open && <div className="consignment-item-group-items">{children}</div>}
