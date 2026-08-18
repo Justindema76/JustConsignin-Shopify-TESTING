@@ -880,24 +880,6 @@ details[open] > .consignment-shopify-summary::after { transform: rotate(180deg);
   .consignment-all-item-row, .consignment-all-items-card > .consignment-list-head { grid-template-columns: minmax(180px, 2fr) 76px minmax(105px, 1fr) 80px 102px 86px 102px; }
   .consignment-all-item-row > :nth-child(5), .consignment-all-items-card > .consignment-list-head > :nth-child(5) { display: none; }
 }
-/* Bottom tab-bar nav for iPad AND iPhone (not just phone-width). */
-@media (max-width: 1024px) {
-  .consignment { padding-bottom: 74px; }
-  .consignment-body { padding-bottom: 96px; }
-  .consignment-back-to-top {
-    right: 14px;
-    bottom: calc(84px + env(safe-area-inset-bottom));
-  }
-  .consignment-main-nav {
-    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
-    justify-content: space-around; padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--line); border-bottom: 0; box-shadow: 0 -5px 18px rgba(0,0,0,.08);
-    z-index: 30;
-  }
-  .consignment-brand { display: none; }
-  .consignment-nav-button { flex: 1; flex-direction: column; gap: 3px; font-size: 10px; padding: 6px 2px; }
-}
-
 @media (max-width: 640px) {
   .consignment { padding-bottom: 74px; }
   .consignment-back-to-top {
@@ -914,9 +896,13 @@ details[open] > .consignment-shopify-summary::after { transform: rotate(180deg);
   .consignment-body { padding: 14px 16px 96px; }
   .consignment-fab-wrap { padding-left: 16px; padding-right: 16px; bottom: 68px; }
   .consignment-btn { width: 100%; min-width: 0; }
-  /* .consignment-main-nav / .consignment-brand / .consignment-nav-button now
-     live in the shared @media (max-width: 1024px) block above so the bottom
-     tab-bar nav applies to iPad as well as iPhone. */
+  .consignment-main-nav {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+    justify-content: space-around; padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line); border-bottom: 0; box-shadow: 0 -5px 18px rgba(0,0,0,.08);
+  }
+  .consignment-brand { display: none; }
+  .consignment-nav-button { flex: 1; flex-direction: column; gap: 3px; font-size: 10px; padding: 6px 2px; }
   .consignment-dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .consignment-metric { padding: 13px; min-height: 108px; }
   .consignment-metric-value { font-size: 21px; }
