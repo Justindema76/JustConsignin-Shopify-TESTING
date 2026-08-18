@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Grid3X3, Plus, Users } from 'lucide-react';
+import { ChevronDown, Grid3X3, Plus, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import { PageToolbar } from '../../components/consignment/PageBuildingBlocks';
+import ByConsignorContainer from '../../components/consignment/ByConsignorContainer';
 import { money, productLabel, statusClass, statusLabel } from '../../lib/consignmentHelpers';
 
 export default function ConsignorsScreen({
@@ -21,16 +22,15 @@ export default function ConsignorsScreen({
   const [sort, setSort] = useState('consignor');
   const [viewMode, setViewMode] = useState('grouped');
   const [sellingItemId, setSellingItemId] = useState(null);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
   const statuses = ['All', 'Draft', 'Available', 'Sold', 'Archived', 'Returned', 'Donated'];
   const consignorById = Object.fromEntries(consignors.map((entry) => [entry.id, entry]));
 
   const filtered = items.filter((item) => {
     const q = query.trim().toLowerCase();
     const consignor = consignorById[item.consignorId];
+    const product = productLabel(item);
     const matchesQuery = !q || `${item.description || ''} ${item.itemNumber || ''} ${item.type || ''} ${item.brand || ''} ${consignor?.firstName || ''} ${consignor?.lastName || ''} ${consignor?.number || ''}`.toLowerCase().includes(q);
     const matchesConsignor = consignorFilter === 'All' || item.consignorId === consignorFilter;
-    const product = productLabel(item);
     const matchesProduct = productFilter === 'All'
       || (productFilter === 'Manual' && product.className === 'manual')
       || (productFilter === 'POS' && product.text === 'POS')
@@ -97,15 +97,6 @@ export default function ConsignorsScreen({
     }
   }
 
-  function toggleGroup(consignorId) {
-    setCollapsedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(consignorId)) next.delete(consignorId);
-      else next.add(consignorId);
-      return next;
-    });
-  }
-
   function ItemAction({ item, product }) {
     const isManualAvailable = product.className === 'manual' && (item.status === 'Available' || item.status === 'Active') && !item.paidOut;
     if (item.paidOut) return <span className="consignment-archive-note">Archived</span>;
@@ -141,40 +132,38 @@ export default function ConsignorsScreen({
               const consignor = consignorById[consignorId];
               const availableCount = consignorItems.filter((item) => item.status === 'Available' || item.status === 'Active').length;
               const soldCount = consignorItems.filter((item) => item.status === 'Sold' || item.dateSold).length;
-              const initials = consignor ? `${consignor.firstName?.[0] || ''}${consignor.lastName?.[0] || ''}` : '—';
-              const collapsed = collapsedGroups.has(consignorId);
+              const total = consignorItems.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
+              const due = consignorItems.filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut).reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100, 0);
               return (
-                <section className="consignment-item-group" key={consignorId}>
-                  <div className="consignment-item-group-summary">
-                    <button type="button" className={`consignment-item-group-chevron ${collapsed ? '' : 'open'}`} onClick={() => toggleGroup(consignorId)}><ChevronRight size={16} /></button>
-                    <span className="consignment-avatar consignment-item-group-avatar">{initials}</span>
-                    <span className="consignment-item-group-person">
-                      {consignor ? <button type="button" className="consignment-consignor-profile-link" onClick={() => onOpenConsignor(consignor.id)}>{consignor.firstName} {consignor.lastName}</button> : <span>Unassigned</span>}
-                      <span className="consignment-item-group-meta"><strong className="consignment-item-group-number">#{consignor?.number || '—'}</strong><span className="consignment-item-group-count"> · {consignorItems.length} item{consignorItems.length === 1 ? '' : 's'}</span></span>
-                    </span>
-                    <span className="consignment-item-group-stat"><strong>{availableCount}</strong><span>Available</span></span>
-                    <span className="consignment-item-group-stat"><strong>{soldCount}</strong><span>Sold</span></span>
-                  </div>
-                  {!collapsed && (
-                    <div className="consignment-item-group-items">
-                      <div className="consignment-grouped-item-row consignment-list-head"><span>Item</span><span>Price</span><span>Commission</span><span>Product</span><span>Status</span><span>Action</span></div>
-                      {consignorItems.map((item) => {
-                        const product = productLabel(item);
-                        const photo = item.shopifyPhoto || item.photo;
-                        return (
-                          <div className="consignment-grouped-item-row" key={item.id}>
-                            <button type="button" className="consignment-grouped-item-open" onClick={() => onOpenItem(item.id)}>{photo && <span className="consignment-batch-thumb"><img src={photo} alt="" /></span>}<span><strong>{item.description || item.type || 'Consignment item'}</strong><span>{item.itemNumber}{item.size ? ` · ${item.size}` : ''}{item.brand ? ` · ${item.brand}` : ''}</span></span></button>
-                            <strong>{money(item.price)}</strong>
-                            <span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span>
-                            <span className={`consignment-product-badge ${product.className}`}>{product.text}</span>
-                            <span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Paid · archived' : statusLabel(item.status)}</span>
-                            <span className="consignment-item-quick-action"><ItemAction item={item} product={product} /></span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
+                <ByConsignorContainer
+                  key={consignorId}
+                  consignor={consignor}
+                  itemCount={consignorItems.length}
+                  itemLabel={`item${consignorItems.length === 1 ? '' : 's'}`}
+                  onOpenConsignor={onOpenConsignor}
+                  stats={[
+                    { label: 'Available', value: availableCount },
+                    { label: 'Sold', value: soldCount },
+                    { label: 'Total', value: money(total) },
+                    { label: 'Due', value: money(due) },
+                  ]}
+                >
+                  <div className="consignment-grouped-item-row consignment-list-head"><span>Item</span><span>Price</span><span>Commission</span><span>Product</span><span>Status</span><span>Action</span></div>
+                  {consignorItems.map((item) => {
+                    const product = productLabel(item);
+                    const photo = item.shopifyPhoto || item.photo;
+                    return (
+                      <div className="consignment-grouped-item-row" key={item.id}>
+                        <button type="button" className="consignment-grouped-item-open" onClick={() => onOpenItem(item.id)}>{photo && <span className="consignment-batch-thumb"><img src={photo} alt="" /></span>}<span><strong>{item.description || item.type || 'Consignment item'}</strong><span>{item.itemNumber}{item.size ? ` · ${item.size}` : ''}{item.brand ? ` · ${item.brand}` : ''}</span></span></button>
+                        <strong>{money(item.price)}</strong>
+                        <span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span>
+                        <span className={`consignment-product-badge ${product.className}`}>{product.text}</span>
+                        <span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Paid · archived' : statusLabel(item.status)}</span>
+                        <span className="consignment-item-quick-action"><ItemAction item={item} product={product} /></span>
+                      </div>
+                    );
+                  })}
+                </ByConsignorContainer>
               );
             })}
           </div>
