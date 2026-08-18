@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { money } from '../../lib/consignmentHelpers';
 import '../../styles/by-consignor-container.css';
 
 export default function ByConsignorContainer({
   consignor,
-  itemCount = 0,
-  itemLabel = 'items',
-  stats = [],
+  summaryItems = [],
   onOpenConsignor,
+  onStartPayout,
   children,
   defaultOpen = false,
 }) {
@@ -15,6 +15,31 @@ export default function ByConsignorContainer({
   const initials = consignor
     ? `${consignor.firstName?.[0] || ''}${consignor.lastName?.[0] || ''}` || '—'
     : '—';
+
+  const availableCount = summaryItems.filter(
+    (item) => (item.status === 'Available' || item.status === 'Active') && !item.paidOut,
+  ).length;
+  const soldCount = summaryItems.filter((item) => item.status === 'Sold' || item.dateSold).length;
+  const total = summaryItems.reduce(
+    (sum, item) => sum + Number(item.salePrice ?? item.price ?? 0),
+    0,
+  );
+  const due = summaryItems
+    .filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut)
+    .reduce(
+      (sum, item) => sum + (
+        Number(item.salePrice ?? item.price ?? 0)
+        * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)
+      ) / 100,
+      0,
+    );
+
+  const stats = [
+    { label: 'Available', value: availableCount },
+    { label: 'Sold', value: soldCount },
+    { label: 'Total', value: money(total) },
+    { label: 'Due', value: money(due) },
+  ];
 
   return (
     <section className="consignment-item-group consignment-by-consignor-container">
@@ -45,7 +70,9 @@ export default function ByConsignorContainer({
           )}
           <span className="consignment-item-group-meta">
             <strong className="consignment-item-group-number">#{consignor?.number || '—'}</strong>
-            <span className="consignment-item-group-count">{' '}· {itemCount} {itemLabel}</span>
+            <span className="consignment-item-group-count">
+              {' '}· {summaryItems.length} item{summaryItems.length === 1 ? '' : 's'}
+            </span>
           </span>
         </span>
 
@@ -55,6 +82,18 @@ export default function ByConsignorContainer({
             <span>{stat.label}</span>
           </span>
         ))}
+
+        <span className="consignment-by-consignor-action">
+          {due > 0 && onStartPayout ? (
+            <button
+              type="button"
+              className="consignment-list-action"
+              onClick={() => onStartPayout(consignor?.id)}
+            >
+              Review &amp; pay
+            </button>
+          ) : null}
+        </span>
       </div>
 
       {open && <div className="consignment-item-group-items">{children}</div>}
