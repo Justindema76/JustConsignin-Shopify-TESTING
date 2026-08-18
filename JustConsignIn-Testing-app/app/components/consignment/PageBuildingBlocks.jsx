@@ -1,5 +1,4 @@
-import { Children } from 'react';
-import { Search, Tag } from 'lucide-react';
+import { Search } from 'lucide-react';
 import '../../styles/consignment-card-grid.css';
 import '../../styles/consignment-title-actions.css';
 
@@ -39,26 +38,16 @@ export function PageToolbar({ query, onQueryChange, placeholder = 'Search', filt
   );
 }
 
-// Shared Items / Sales card. The first enabled grid-open action is the item
-// detail/edit destination. We promote that handler to the title and remove the
-// duplicate Edit item button from the card action area. The remaining action
-// is only the workflow action: Mark sold, Review & pay, Paid, etc.
-export function EntityCard({ photo, title, subtitle, topBadge, consignor, onOpenConsignor, metrics = [], detailLabel, detailValue, detailBadge, footNote, action }) {
+export function EntityCard({ photo, title, subtitle, onOpen, topBadge, consignor, onOpenConsignor, metrics = [], detailLabel, detailValue, detailBadge, footNote, action }) {
   const skuText = String(subtitle || '').replace(/^#/, '');
-  const actionWrapper = action?.props?.className === 'consignment-row-actions' ? action : null;
-  const actionChildren = actionWrapper ? Children.toArray(actionWrapper.props.children).filter(Boolean) : [];
-  const editActionIndex = actionChildren.findIndex((child) => child?.props?.className === 'consignment-grid-open-btn' && !child?.props?.disabled && typeof child?.props?.onClick === 'function');
-  const editAction = editActionIndex >= 0 ? actionChildren[editActionIndex] : null;
-  const remainingActions = editActionIndex >= 0 ? actionChildren.filter((_, index) => index !== editActionIndex) : actionChildren;
-  const renderedAction = actionWrapper ? (remainingActions.length > 0 ? <div className="consignment-row-actions">{remainingActions}</div> : null) : action;
 
   return (
     <article className="consignment-readable-card">
       <div className="consignment-readable-card-top">
         <div className="consignment-grid-thumb-row">
-          <div className="consignment-grid-thumb">{photo ? <img src={photo} alt="" /> : <Tag size={17} color="var(--muted)" />}</div>
+          {photo && <div className="consignment-grid-thumb"><img src={photo} alt="" /></div>}
           <div className="consignment-readable-title-copy">
-            {editAction ? <button type="button" className="consignment-title-link consignment-readable-title-link" onClick={editAction.props.onClick}>{title}</button> : <strong>{title}</strong>}
+            {onOpen ? <button type="button" className="consignment-title-link consignment-readable-title-link" onClick={onOpen}>{title}</button> : <strong>{title}</strong>}
             {skuText && <small className="consignment-readable-card-sku"><b>SKU:</b><span>{skuText}</span></small>}
           </div>
         </div>
@@ -74,7 +63,7 @@ export function EntityCard({ photo, title, subtitle, topBadge, consignor, onOpen
       {(detailLabel || detailBadge) && <div className="consignment-readable-card-details"><span>{detailLabel && <small>{detailLabel}</small>}{detailValue && <strong>{detailValue}</strong>}</span>{detailBadge && <span className={`consignment-badge ${detailBadge.className}`}>{detailBadge.text}</span>}</div>}
 
       {footNote && <div className="consignment-sales-grid-order">{footNote}</div>}
-      {renderedAction && <div className="consignment-readable-card-actions">{renderedAction}</div>}
+      {action && <div className="consignment-readable-card-actions">{action}</div>}
     </article>
   );
 }
