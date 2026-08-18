@@ -87,7 +87,7 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
     }
   }
 
-  function itemAction(item) {
+  function itemAction(item, { grouped = false } = {}) {
     const consignor = consignorById[item.consignorId];
     const product = productLabel(item);
     const sold = item.status === 'Sold' || Boolean(item.dateSold);
@@ -95,7 +95,7 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
     const isManualAvailable = product.className === 'manual' && !sold && !paid && (item.status === 'Available' || item.status === 'Active');
     if (paid) return <span className="consignment-archive-note">Archived</span>;
     if (isManualAvailable) return <button type="button" className="consignment-list-action" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>{sellingItemId === item.id ? 'Saving…' : 'Mark sold'}</button>;
-    if (sold && consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout?.(consignor.id)}>Review &amp; pay</button>;
+    if (!grouped && sold && consignor) return <button type="button" className="consignment-sales-pay-btn" onClick={() => onStartPayout?.(consignor.id)}>Review &amp; pay</button>;
     return null;
   }
 
@@ -120,14 +120,12 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
   function groupedView() {
     return <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => {
       const consignor = consignorById[consignorId];
-      const sold = consignorItems.filter((item) => item.status === 'Sold' || item.dateSold).length;
-      const total = consignorItems.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-      const due = consignorItems.filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut).reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100, 0);
-      return <ByConsignorContainer key={consignorId} consignor={consignor} itemCount={consignorItems.length} itemLabel={`item${consignorItems.length === 1 ? '' : 's'}`} onOpenConsignor={onOpenConsignor} stats={[{ label: 'Items', value: consignorItems.length }, { label: 'Sold', value: sold }, { label: 'Total', value: money(total) }, { label: 'Due', value: money(due) }]}>
+      const summaryItems = items.filter((item) => item.consignorId === consignorId);
+      return <ByConsignorContainer key={consignorId} consignor={consignor} summaryItems={summaryItems} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout}>
         <div className="consignment-live-list-head consignment-grouped-live-columns"><span>Item</span><span>Price</span><span>Commission</span><span>Source</span><span>Status</span><span>Action</span></div>
         {consignorItems.map((item) => {
           const product = productLabel(item);
-          return <div className="consignment-live-list-row consignment-grouped-live-columns" key={item.id}>{itemCell(item)}<strong className="consignment-money">{money(item.price)}</strong><span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span><span><span className={`consignment-product-badge ${product.className}`}>{product.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Archived' : statusLabel(item.status)}</span></span><span>{itemAction(item)}</span></div>;
+          return <div className="consignment-live-list-row consignment-grouped-live-columns" key={item.id}>{itemCell(item)}<strong className="consignment-money">{money(item.price)}</strong><span>{item.commissionPct ?? consignor?.commissionPct ?? 0}%</span><span><span className={`consignment-product-badge ${product.className}`}>{product.text}</span></span><span><span className={`consignment-badge ${item.paidOut ? 'sold' : statusClass(item.status)}`}>{item.paidOut ? 'Archived' : statusLabel(item.status)}</span></span><span>{itemAction(item, { grouped: true })}</span></div>;
         })}
       </ByConsignorContainer>;
     })}</div>;
