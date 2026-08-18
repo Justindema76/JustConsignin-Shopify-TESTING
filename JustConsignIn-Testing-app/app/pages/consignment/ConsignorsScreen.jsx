@@ -13,6 +13,7 @@ export default function ConsignorsScreen({
   onOpenConsignor,
   onOpenItem,
   onMarkSold,
+  onStartPayout,
   onNewConsignor,
   onNewItem,
 }) {
@@ -130,23 +131,14 @@ export default function ConsignorsScreen({
           <div className="consignment-item-groups">
             {groupedEntries.map(([consignorId, consignorItems]) => {
               const consignor = consignorById[consignorId];
-              const availableCount = consignorItems.filter((item) => item.status === 'Available' || item.status === 'Active').length;
-              const soldCount = consignorItems.filter((item) => item.status === 'Sold' || item.dateSold).length;
-              const total = consignorItems.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
-              const due = consignorItems.filter((item) => (item.status === 'Sold' || item.dateSold) && !item.paidOut).reduce((sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor?.commissionPct ?? 0)) / 100, 0);
+              const summaryItems = items.filter((item) => item.consignorId === consignorId);
               return (
                 <ByConsignorContainer
                   key={consignorId}
                   consignor={consignor}
-                  itemCount={consignorItems.length}
-                  itemLabel={`item${consignorItems.length === 1 ? '' : 's'}`}
+                  summaryItems={summaryItems}
                   onOpenConsignor={onOpenConsignor}
-                  stats={[
-                    { label: 'Available', value: availableCount },
-                    { label: 'Sold', value: soldCount },
-                    { label: 'Total', value: money(total) },
-                    { label: 'Due', value: money(due) },
-                  ]}
+                  onStartPayout={onStartPayout}
                 >
                   <div className="consignment-grouped-item-row consignment-list-head"><span>Item</span><span>Price</span><span>Commission</span><span>Product</span><span>Status</span><span>Action</span></div>
                   {consignorItems.map((item) => {
