@@ -108,10 +108,11 @@ export default function ConsignorsScreen({
 
   function ItemAction({ item, product }) {
     const isManualAvailable = product.className === 'manual' && (item.status === 'Available' || item.status === 'Active') && !item.paidOut;
+    if (item.paidOut) return <span className="consignment-archive-note">Archived</span>;
     if (isManualAvailable) {
       return <button type="button" className="consignment-quick-sold-btn" disabled={sellingItemId === item.id} onClick={() => quickMarkSold(item)}>{sellingItemId === item.id ? 'Saving…' : 'Mark sold'}</button>;
     }
-    return <button type="button" className="consignment-grid-open-btn" onClick={() => onOpenItem(item.id)}>Open item</button>;
+    return null;
   }
 
   const filtersSlot = (
@@ -128,29 +129,9 @@ export default function ConsignorsScreen({
 
   return (
     <>
-      <Header
-        eyebrow="Accounts"
-        title="Consignors"
-        action={(
-          <div className="consignment-header-actions consignment-header-actions-full">
-            <button className="consignment-btn secondary" type="button" onClick={onNewItem}><Plus size={17} /> New item</button>
-            <button className="consignment-btn" type="button" onClick={onNewConsignor}><Plus size={17} /> New consignor</button>
-          </div>
-        )}
-      />
+      <Header eyebrow="Accounts" title="Consignors" action={<div className="consignment-header-actions consignment-header-actions-full"><button className="consignment-btn secondary" type="button" onClick={onNewItem}><Plus size={17} /> New item</button><button className="consignment-btn" type="button" onClick={onNewConsignor}><Plus size={17} /> New consignor</button></div>} />
       <div className="consignment-body consignment-online-layout">
-        <PageToolbar
-          query={query}
-          onQueryChange={setQuery}
-          placeholder="Search name, SKU, brand, or consignor"
-          filtersSlot={filtersSlot}
-          viewOptions={[
-            { key: 'grouped', label: 'By consignor', icon: Users },
-            { key: 'grid', label: 'Grid', icon: Grid3X3 },
-          ]}
-          activeView={viewMode}
-          onViewChange={setViewMode}
-        />
+        <PageToolbar query={query} onQueryChange={setQuery} placeholder="Search name, SKU, brand, or consignor" filtersSlot={filtersSlot} viewOptions={[{ key: 'grouped', label: 'By consignor', icon: Users }, { key: 'grid', label: 'Grid', icon: Grid3X3 }]} activeView={viewMode} onViewChange={setViewMode} />
 
         {groupedEntries.length === 0 && <div className="consignment-empty-small">No consignors match these filters.</div>}
 
