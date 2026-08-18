@@ -1,14 +1,7 @@
-/* Items + Sales interaction cleanup.
- * Product titles are the edit/detail links in all three views.
- * The action area is reserved for workflow actions only.
+/* Shared interaction rules for Consignors, Items and Sales.
+ * Item/product titles are the edit/detail link. Action areas are reserved for
+ * workflow actions only: Mark sold, Review & pay, or Archived.
  */
-
-.consignment-items-page .consignment-live-list .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
-.consignment-sales-page .consignment-live-list .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
-.consignment-items-page .consignment-live-group .consignment-row-actions > .consignment-grid-open-btn:not(:disabled),
-.consignment-sales-page .consignment-live-group .consignment-row-actions > .consignment-grid-open-btn:not(:disabled) {
-  display: none;
-}
 
 .consignment-readable-title-link {
   display: block;
@@ -30,20 +23,54 @@
 }
 
 .consignment-readable-title-link:hover,
-.consignment-live-item-copy .consignment-title-link:hover {
+.consignment-live-item-copy .consignment-title-link:hover,
+.consignment-grouped-item-open:hover strong {
   color: var(--green);
   text-decoration: underline;
 }
 
 .consignment-readable-title-link:focus-visible,
-.consignment-live-item-copy .consignment-title-link:focus-visible {
+.consignment-live-item-copy .consignment-title-link:focus-visible,
+.consignment-grouped-item-open:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 2px;
   border-radius: 3px;
 }
 
+.consignment-archive-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.consignment-readable-card-actions > .consignment-archive-note {
+  width: 100%;
+  min-height: 42px;
+  font-size: 11px;
+}
+
+.consignment-item-quick-action .consignment-archive-note {
+  width: 100%;
+}
+
 @media (max-width: 700px) {
   .consignment-readable-title-link {
     font-size: 13px;
+  }
+
+  .consignment-archive-note {
+    min-width: 0;
+    width: 100%;
   }
 }
