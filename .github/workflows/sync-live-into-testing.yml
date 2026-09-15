@@ -1,0 +1,104 @@
+name: Sync live app into testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/sync-live-into-testing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout testing repository
+        uses: actions/checkout@v4
+        with:
+          path: testing
+          fetch-depth: 0
+
+      - name: Checkout live repository
+        uses: actions/checkout@v4
+        with:
+          repository: Justindema76/JustConsignIn-Shopify-App
+          ref: main
+          path: live
+          persist-credentials: false
+
+      - name: Copy live code while preserving testing Shopify identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f testing/JustConsignIn-Testing-app/shopify.app.toml
+          test -f testing/JustConsignIn-Testing-app/extensions/consignment-sale/shopify.extension.toml
+
+          rsync -a --delete \
+            --exclude='shopify.app.toml' \
+            --exclude='extensions/consignment-sale/shopify.extension.toml' \
+            live/ testing/JustConsignIn-Testing-app/
+
+      - name: Disable plan restrictions in testing only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('testing/JustConsignIn-Testing-app/app/billing.server.js')
+          text = path.read_text()
+
+          replacement = """export async function getActivePlan(admin) {
+            // TESTING REPOSITORY ONLY:
+            // Always unlock the full Tier 2 feature set in the testing app.
+            // Production billing remains untouched in the live repository.
+            return 'TIER2';
+          }"""
+
+          updated, count = re.subn(
+              r"export async function getActivePlan\(admin\) \{.*?\n\}",
+              replacement,
+              text,
+              count=1,
+              flags=re.S,
+          )
+
+          if count != 1:
+              raise SystemExit('Could not locate getActivePlan() in billing.server.js; refusing to continue.')
+
+          path.write_text(updated)
+          PY
+
+      - name: Verify testing connection was preserved
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -q 'client_id = "2f0a1a68cd577674aa945d19764319f4"' testing/JustConsignIn-Testing-app/shopify.app.toml
+          grep -q 'application_url = "https://justconsignin-shopify-app.onrender.com"' testing/JustConsignIn-Testing-app/shopify.app.toml
+          grep -q 'uid = "56ce102f-d6cb-3d16-a570-28e6182df8eaf3b1c146"' testing/JustConsignIn-Testing-app/extensions/consignment-sale/shopify.extension.toml
+          grep -q "return 'TIER2';" testing/JustConsignIn-Testing-app/app/billing.server.js
+
+      - name: Commit synced testing state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd testing
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A JustConsignIn-Testing-app
+
+          if git diff --cached --quiet; then
+            echo "Testing is already synchronized with live."
+            exit 0
+          fi
+
+          git commit -m "Sync live app into testing with tiers unlocked"
+          git push origin HEAD:main
