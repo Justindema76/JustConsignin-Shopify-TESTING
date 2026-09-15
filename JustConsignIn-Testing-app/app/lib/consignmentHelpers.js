@@ -1,13 +1,13 @@
-export const CATEGORIES = [
-  'Clothing', 'Shoes', 'Jewellery', 'Handbags', 'Home Décor', 'Furniture',
-  'Electronics', 'Appliances', 'Books', 'Movies & Music', 'Video Games',
-  'Collectibles', 'Sporting Goods', 'Tools', 'Toys', 'Baby Gear',
-  'Pet Supplies', 'Outdoor & Garden', 'Art', 'Automotive', 'Other',
-];
-
-export const CONDITIONS = ['New with tags', 'Like new', 'Good', 'Fair'];
+// Shared formatting/display helpers for the consignment app.
+// Starting scoped to what DashboardScreen needs; more helpers move here
+// as each additional page gets broken out of consignment_intake.jsx.
 
 export const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+
+// Extracted verbatim from consignment_intake.jsx (still also present there
+// for now — nothing in the monolith has been rewired yet). AllConsignorView
+// imports these copies. Removing the monolith's local versions happens in
+// the later "wire it in" step, not here.
 
 export function productLabel(item) {
   if (!item?.shopifyProductId) return { text: 'Manual', className: 'manual' };
@@ -22,27 +22,78 @@ export function productLabel(item) {
     : { text: 'POS', className: 'pos' };
 }
 
-export function saleSourceLabel(item) {
-  if (!(item?.status === 'Sold' || item?.dateSold)) return null;
+export function normalizeSaleSource(value) {
+  const source = String(value || '').trim().toLowerCase();
 
-  const source = String(item.saleSource || '').trim().toLowerCase();
-  if (source === 'pos' || source.includes('point of sale')) {
-    return { text: 'Sold via POS', className: 'pos' };
-  }
-  if (source === 'online' || source === 'web' || source.includes('online')) {
-    return { text: 'Sold Online', className: 'online' };
-  }
-  if (source === 'manual') {
-    return { text: 'Manual Sale', className: 'manual' };
+  if (!source) return '';
+  if (source === 'manual') return 'Manual';
+  if (source === 'pos' || source.includes('point of sale')) return 'POS';
+  if (
+    source === 'online'
+    || source === 'web'
+    || source.includes('online')
+    || source.includes('web')
+  ) return 'Online';
+  if (source.includes('shopify')) return 'Shopify';
+
+  return 'Shopify';
+}
+
+export function saleSourceLabel(value) {
+  const source = normalizeSaleSource(value);
+
+  if (source === 'Manual') {
+    return { text: 'Manual', className: 'manual' };
   }
 
-  // Older sales recorded before sale-source tracking:
-  // no Shopify order means it was marked sold manually in JustConsignIn.
-  if (!item.orderId && !item.orderName) {
-    return { text: 'Manual Sale', className: 'manual' };
+  if (source === 'POS') {
+    return { text: 'POS', className: 'pos' };
   }
 
-  return { text: 'Shopify Sale', className: 'draft' };
+  if (source === 'Online') {
+    return { text: 'Online', className: 'online' };
+  }
+
+  if (source === 'Shopify') {
+    return { text: 'Shopify', className: 'online' };
+  }
+
+  return { text: 'Unknown', className: 'draft' };
+}
+
+export function saleSourceForItem(item) {
+  const recordedSource = normalizeSaleSource(item?.saleSource);
+
+  if (recordedSource === 'Manual' || recordedSource === 'POS' || recordedSource === 'Online') {
+    return recordedSource;
+  }
+
+  if (!item?.shopifyProductId) return 'Manual';
+  if (!item?.publishOnline) return 'POS';
+
+  return '';
+}
+
+export function saleSourceMatches(item, filter) {
+  return filter === 'All' || saleSourceForItem(item) === filter;
+}
+
+export function itemBadge(item) {
+  const product = productLabel(item);
+
+  if (!isSold(item) || !item?.shopifyProductId) {
+    return product;
+  }
+
+  const saleSource = saleSourceForItem(item);
+
+  if (saleSource === 'POS' || saleSource === 'Online') {
+    return saleSourceLabel(saleSource);
+  }
+
+  return item.publishOnline
+    ? { text: 'POS + Online', className: 'online' }
+    : { text: 'POS', className: 'pos' };
 }
 
 export function statusClass(status) {
@@ -59,61 +110,6 @@ export function statusLabel(status) {
 export function productAdminUrl(productId) {
   const numericId = String(productId || '').split('/').pop();
   return `shopify://admin/products/${numericId}`;
-}
-
-export function resizeImage(file, maxWidth = 320, quality = 0.55) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (typeof e.target?.result !== 'string') {
-        reject(new Error('Could not read this image'));
-        return;
-      }
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-export async function handlePhotoFile(e, onChange) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const dataUrl = await resizeImage(file);
-  onChange(dataUrl);
-}
-
-export function parseCsv(text) {
-  const rows = [];
-  let row = [], field = '', quoted = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === '"' && quoted && text[index + 1] === '"') { field += '"'; index += 1; }
-    else if (char === '"') quoted = !quoted;
-    else if (char === ',' && !quoted) { row.push(field.trim()); field = ''; }
-    else if ((char === '\n' || char === '\r') && !quoted) {
-      if (char === '\r' && text[index + 1] === '\n') index += 1;
-      row.push(field.trim()); field = '';
-      if (row.some(Boolean)) rows.push(row);
-      row = [];
-    } else field += char;
-  }
-  row.push(field.trim());
-  if (row.some(Boolean)) rows.push(row);
-  if (rows.length < 2) throw new Error('The CSV needs a header row and at least one data row.');
-  const headers = rows[0].map((value) => value.toLowerCase().replace(/\s+/g, '_'));
-  return rows.slice(1).map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index] || ''])));
 }
 
 export function csvValue(value) {
@@ -134,34 +130,102 @@ export function downloadCsv(fileName, headers, rows) {
   URL.revokeObjectURL(url);
 }
 
-export function exportConsignors(consignors) {
-  const headers = ['number', 'first_name', 'last_name', 'phone', 'email', 'address', 'city', 'province', 'postal_code', 'date_joined', 'commission_pct', 'unsold_preference', 'notes'];
-  const rows = consignors.map((c) => [
-    c.number, c.firstName, c.lastName, c.phone, c.email, c.address, c.city,
-    c.province, c.postalCode, c.dateJoined, c.commissionPct, c.unsoldPreference, c.notes,
-  ]);
-  downloadCsv(`consignors-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+// Shared payout math/grouping — originally lived only inside reports.jsx.
+// Extracted so the Payouts page's history view and the Reports payout
+// ledger CSV are guaranteed to agree on what a "payout" is, instead of
+// each page maintaining its own copy that could silently drift apart.
+
+export function saleAmount(item) {
+  return Number(item.salePrice ?? item.price ?? 0);
 }
 
-export function exportItems(items, consignors) {
-  const consignorById = Object.fromEntries(consignors.map((c) => [c.id, c]));
-  const headers = [
-    'item_number', 'consignor_number', 'description', 'price', 'category', 'type',
-    'size', 'condition', 'status', 'date_received', 'commission_pct', 'notes',
-    'tags', 'brand', 'vendor', 'product_description', 'sale_price', 'date_sold',
-    'order_name', 'order_id', 'paid_out', 'payout_id', 'payout_date',
-    'payout_method', 'payout_reference', 'payout_note', 'payout_amount',
-    'payout_total', 'payout_adjustment', 'shopify_product_id',
-  ];
-  const rows = items.map((item) => [
-    item.itemNumber, consignorById[item.consignorId]?.number || '', item.description,
-    item.price, item.category, item.type, item.size, item.condition, item.status,
-    item.dateReceived, item.commissionPct, item.notes,
-    Array.isArray(item.tags) ? item.tags.join('|') : item.tags || '',
-    item.brand, item.vendor, item.productDescription, item.salePrice, item.dateSold,
-    item.orderName, item.orderId, item.paidOut ? 'true' : 'false', item.payoutId,
-    item.payoutDate, item.payoutMethod, item.payoutReference, item.payoutNote,
-    item.payoutAmount, item.payoutTotal, item.payoutAdjustment, item.shopifyProductId,
-  ]);
-  downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+export function commissionRate(item, consignor) {
+  return Number(item.commissionPct ?? consignor?.commissionPct ?? 0);
+}
+
+export function consignorEarning(item, consignor) {
+  return (saleAmount(item) * commissionRate(item, consignor)) / 100;
+}
+
+export function isSold(item) {
+  return item.status === 'Sold' || Boolean(item.dateSold) || Boolean(item.orderId);
+}
+
+export const EXPIRY_FILTERS = {
+  ALL: 'all',
+  NEXT_7: 'next7',
+  NEXT_30: 'next30',
+  EXPIRED: 'expired',
+  NONE: 'none',
+};
+
+export function isAvailableInventoryItem(item) {
+  return !item?.paidOut
+    && !isSold(item)
+    && ['Draft', 'Available', 'Active'].includes(item?.status);
+}
+
+function localDateOnly(value) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function matchesExpiryFilter(item, filter = EXPIRY_FILTERS.ALL, now = new Date()) {
+  if (filter === EXPIRY_FILTERS.ALL) return true;
+  if (!isAvailableInventoryItem(item)) return false;
+
+  const expiry = localDateOnly(item?.expiryDate);
+  if (filter === EXPIRY_FILTERS.NONE) return !expiry;
+  if (!expiry) return false;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  if (filter === EXPIRY_FILTERS.EXPIRED) {
+    return expiry < today;
+  }
+
+  const days = filter === EXPIRY_FILTERS.NEXT_7
+    ? 7
+    : filter === EXPIRY_FILTERS.NEXT_30
+      ? 30
+      : null;
+
+  if (days == null) return true;
+
+  const through = new Date(today);
+  through.setDate(through.getDate() + days);
+  return expiry >= today && expiry <= through;
+}
+
+export function expiryFilterCount(items, filter, now = new Date()) {
+  return items.filter((item) => matchesExpiryFilter(item, filter, now)).length;
+}
+
+// Groups paid-out items back into the individual payout events that
+// created them (one payoutId = one "Record payout" action for one
+// consignor). This is the single source of truth for payout history.
+export function recordedPayoutGroups(items) {
+  const groups = new Map();
+
+  items
+    .filter((item) => item.paidOut && item.payoutId)
+    .forEach((item) => {
+      if (!groups.has(item.payoutId)) {
+        groups.set(item.payoutId, {
+          payoutId: item.payoutId,
+          consignorId: item.consignorId || null,
+          payoutDate: item.payoutDate || '',
+          payoutMethod: item.payoutMethod || '',
+          payoutReference: item.payoutReference || '',
+          payoutTotal: Number(item.payoutTotal || 0),
+          payoutAdjustment: Number(item.payoutAdjustment || 0),
+          items: [],
+        });
+      }
+      groups.get(item.payoutId).items.push(item);
+    });
+
+  return [...groups.values()];
 }

@@ -1,42 +1,102 @@
+/* eslint-disable react/prop-types */
 import { useState } from 'react';
-import { ChevronDown, Grid3X3, List, Plus, Users } from 'lucide-react';
-import { Header } from '../../components/consignment/SharedPieces';
-import { SummaryStatRow, PageToolbar } from '../../components/consignment/PageBuildingBlocks';
-import ByConsignorContainer from '../../components/consignment/ByConsignorContainer';
-import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
-import AllListContainer from '../../components/consignment/AllListContainer';
-import { productLabel, statusLabel } from '../../lib/consignmentHelpers';
-import '../../styles/consignment-live-items-sales.css';
+import { Grid3X3, List, Plus, Users } from 'lucide-react';
 
-export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsignor, onMarkSold, onStartPayout, onNewItem }) {
+import Header from '../../components/consignment/Header';
+import AllConsignorView from '../../components/consignment/AllConsignorView';
+import AllListView from '../../components/consignment/AllListView';
+import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
+import ConsignmentFilterBar from '../../components/consignment/ConsignmentFilterBar';
+import {
+  EXPIRY_FILTERS,
+  isSold,
+  matchesExpiryFilter,
+  productLabel,
+  statusLabel,
+} from '../../lib/consignmentHelpers';
+
+const EXPIRY_OPTIONS = [
+  { value: EXPIRY_FILTERS.ALL, label: 'All expiry dates' },
+  { value: EXPIRY_FILTERS.NEXT_7, label: 'Next 7 days' },
+  { value: EXPIRY_FILTERS.NEXT_30, label: 'Next 30 days' },
+  { value: EXPIRY_FILTERS.EXPIRED, label: 'Expired' },
+  { value: EXPIRY_FILTERS.NONE, label: 'No expiry date' },
+];
+
+function initialExpiryFilter() {
+  if (typeof window === 'undefined') return EXPIRY_FILTERS.ALL;
+
+  const state = window.history.state || {};
+  const requested = state.consignmentPageFilters?.expiry;
+  const validValues = new Set(Object.values(EXPIRY_FILTERS));
+  const initial = validValues.has(requested) ? requested : EXPIRY_FILTERS.ALL;
+
+  if (state.consignmentPageFilters) {
+    const nextState = { ...state };
+    delete nextState.consignmentPageFilters;
+    window.history.replaceState(nextState, '');
+  }
+
+  return initial;
+}
+
+export default function ItemsScreen({
+  items,
+  consignors,
+  onOpenItem,
+  onOpenConsignor,
+  onMarkSold,
+  onStartPayout,
+  onNewItem,
+  tier2Enabled = false,
+}) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('Current');
+  const [filter, setFilter] = useState('Available');
   const [consignorFilter, setConsignorFilter] = useState('All');
-  const [productFilter, setProductFilter] = useState('All');
+  const [productFilter, setProductFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');
+  const [expiryFilter, setExpiryFilter] = useState(initialExpiryFilter);
   const [sort, setSort] = useState('consignor');
-  const [viewMode, setViewMode] = useState('grouped');
-  const statuses = ['Current', 'Draft', 'Available', 'Sold', 'Archived', 'Returned', 'Donated'];
+  const [viewMode, setViewMode] = useState('list');
+
+  const statuses = [
+    { value: 'Available', label: 'Available' },
+    { value: 'SoldUnpaid', label: 'Sold / Unpaid' },
+    { value: 'PaidArchived', label: 'Paid / Archived' },
+    { value: 'Returned', label: 'Returned' },
+    { value: 'Donated', label: 'Donated' },
+  ];
+
+  const statusCount = (statusValue) => {
+    if (statusValue === 'PaidArchived') return items.filter((item) => item.paidOut).length;
+    if (statusValue === 'Available') {
+      return items.filter((item) => !item.paidOut && !isSold(item) && ['Draft', 'Available', 'Active'].includes(item.status)).length;
+    }
+    if (statusValue === 'SoldUnpaid') return items.filter((item) => !item.paidOut && isSold(item)).length;
+    return items.filter((item) => item.status === statusValue && !item.paidOut).length;
+  };
+
   const consignorById = Object.fromEntries(consignors.map((entry) => [entry.id, entry]));
 
   const filtered = items.filter((item) => {
     const q = query.trim().toLowerCase();
     const consignor = consignorById[item.consignorId];
-    const product = productLabel(item);
-    const matchesQuery = !q || `${item.description || ''} ${item.itemNumber || ''} ${item.type || ''} ${item.brand || ''} ${item.size || ''} ${consignor?.firstName || ''} ${consignor?.lastName || ''} ${consignor?.number || ''}`.toLowerCase().includes(q);
+    const matchesQuery = !q || `${item.description} ${item.itemNumber} ${item.type} ${item.brand || ''} ${consignor?.firstName || ''} ${consignor?.lastName || ''} ${consignor?.number || ''}`.toLowerCase().includes(q);
     const matchesConsignor = consignorFilter === 'All' || item.consignorId === consignorFilter;
+    const product = productLabel(item);
     const matchesProduct = productFilter === 'All'
       || (productFilter === 'Manual' && product.className === 'manual')
       || (productFilter === 'POS' && product.text === 'POS')
       || (productFilter === 'Online' && product.text === 'Online')
       || (productFilter === 'POS + Online' && product.text === 'POS + Online');
-    const matchesStatus = filter === 'Current'
-      ? !item.paidOut
-      : filter === 'Archived'
-        ? item.paidOut
-        : filter === 'Available'
-          ? item.status === 'Available' || item.status === 'Active'
+    const matchesStatus = filter === 'PaidArchived'
+      ? item.paidOut
+      : filter === 'Available'
+        ? !item.paidOut && !isSold(item) && ['Draft', 'Available', 'Active'].includes(item.status)
+        : filter === 'SoldUnpaid'
+          ? !item.paidOut && isSold(item)
           : item.status === filter && !item.paidOut;
-    return matchesQuery && matchesConsignor && matchesProduct && matchesStatus;
+    const matchesExpiry = matchesExpiryFilter(item, expiryFilter);
+    return matchesQuery && matchesConsignor && matchesProduct && matchesStatus && matchesExpiry;
   }).sort((a, b) => {
     if (sort === 'oldest') return String(a.dateReceived || '').localeCompare(String(b.dateReceived || ''));
     if (sort === 'consignor') {
@@ -47,51 +107,79 @@ export default function ItemsScreen({ items, consignors, onOpenItem, onOpenConsi
     if (sort === 'ticket') return String(a.itemNumber || '').localeCompare(String(b.itemNumber || ''), undefined, { numeric: true });
     if (sort === 'priceHigh') return Number(b.price || 0) - Number(a.price || 0);
     if (sort === 'priceLow') return Number(a.price || 0) - Number(b.price || 0);
-    return String(b.dateReceived || '').localeCompare(String(a.dateReceived || ''));
+    return String(b.dateReceived || '').localeCompare(String(a.dateReceived || '')) || String(b.itemNumber || '').localeCompare(String(a.itemNumber || ''), undefined, { numeric: true });
   });
 
-  const groupedEntries = Array.from(filtered.reduce((groups, item) => {
+  const grouped = filtered.reduce((groups, item) => {
     const key = item.consignorId || 'unassigned';
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
     return groups;
-  }, new Map()).entries()).sort(([aId], [bId]) => {
+  }, new Map());
+
+  const groupedEntries = Array.from(grouped.entries()).sort(([aId, aItems], [bId, bItems]) => {
+    if (sort !== 'consignor') return filtered.indexOf(aItems[0]) - filtered.indexOf(bItems[0]);
     const a = consignorById[aId];
     const b = consignorById[bId];
     return `${a?.lastName || ''} ${a?.firstName || ''}`.localeCompare(`${b?.lastName || ''} ${b?.firstName || ''}`);
   });
 
-  const activeCount = items.filter((item) => !item.paidOut).length;
-  const availableCount = items.filter((item) => item.status === 'Available' || item.status === 'Active').length;
-  const soldCount = items.filter((item) => item.status === 'Sold' || item.dateSold).length;
+  const filters = [
+    {
+      key: 'consignor', label: 'Consignor', value: consignorFilter, onChange: setConsignorFilter,
+      ariaLabel: 'Filter by consignor',
+      options: [{ value: 'All', label: 'All consignors' }, ...consignors.map((c) => ({ value: c.id, label: `#${c.number} · ${c.firstName} ${c.lastName}` }))],
+    },
+    {
+      key: 'expiry', label: 'Expiry', value: expiryFilter, onChange: setExpiryFilter,
+      ariaLabel: 'Filter by expiry date', options: EXPIRY_OPTIONS,
+    },
+    {
+      key: 'sort', label: 'Sort', value: sort, onChange: setSort, ariaLabel: 'Sort items',
+      options: [
+        { value: 'consignor', label: 'Consignor name' }, { value: 'newest', label: 'Newest first' },
+        { value: 'oldest', label: 'Oldest first' }, { value: 'ticket', label: 'SKU / item number' },
+        { value: 'priceHigh', label: 'Price high to low' }, { value: 'priceLow', label: 'Price low to high' },
+      ],
+    },
+    ...(tier2Enabled ? [{
+      key: 'product', label: 'Product type', value: productFilter, onChange: setProductFilter,
+      ariaLabel: 'Filter by product type',
+      options: [
+        { value: 'All', label: 'All product types' }, { value: 'POS', label: 'POS' },
+        { value: 'Online', label: 'Online' }, { value: 'POS + Online', label: 'POS + Online' },
+      ],
+    }] : []),
+    {
+      key: 'status', label: 'Status', value: filter, onChange: setFilter, ariaLabel: 'Filter by status',
+      options: statuses.map((status) => ({
+        value: status.value,
+        label: `${status.value === 'Returned' || status.value === 'Donated' ? statusLabel(status.value) : status.label} (${statusCount(status.value)})`,
+      })),
+    },
+  ];
 
-  function groupedView() {
-    return (
-      <div className="consignment-item-groups">
-        {groupedEntries.map(([consignorId, consignorItems]) => (
-          <ByConsignorContainer
-            key={consignorId}
-            consignor={consignorById[consignorId]}
-            items={consignorItems}
-            onOpenConsignor={onOpenConsignor}
-            onOpenItem={onOpenItem}
-            onMarkSold={onMarkSold}
-            onStartPayout={onStartPayout}
-          />
-        ))}
+  return (
+    <>
+      <Header eyebrow="Inventory" title="Items" action={<button className="consignment-btn" type="button" onClick={onNewItem}><Plus size={17} /> Add new item</button>} />
+      <div className="consignment-body">
+        <ConsignmentFilterBar
+          search={{ value: query, onChange: setQuery, placeholder: 'Search name, SKU, brand, or consignor' }}
+          filters={filters}
+          views={{
+            value: viewMode, onChange: setViewMode, ariaLabel: 'Choose item view',
+            options: [
+              { value: 'list', label: 'All items', icon: List },
+              { value: 'grouped', label: 'By consignor', icon: Users },
+              { value: 'grid', label: 'Grid', icon: Grid3X3 },
+            ],
+          }}
+        />
+        {filtered.length === 0 && <section className="consignment-card"><div className="consignment-empty-small">No items match these filters.</div></section>}
+        {viewMode === 'list' && filtered.length > 0 && <AllListView items={filtered} consignors={consignors} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />}
+        {viewMode === 'grouped' && <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => <AllConsignorView key={consignorId} consignor={consignorById[consignorId]} items={consignorItems} onOpenConsignor={onOpenConsignor} onOpenItem={onOpenItem} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />)}</div>}
+        {viewMode === 'grid' && <div className="consignment-readable-grid">{filtered.map((item) => <ItemGridCardContainer key={item.id} item={item} consignor={consignorById[item.consignorId]} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />)}</div>}
       </div>
-    );
-  }
-
-  const filtersSlot = <details className="consignment-items-filter-details"><summary className="consignment-items-filter-summary"><span>Filters &amp; sorting</span><ChevronDown size={20} /></summary><div className="consignment-items-toolbar-top"><label className="consignment-tool-field"><span>Consignor</span><select className="consignment-select consignment-filter-select" value={consignorFilter} onChange={(event) => setConsignorFilter(event.target.value)}><option value="All">All consignors</option>{consignors.map((consignor) => <option key={consignor.id} value={consignor.id}>#{consignor.number} · {consignor.firstName} {consignor.lastName}</option>)}</select></label><label className="consignment-tool-field"><span>Sort</span><select className="consignment-select consignment-filter-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="consignor">Consignor name</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="ticket">SKU / item number</option><option value="priceHigh">Price high to low</option><option value="priceLow">Price low to high</option></select></label><label className="consignment-tool-field"><span>Product type</span><select className="consignment-select consignment-filter-select" value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option value="All">All product types</option><option value="Manual">Manual</option><option value="POS">POS</option><option value="Online">Online</option><option value="POS + Online">POS + Online</option></select></label><label className="consignment-tool-field"><span>Status</span><select className="consignment-select consignment-filter-select" value={filter} onChange={(event) => setFilter(event.target.value)}>{statuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label></div></details>;
-
-  return <><Header eyebrow="Inventory" title="Items" action={<button className="consignment-btn" type="button" onClick={onNewItem}><Plus size={17} /> Add new item</button>} /><div className="consignment-body consignment-online-layout consignment-items-page"><SummaryStatRow stats={[{ label: 'Active items', value: activeCount }, { label: 'Available', value: availableCount }, { label: 'Sold', value: soldCount }, { label: 'Total items', value: items.length }]} /><PageToolbar query={query} onQueryChange={setQuery} placeholder="Search name, SKU, brand, or consignor" filtersSlot={filtersSlot} viewOptions={[{ key: 'all', label: 'All items', icon: List }, { key: 'grouped', label: 'By consignor', icon: Users }, { key: 'grid', label: 'Grid', icon: Grid3X3 }]} activeView={viewMode} onViewChange={setViewMode} />{filtered.length === 0 && <div className="consignment-empty-small">No items match these filters.</div>}{viewMode === 'all' && filtered.length > 0 && (
-    <AllListContainer items={filtered} consignorById={consignorById} mode="items" onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />
-  )}{viewMode === 'grouped' && filtered.length > 0 && groupedView()}{viewMode === 'grid' && filtered.length > 0 && (
-    <div className="consignment-readable-grid">
-      {filtered.map((item) => (
-        <ItemGridCardContainer key={item.id} item={item} consignor={consignorById[item.consignorId]} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />
-      ))}
-    </div>
-  )}</div></>;
+    </>
+  );
 }

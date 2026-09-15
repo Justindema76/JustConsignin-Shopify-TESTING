@@ -1,0 +1,290 @@
+/* =========================================================
+   MARK SOLD MODAL
+   Separate file so this flow is easy to style.
+   Desktop = centered modal.
+   Mobile  = bottom sheet.
+   ========================================================= */
+
+.mark-sold-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 18px;
+
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.mark-sold-modal {
+  width: min(430px, 100%);
+
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 14px;
+
+  background: var(--surface);
+  color: var(--ink);
+
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+}
+
+.mark-sold-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 18px 20px 14px;
+
+  border-bottom: 1px solid var(--line);
+}
+
+.mark-sold-heading {
+  min-width: 0;
+}
+
+.mark-sold-heading h2 {
+  margin: 0;
+
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.mark-sold-heading p {
+  margin: 5px 0 0;
+
+  overflow: hidden;
+
+  color: var(--muted);
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mark-sold-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid var(--line);
+  border-radius: 8px;
+
+  background: var(--surface);
+  color: var(--ink);
+
+  cursor: pointer;
+}
+
+.mark-sold-body {
+  display: grid;
+  gap: 16px;
+
+  padding: 20px;
+}
+
+.mark-sold-field {
+  display: grid;
+  gap: 7px;
+}
+
+.mark-sold-field > span {
+  color: var(--muted);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.mark-sold-money-input {
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 9px;
+
+  background: var(--surface);
+}
+
+.mark-sold-money-input > span {
+  padding-left: 14px;
+
+  color: var(--muted);
+
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.mark-sold-money-input input {
+  width: 100%;
+  min-width: 0;
+
+  padding: 12px 14px 12px 7px;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: var(--ink);
+
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.mark-sold-date-input {
+  width: 100%;
+  min-height: 46px;
+
+  padding: 10px 12px;
+
+  border: 1px solid var(--line);
+  border-radius: 9px;
+
+  background: var(--surface);
+  color: var(--ink);
+
+  font: inherit;
+}
+
+.mark-sold-error {
+  padding: 9px 11px;
+
+  border-radius: 8px;
+
+  background: var(--danger-soft);
+  color: var(--danger);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mark-sold-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  padding: 14px 20px 20px;
+
+  border-top: 1px solid var(--line);
+}
+
+.mark-sold-cancel,
+.mark-sold-confirm {
+  min-height: 42px;
+
+  padding: 10px 16px;
+
+  border-radius: 8px;
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.mark-sold-cancel {
+  border: 1px solid var(--line);
+
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.mark-sold-confirm {
+  border: 1px solid var(--green);
+
+  background: var(--green);
+  color: #fff;
+}
+
+.mark-sold-cancel:disabled,
+.mark-sold-confirm:disabled,
+.mark-sold-close:disabled {
+  cursor: default;
+  opacity: .6;
+}
+
+/* =========================================================
+   MOBILE
+   Bottom sheet lifted above Shopify's mobile navigation.
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+  .mark-sold-overlay {
+    align-items: flex-end;
+
+    padding: 0;
+  }
+
+  .mark-sold-modal {
+    width: 100%;
+    max-height: calc(88dvh - 104px);
+    margin-bottom: calc(104px + env(safe-area-inset-bottom));
+
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    border-radius: 16px;
+  }
+
+  .mark-sold-header {
+    padding: 18px 18px 14px;
+  }
+
+  .mark-sold-body {
+    padding: 18px;
+  }
+
+  .mark-sold-money-input {
+    min-height: 54px;
+  }
+
+  .mark-sold-money-input input {
+    padding-top: 14px;
+    padding-bottom: 14px;
+
+    font-size: 20px;
+  }
+
+  .mark-sold-date-input {
+    min-height: 52px;
+
+    font-size: 16px;
+  }
+
+  .mark-sold-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    padding: 14px 18px 18px;
+  }
+
+  .mark-sold-cancel,
+  .mark-sold-confirm {
+    width: 100%;
+    min-height: 48px;
+
+    padding: 12px;
+  }
+}

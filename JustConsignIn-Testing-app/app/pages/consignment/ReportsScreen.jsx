@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
 import { Download } from 'lucide-react';
+import {
+  csvValue, money, saleAmount, commissionRate, consignorEarning, isSold, recordedPayoutGroups,
+} from '../../lib/consignmentHelpers';
+import '../../styles/consignment-reports.css';
 
-const money = (value) => `$${Number(value || 0).toFixed(2)}`;
-
-function csvValue(value) {
-  const text = value == null ? '' : String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
+// Local, not shared: this export needs arbitrary row shapes (section
+// headers, blank separator rows, single-cell rows) that don't fit the
+// stricter headers+rows CSV helper in consignmentHelpers.js.
 function downloadCsv(fileName, rows) {
   const csv = rows.map((row) => row.map(csvValue).join(',')).join('\n');
   const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
@@ -17,171 +17,6 @@ function downloadCsv(fileName, rows) {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
-}
-
-function saleAmount(item) {
-  return Number(item.salePrice ?? item.price ?? 0);
-}
-
-function commissionRate(item, consignor) {
-  return Number(item.commissionPct ?? consignor?.commissionPct ?? 0);
-}
-
-function consignorEarning(item, consignor) {
-  return (saleAmount(item) * commissionRate(item, consignor)) / 100;
-}
-
-function isSold(item) {
-  return item.status === 'Sold' || Boolean(item.dateSold) || Boolean(item.orderId);
-}
-
-function recordedPayoutGroups(items) {
-  const groups = new Map();
-
-  items
-    .filter((item) => item.paidOut && item.payoutId)
-    .forEach((item) => {
-      if (!groups.has(item.payoutId)) {
-        groups.set(item.payoutId, {
-          payoutId: item.payoutId,
-          payoutDate: item.payoutDate || '',
-          payoutMethod: item.payoutMethod || '',
-          payoutReference: item.payoutReference || '',
-          payoutTotal: Number(item.payoutTotal || 0),
-          payoutAdjustment: Number(item.payoutAdjustment || 0),
-          items: [],
-        });
-      }
-      groups.get(item.payoutId).items.push(item);
-    });
-
-  return [...groups.values()];
-}
-
-function ReportsStyle() {
-  return (
-    <style>{`
-      .consignment-reports-page { padding-top: 16px; }
-      .consignment-reports-header {
-        display: flex; align-items: flex-start; justify-content: space-between;
-        gap: 18px; margin-bottom: 18px;
-      }
-      .consignment-reports-eyebrow {
-        margin: 0 0 4px; color: var(--green); font-size: 11px; font-weight: 800;
-        letter-spacing: .08em; text-transform: uppercase;
-      }
-      .consignment-reports-title {
-        margin: 0; font-family: 'Fraunces', serif; font-size: 28px; line-height: 1.1;
-      }
-      .consignment-reports-subtitle {
-        margin: 5px 0 0; color: var(--muted); font-size: 13px;
-      }
-      .consignment-reports-downloads {
-        display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;
-      }
-      .consignment-reports-download {
-        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-        min-height: 38px; padding: 8px 12px; border: 1px solid var(--line);
-        border-radius: 9px; background: var(--surface); color: var(--green-dark);
-        font-size: 12px; font-weight: 750;
-      }
-      .consignment-reports-download.primary {
-        border-color: var(--green); background: var(--green); color: #fff;
-      }
-      .consignment-reports-metrics {
-        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px; margin-bottom: 14px;
-      }
-      .consignment-reports-metric {
-        min-width: 0; padding: 15px 16px; border: 1px solid var(--line);
-        border-radius: 12px; background: var(--surface);
-      }
-      .consignment-reports-metric span {
-        display: block; color: var(--muted); font-size: 10px; font-weight: 800;
-        letter-spacing: .03em; text-transform: uppercase;
-      }
-      .consignment-reports-metric strong {
-        display: block; margin-top: 5px; font-size: 22px; line-height: 1.05;
-      }
-      .consignment-reports-pair {
-        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px; margin-bottom: 18px;
-      }
-      .consignment-reports-card {
-        border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
-        overflow: hidden;
-      }
-      .consignment-reports-card-body { padding: 16px; }
-      .consignment-reports-card h2 {
-        margin: 0 0 10px; font-size: 16px;
-      }
-      .consignment-reports-line {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; min-height: 28px; font-size: 12px;
-      }
-      .consignment-reports-line.total {
-        margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line);
-        font-size: 13px;
-      }
-      .consignment-reports-section { margin-bottom: 16px; }
-      .consignment-reports-section-head {
-        padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
-      }
-      .consignment-reports-section-head h2 {
-        margin: 0; font-size: 16px;
-      }
-      .consignment-reports-section-head p {
-        margin: 4px 0 0; color: var(--muted); font-size: 11px;
-      }
-      .consignment-reports-table { width: 100%; overflow-x: auto; }
-      .consignment-reports-row {
-        display: grid; gap: 12px; align-items: center;
-        min-width: 850px; padding: 11px 14px; border-bottom: 1px solid var(--line);
-        font-size: 12px;
-      }
-      .consignment-reports-row:last-child { border-bottom: 0; }
-      .consignment-reports-row.reconciliation {
-        grid-template-columns: minmax(190px, 1.35fr) 90px 105px 125px 90px 90px 105px;
-      }
-      .consignment-reports-row.liability {
-        grid-template-columns: minmax(210px, 1.4fr) minmax(160px, 1fr) 100px 95px 90px 100px 120px;
-      }
-      .consignment-reports-row.head {
-        background: #FAFBFB; color: var(--muted); font-size: 10px;
-        font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
-      }
-      .consignment-reports-cell-center { text-align: center; }
-      .consignment-reports-cell-right { text-align: right; }
-      .consignment-reports-consignor {
-        border: 0; padding: 0; background: transparent; color: var(--green-dark);
-        font: inherit; font-weight: 800; text-align: left;
-      }
-      .consignment-reports-consignor:hover { text-decoration: underline; }
-      .consignment-reports-consignor small {
-        display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 500;
-      }
-      .consignment-reports-pay {
-        min-height: 34px; padding: 7px 10px; border: 0; border-radius: 8px;
-        background: var(--green); color: white; font-size: 11px; font-weight: 750;
-        white-space: nowrap;
-      }
-      .consignment-reports-empty {
-        padding: 24px 16px; color: var(--muted); font-size: 12px; text-align: center;
-      }
-      @media (max-width: 900px) {
-        .consignment-reports-header { flex-direction: column; }
-        .consignment-reports-downloads { justify-content: flex-start; }
-        .consignment-reports-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      }
-      @media (max-width: 640px) {
-        .consignment-reports-metrics, .consignment-reports-pair { grid-template-columns: 1fr 1fr; gap: 8px; }
-        .consignment-reports-card-body { padding: 13px; }
-        .consignment-reports-title { font-size: 24px; }
-        .consignment-reports-downloads { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-        .consignment-reports-download.primary { grid-column: 1 / -1; }
-      }
-    `}</style>
-  );
 }
 
 export default function ReportsScreen({
@@ -333,7 +168,6 @@ export default function ReportsScreen({
 
   return (
     <>
-      <ReportsStyle />
       <div className="consignment-body consignment-reports-page">
         <div className="consignment-reports-header">
           <div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ChevronRight,
   CircleDollarSign,
@@ -10,8 +11,38 @@ import {
 } from 'lucide-react';
 
 import { Header, MetricCard } from '../../components/consignment/SharedPieces';
-import { money } from '../../lib/consignmentHelpers';
+import {
+  EXPIRY_FILTERS,
+  expiryFilterCount,
+  money,
+} from '../../lib/consignmentHelpers';
 import '../../styles/consignment-dashboard.css';
+
+const PERIODS = [
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+  { value: 'all', label: 'All time' },
+];
+
+function soldWithinPeriod(item, period, now = new Date()) {
+  if (period === 'all') return true;
+  if (!item.dateSold) return false;
+
+  const soldDate = new Date(`${item.dateSold}T00:00:00`);
+  if (Number.isNaN(soldDate.getTime())) return false;
+
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(end);
+  start.setHours(0, 0, 0, 0);
+
+  if (period === 'week') start.setDate(start.getDate() - 6);
+  if (period === 'month') start.setDate(start.getDate() - 29);
+  if (period === 'year') start.setFullYear(start.getFullYear() - 1);
+
+  return soldDate >= start && soldDate <= end;
+}
 
 export default function DashboardScreen({
   consignors,
@@ -23,9 +54,12 @@ export default function DashboardScreen({
   onImport,
   onExport,
 }) {
+  const [period, setPeriod] = useState('month');
+
   const soldItems = items.filter((item) => item.status === 'Sold' || item.dateSold);
+  const periodSoldItems = soldItems.filter((item) => soldWithinPeriod(item, period));
   const activeItems = items.filter((item) => ['Available', 'Active'].includes(item.status));
-  const totalSales = soldItems.reduce(
+  const totalSales = periodSoldItems.reduce(
     (sum, item) => sum + Number(item.salePrice ?? item.price ?? 0),
     0,
   );
@@ -35,30 +69,6 @@ export default function DashboardScreen({
       (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? 0)) / 100,
     0,
   );
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const in7 = new Date(today);
-  in7.setDate(in7.getDate() + 7);
-  const in30 = new Date(today);
-  in30.setDate(in30.getDate() + 30);
-
-  const itemsWithExpiry = items.filter(
-    (item) => item.expiryDate &&
-      !item.paidOut &&
-      ['Available', 'Active'].includes(item.status),
-  );
-  const expiredItems = itemsWithExpiry.filter(
-    (item) => new Date(`${item.expiryDate}T00:00:00`) < today,
-  );
-  const expiring7Items = itemsWithExpiry.filter((item) => {
-    const date = new Date(`${item.expiryDate}T00:00:00`);
-    return date >= today && date <= in7;
-  });
-  const expiring30Items = itemsWithExpiry.filter((item) => {
-    const date = new Date(`${item.expiryDate}T00:00:00`);
-    return date >= today && date <= in30;
-  });
 
   const consignorBalances = consignors
     .map((consignor) => {
@@ -75,15 +85,36 @@ export default function DashboardScreen({
     .filter((entry) => entry.due > 0)
     .sort((a, b) => b.due - a.due);
 
-  const recentSales = [...soldItems]
+  const recentSales = [...periodSoldItems]
     .sort((a, b) => String(b.dateSold || '').localeCompare(String(a.dateSold || '')))
     .slice(0, 5);
 
   const expiryStats = [
-    { label: '7 days', count: expiring7Items.length },
-    { label: '30 days', count: expiring30Items.length },
-    { label: 'Expired', count: expiredItems.length, alert: expiredItems.length > 0 },
+    {
+      label: '7 days',
+      filter: EXPIRY_FILTERS.NEXT_7,
+      count: expiryFilterCount(items, EXPIRY_FILTERS.NEXT_7),
+    },
+    {
+      label: '30 days',
+      filter: EXPIRY_FILTERS.NEXT_30,
+      count: expiryFilterCount(items, EXPIRY_FILTERS.NEXT_30),
+    },
+    {
+      label: 'Expired',
+      filter: EXPIRY_FILTERS.EXPIRED,
+      count: expiryFilterCount(items, EXPIRY_FILTERS.EXPIRED),
+      alert: expiryFilterCount(items, EXPIRY_FILTERS.EXPIRED) > 0,
+    },
   ];
+
+  function navigateWithPageFilter(viewName, filters) {
+    window.history.replaceState(
+      { ...(window.history.state || {}), consignmentPageFilters: filters },
+      '',
+    );
+    onNavigate(viewName);
+  }
 
   return (
     <div className="consignment-dashboard-page">
@@ -112,17 +143,24 @@ export default function DashboardScreen({
         <div className="consignment-dashboard-context">
           <p>Live sales, inventory, and consignor balances from Shopify.</p>
           <div className="consignment-date-tabs" aria-label="Dashboard period">
-            <button type="button">Week</button>
-            <button type="button" className="active">Month</button>
-            <button type="button">Year</button>
-            <button type="button">All time</button>
+            {PERIODS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={period === option.value ? 'active' : ''}
+                aria-pressed={period === option.value}
+                onClick={() => setPeriod(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="consignment-dashboard-grid consignment-dashboard-metrics">
           <MetricCard icon={PackageSearch} label="Active items" value={activeItems.length} note={`${items.length} items total`} onClick={() => onNavigate('items')} />
           <MetricCard icon={Users} label="Consignors" value={consignors.length} note={`${consignorBalances.length} with payouts due`} onClick={() => onNavigate('home')} />
-          <MetricCard icon={TrendingUp} label="Sales" value={money(totalSales)} note={`${soldItems.length} sold items`} onClick={() => onNavigate('sales')} />
+          <MetricCard icon={TrendingUp} label="Sales" value={money(totalSales)} note={`${periodSoldItems.length} sold items · ${PERIODS.find((entry) => entry.value === period)?.label}`} onClick={() => navigateWithPageFilter('sales', { period })} />
           <MetricCard icon={CircleDollarSign} label="Payouts due" value={money(amountDue)} note={`${unpaidSales.length} unpaid sales`} onClick={() => onNavigate('payouts')} />
         </div>
 
@@ -139,7 +177,7 @@ export default function DashboardScreen({
                 type="button"
                 className="consignment-expiry-stat"
                 key={stat.label}
-                onClick={() => onNavigate('items')}
+                onClick={() => navigateWithPageFilter('items', { expiry: stat.filter })}
               >
                 <span className="consignment-dashboard-expiry-label">{stat.label}</span>
                 <strong className={stat.alert ? 'alert' : ''}>{stat.count}</strong>
@@ -172,10 +210,10 @@ export default function DashboardScreen({
           <section className="consignment-card consignment-dashboard-compact-card">
             <div className="consignment-section-title">
               <h2>Recent sales</h2>
-              <button type="button" className="consignment-link-button" onClick={() => onNavigate('sales')}>View all</button>
+              <button type="button" className="consignment-link-button" onClick={() => navigateWithPageFilter('sales', { period })}>View all</button>
             </div>
             {recentSales.length === 0 ? (
-              <div className="consignment-empty-small">Paid Shopify orders will appear here automatically.</div>
+              <div className="consignment-empty-small">No sales in the selected period.</div>
             ) : recentSales.map((item) => (
               <div key={item.id} className="consignment-dashboard-summary-row static">
                 <span>

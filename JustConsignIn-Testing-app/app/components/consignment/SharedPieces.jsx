@@ -1,59 +1,8 @@
-import { ArrowLeft, Camera } from 'lucide-react';
-import { handlePhotoFile } from '../../lib/consignmentHelpers';
+/* eslint-disable react/prop-types */
 
-export function Header({ eyebrow, title, onBack = null, action = null }) {
-  return (
-    <div className="consignment-header">
-      <div className="consignment-header-row">
-        <div className="consignment-header-main">
-          {onBack && (
-            <button className="consignment-back" onClick={onBack} aria-label="Back">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <div>
-            {eyebrow && <p className="consignment-eyebrow">{eyebrow}</p>}
-            <h1 className="consignment-title">{title}</h1>
-          </div>
-        </div>
-        {action && <div className="consignment-header-action">{action}</div>}
-      </div>
-    </div>
-  );
-}
-
-export function PhotoPicker({ value, onChange }) {
-  return (
-    <div className="consignment-photo-wrap">
-      <label className="consignment-photo-btn">
-        {value ? (
-          <img src={value} alt="Item" />
-        ) : (
-          <>
-            <Camera size={20} />
-            <span>Take Photo</span>
-          </>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style={{ display: 'none' }}
-          onChange={(e) => handlePhotoFile(e, onChange)}
-        />
-      </label>
-      <label className="consignment-photo-alt">
-        {value ? 'Retake or choose' : 'Choose from library'}
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={(e) => handlePhotoFile(e, onChange)}
-        />
-      </label>
-    </div>
-  );
-}
+// Compatibility re-export so existing screens keep working unchanged.
+// New/updated screens can import Header directly from ./Header.
+export { default as Header } from './Header';
 
 export function MetricCard({ icon: Icon, label, value, note, onClick }) {
   return (

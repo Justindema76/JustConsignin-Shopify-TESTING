@@ -1,0 +1,7 @@
+/* Manual intake saving is available on every paid plan, including Tier 2.
+   Shopify plan visibility must never hide the manual-item save action. */
+.consignment-form-section-body > .consignment-form-actions-inner {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

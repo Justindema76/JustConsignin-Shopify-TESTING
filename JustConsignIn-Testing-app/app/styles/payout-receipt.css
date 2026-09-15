@@ -1,0 +1,79 @@
+.consignment-payout-receipt {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.consignment-receipt-heading,
+.consignment-receipt-meta,
+.consignment-receipt-actions,
+.consignment-receipt-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.consignment-receipt-heading h1 { margin: 2px 0; font-size: 22px; }
+.consignment-receipt-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.consignment-receipt-total { font-size: 26px; white-space: nowrap; }
+
+.consignment-receipt-meta {
+  margin: 16px 0;
+  padding: 12px 0;
+  border-block: 1px solid var(--line);
+}
+
+.consignment-receipt-meta div { flex: 1; }
+.consignment-receipt-meta dt { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.consignment-receipt-meta dd { margin: 3px 0 0; font-size: 13px; font-weight: 700; }
+.consignment-receipt-items h2 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; }
+.consignment-receipt-items h2 span { color: var(--muted); }
+.consignment-receipt-table-wrap { overflow-x: auto; }
+.consignment-receipt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.consignment-receipt-table th { color: var(--muted); font-size: 10px; text-align: left; text-transform: uppercase; }
+.consignment-receipt-table th:not(:first-child),
+.consignment-receipt-table td:not(:first-child) { text-align: right; }
+.consignment-receipt-table th,
+.consignment-receipt-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); }
+.consignment-receipt-table td:first-child { min-width: 190px; }
+.consignment-receipt-table small { display: block; margin-top: 2px; color: var(--muted); }
+.consignment-receipt-summary { width: min(100%, 360px); margin: 14px 0 0 auto; }
+.consignment-receipt-summary p { font-size: 12px; }
+.consignment-receipt-summary > div { padding: 5px 0; }
+.consignment-receipt-summary .total { margin-top: 4px; padding-top: 9px; border-top: 2px solid var(--ink); font-size: 17px; }
+.consignment-receipt-actions { margin-top: 18px; }
+.consignment-receipt-actions > * { flex: 1; }
+
+@media (max-width: 760px) {
+  .consignment-payout-receipt { padding: 14px; }
+  .consignment-receipt-meta { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .consignment-receipt-meta div { width: 100%; display: flex; justify-content: space-between; gap: 12px; }
+  .consignment-receipt-meta dd { text-align: right; }
+  .consignment-receipt-actions { flex-direction: column; }
+  .consignment-receipt-actions > * { width: 100%; }
+}
+
+@media print {
+  @page { size: auto; margin: 10mm; }
+  .consignment-receipt-screen-header,
+  .consignment-receipt-actions,
+  .consignment-back-to-top,
+  .consignment-toast,
+  .consignment-nav,
+  nav { display: none !important; }
+  html, body, .consignment, .consignment-body { background: #fff !important; overflow: visible !important; height: auto !important; }
+  .consignment-body { padding: 0 !important; }
+  .consignment-payout-receipt { width: 100%; max-width: none; margin: 0; padding: 0; border: 0; color: #111; }
+  .consignment-receipt-heading h1 { font-size: 18pt; }
+  .consignment-receipt-total { font-size: 20pt; }
+  .consignment-receipt-meta { margin: 10px 0; padding: 8px 0; }
+  .consignment-receipt-table { font-size: 9pt; }
+  .consignment-receipt-table th,
+  .consignment-receipt-table td { padding: 5px 4px; }
+  .consignment-receipt-table tr { break-inside: avoid; }
+  .consignment-receipt-summary { margin-top: 9px; }
+}

@@ -1,0 +1,209 @@
+/* =========================================================
+   SHOPIFY FILE PICKER
+   This file styles ONLY the Shopify Content → Files picker.
+   ========================================================= */
+
+.shopify-file-picker-trigger {
+  width: 100%;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--green);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.shopify-file-picker-trigger:hover {
+  background: var(--green-soft);
+}
+
+.shopify-file-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.shopify-file-picker-modal {
+  width: min(780px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.shopify-file-picker-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shopify-file-picker-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.shopify-file-picker-heading strong {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.shopify-file-picker-heading span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.shopify-file-picker-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.shopify-file-picker-search {
+  flex: 0 0 auto;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shopify-file-picker-content {
+  min-height: 180px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.shopify-file-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shopify-file-picker-card {
+  min-width: 0;
+  display: block;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.shopify-file-picker-card:hover {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.shopify-file-picker-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: block;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--green-soft);
+}
+
+.shopify-file-picker-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shopify-file-picker-name {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopify-file-picker-state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.shopify-file-picker-state.error {
+  color: var(--danger);
+}
+
+@media (max-width: 760px) {
+  .shopify-file-picker-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .shopify-file-picker-modal {
+    width: 100%;
+    max-height: 88vh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .shopify-file-picker-header,
+  .shopify-file-picker-search,
+  .shopify-file-picker-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .shopify-file-picker-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+  }
+}
+
+@media (max-width: 420px) {
+
+  .shopify-file-picker-trigger {
+    display: none !important;
+  }
+
+}

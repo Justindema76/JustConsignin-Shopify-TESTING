@@ -3,11 +3,13 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "target": "ES2020",
+    "module": "ESNext",
     "checkJs": true,
     "allowJs": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "noEmit": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["dist", "node_modules"]
 }

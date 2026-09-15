@@ -1,0 +1,18 @@
+/* Sales summary metrics — the only genuinely new visual pattern this page
+   needs. Everything else (toolbar, table, grouped view, grid) reuses the
+   Items/Consignors components and their shared stylesheets. */
+.consignment-sales-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.consignment-sales-summary-card { margin-bottom: 0; }
+.consignment-sales-summary-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.consignment-sales-summary-card strong { display: block; margin-top: 5px; font-size: 22px; }
+
+@media (max-width: 760px) {
+  .consignment-sales-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .consignment-sales-summary-card { padding: 13px; }
+  .consignment-sales-summary-card strong { font-size: 18px; }
+}

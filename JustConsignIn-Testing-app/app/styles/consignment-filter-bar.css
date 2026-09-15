@@ -1,0 +1,156 @@
+/* Styles for the shared ConsignmentFilterBar component. Previously these
+   lived inline inside consignment_intake.jsx's GlobalStyle block — moved
+   here so the component that renders this markup and the CSS that styles
+   it live together, instead of the component silently depending on class
+   definitions buried in the monolith. */
+
+.consignment-items-toolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 2px 0 16px;
+}
+.consignment-items-toolbar-top {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  max-width: 920px;
+  align-items: end;
+}
+.consignment-items-toolbar-bottom {
+  display: grid;
+  grid-template-columns: minmax(260px, 520px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.consignment-items-filter-details {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.consignment-items-filter-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; min-height: 48px; padding: 12px 14px; list-style: none;
+  color: var(--ink); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.consignment-items-filter-summary::-webkit-details-marker { display: none; }
+.consignment-items-filter-summary svg { color: var(--muted); transition: transform .15s; }
+.consignment-items-filter-details[open] .consignment-items-filter-summary svg { transform: rotate(180deg); }
+.consignment-items-filter-details .consignment-items-toolbar-top { padding: 12px 14px 14px; border-top: 1px solid var(--line); }
+
+.consignment-items-toolbar .consignment-tool-field,
+.consignment-items-toolbar .consignment-tool-view { min-width: 0; }
+.consignment-items-toolbar .consignment-tool-field > span,
+.consignment-items-toolbar .consignment-tool-view > span {
+  display: block; margin-bottom: 6px; color: var(--muted); font-size: 10px;
+  font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+}
+.consignment-items-toolbar .consignment-select {
+  width: 100%; min-width: 0; min-height: 44px; border-radius: 5px;
+}
+.consignment-filter-select { width: auto; min-width: 170px; padding: 10px 34px 10px 12px; font-size: 13px !important; }
+.consignment-items-toolbar .consignment-search {
+  width: 100%; min-width: 0; min-height: 46px; margin: 0; border-radius: 5px;
+}
+.consignment-items-toolbar .consignment-view-toggle { min-height: 46px; }
+
+/* Shared folder-tab control used by every List/Grid view. */
+.consignment-view-toggle {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 6px;
+  padding: 9px 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+.consignment-view-toggle button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 11px 10px 9px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--green-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: translateY(5px);
+  transition:
+    background .15s ease,
+    color .15s ease,
+    transform .15s ease;
+}
+
+.consignment-view-toggle button::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 12px;
+  width: 38%;
+  height: 8px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: inherit;
+}
+
+.consignment-view-toggle button.active {
+  z-index: 2;
+  background: var(--surface);
+  color: var(--green-dark);
+  transform: translateY(1px);
+}
+
+.consignment-view-toggle button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.consignment-finder-toggle button {
+  min-height: 42px;
+}
+
+@media (max-width: 900px) {
+  .consignment-items-toolbar-top { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
+   .consignment-items-toolbar-bottom { grid-template-columns: 1fr; gap: 9px; }
+}
+@media (max-width: 640px) {
+  .consignment-items-toolbar { gap: 12px; }
+  .consignment-items-toolbar-top,
+  .consignment-items-toolbar-bottom { grid-template-columns: 1fr; gap: 9px; }
+  .consignment-items-toolbar .consignment-view-toggle { width: 100%; }
+  .consignment-items-toolbar .consignment-view-toggle button { flex: 1; min-height: 44px; font-size: 12px; }
+  .consignment-view-toggle button { flex: 1; padding: 9px 5px; font-size: 10px; }
+  .consignment-filter-select { width: 100%; }
+}
+@media (max-width: 1024px) {
+  .consignment-items-toolbar-top,
+  .consignment-items-toolbar-bottom {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .consignment-items-toolbar .consignment-view-toggle {
+    width: 100%;
+  }
+
+  .consignment-items-toolbar .consignment-view-toggle button {
+    flex: 1;
+  }
+}

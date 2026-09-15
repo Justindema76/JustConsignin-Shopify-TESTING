@@ -128,6 +128,26 @@ const TAXONOMY_SEARCH_QUERY = `#graphql
   }
 `;
 
+const SHOPIFY_FILES_QUERY = `#graphql
+  query ConsignmentShopifyFiles($query: String) {
+    files(first: 60, query: $query, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        ... on MediaImage {
+          id
+          alt
+          createdAt
+          image {
+            url
+            width
+            height
+          }
+        }
+      }
+    }
+  }
+`;
+
+
 const CONSIGNMENT_COLLECTION_QUERY = `#graphql
   query ConsignmentCollection($identifier: CollectionIdentifierInput!) {
     collectionByIdentifier(identifier: $identifier) {
@@ -396,6 +416,22 @@ function mapConsignor(node) {
   };
 }
 
+function shopifyDescriptionToPlainText(value) {
+  return String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;/gi, "'")
+    .replace(/&#x0*27;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function mapItem(node) {
   const field = values(node);
   const reference = references(node);
@@ -436,7 +472,7 @@ function mapItem(node) {
     tags: productReference?.tags || (field.shopify_tags ? String(field.shopify_tags).split(',').map((tag) => tag.trim()).filter(Boolean) : savedDetails.tags),
     vendor: productReference?.vendor || field.shopify_vendor || savedDetails.vendor,
     brand: field.brand || savedDetails.brand,
-    productDescription: productReference?.descriptionHtml || field.shopify_description || savedDetails.productDescription,
+    productDescription: shopifyDescriptionToPlainText(productReference?.descriptionHtml || field.shopify_description || savedDetails.productDescription),
     shopifyCategoryId: productReference?.category?.id || field.shopify_category_id || savedDetails.shopifyCategoryId,
     shopifyCategoryName: productReference?.category?.fullName || field.shopify_category_name || savedDetails.shopifyCategoryName,
     seoTitle: productReference?.seo?.title || field.seo_title || savedDetails.seoTitle,
@@ -884,7 +920,7 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
       'No active Shopify location was found. Check Settings → Locations.',
     );
   }
-  if (!posPublication?.id) {
+  if (item.publishToPos !== false && !posPublication?.id) {
     throw new Error(
       'The Point of Sale sales channel is not available. Add Shopify POS, then try again.',
     );
@@ -895,9 +931,14 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
     );
   }
   const publications = [
-    posPublication,
+    ...(item.publishToPos !== false ? [posPublication] : []),
     ...(item.publishOnline ? [onlineStorePublication] : []),
   ];
+  if (!publications.length) {
+    throw new Error(
+      'Choose at least one Shopify sales channel: Point of Sale or Online Store.',
+    );
+  }
   const collection = await ensureConsignmentCollection(admin, publications);
 
   const files = item.photoId ? [{ id: item.photoId }] : undefined;
@@ -909,7 +950,7 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
       .filter(Boolean);
   const input = {
     ...(item.shopifyProductId ? { id: item.shopifyProductId } : {}),
-    title: String(item.shopifyTitle || '').trim(),
+    title: String(item.shopifyTitle || item.description || item.type || `Consignment item ${item.itemNumber}`).trim(),
     descriptionHtml: item.productDescription
       ? `<p>${escapeHtml(item.productDescription).replaceAll('\n', '<br>')}</p>`
       : [
@@ -931,7 +972,7 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
     ].filter(Boolean),
     category: item.shopifyCategoryId || undefined,
     seo: (item.seoTitle || item.seoDescription) ? {
-      title: item.seoTitle || item.shopifyTitle || undefined,
+      title: item.seoTitle || item.shopifyTitle || item.description || undefined,
       description: item.seoDescription || undefined,
     } : undefined,
     files,
@@ -1022,7 +1063,29 @@ export async function loader({ request }) {
     if (!setup.ok) {
       throw new Error(setup.errors.map((error) => error.message).join(', '));
     }
-    const taxonomySearch = new URL(request.url).searchParams.get('taxonomy')?.trim();
+    const url = new URL(request.url);
+
+    if (url.searchParams.get('files') === '1') {
+      const filesQuery = url.searchParams.get('filesQuery')?.trim() || '';
+      const filesData = await adminGraphql(admin, SHOPIFY_FILES_QUERY, {
+        query: filesQuery || null,
+      });
+
+      return Response.json({
+        files: (filesData.files?.nodes || [])
+          .filter((file) => file?.id && file?.image?.url)
+          .map((file) => ({
+            id: file.id,
+            url: file.image.url,
+            width: file.image.width || null,
+            height: file.image.height || null,
+            alt: file.alt || '',
+            createdAt: file.createdAt || '',
+          })),
+      });
+    }
+
+    const taxonomySearch = url.searchParams.get('taxonomy')?.trim();
     if (taxonomySearch) {
       const taxonomyData = await adminGraphql(admin, TAXONOMY_SEARCH_QUERY, {
         search: taxonomySearch,
@@ -1121,10 +1184,29 @@ export async function action({ request }) {
         const number = Number(value);
         return Number.isFinite(number) ? number : null;
       };
+      const wantsShopifyProduct = (row) => asBoolean(
+        row.create_shopify_product ?? row.createShopifyProduct,
+      );
+      const importedShopifyFields = (row, fallbackPrice) => {
+        const rawTags = text(row.shopify_tags ?? row.shopifyTags);
+        return {
+          shopifyTitle: text(row.shopify_title ?? row.shopifyTitle),
+          shopifyPrice: optionalNumber(row.shopify_price ?? row.shopifyPrice) ?? Number(fallbackPrice || 0),
+          productDescription: text(row.shopify_description ?? row.shopifyDescription),
+          vendor: text(row.shopify_vendor ?? row.shopifyVendor),
+          tags: rawTags.split(/[|,]/).map((tag) => tag.trim()).filter(Boolean),
+          shopifyCategoryId: text(row.shopify_category_id ?? row.shopifyCategoryId),
+          shopifyCategoryName: text(row.shopify_category_name ?? row.shopifyCategoryName),
+          seoTitle: text(row.seo_title ?? row.seoTitle),
+          seoDescription: text(row.seo_description ?? row.seoDescription),
+          publishToPos: asBoolean(row.publish_to_pos ?? row.publishToPos),
+          publishOnline: asBoolean(row.publish_online ?? row.publishOnline),
+        };
+      };
 
-      // The combined consignor import creates/matches the consignor first, then
-      // attaches every manual item using the returned metaobject ID. It never
-      // relies on a CSV consignor number and never creates Shopify products.
+      // Combined imports always create/match consignors and consignment items.
+      // Tier 1 remains manual-only. Tier 2 can additionally create and link
+      // Shopify products when create_shopify_product is true.
       if (kind === 'consignors') {
         const grouped = new Map();
         rows.forEach((row, index) => {
@@ -1212,23 +1294,72 @@ export async function action({ request }) {
             const next = (sequences.get(consignor.id) || 0) + 1;
             sequences.set(consignor.id, next);
             const itemNumber = `${consignor.number}-${String(next).padStart(3, '0')}`;
-            const rawStatus = text(row.status || 'Available');
+            const rawStatus = text(row.status || 'Draft');
             const payoutStatus = text(row.payout_status || row.payoutStatus).toLowerCase();
             const paidOut = payoutStatus === 'paid' || asBoolean(row.paid_out ?? row.paidOut);
             const sold = paidOut || rawStatus.toLowerCase() === 'sold' || Boolean(text(row.sale_date || row.date_sold || row.dateSold));
-            const status = sold ? 'Sold' : (rawStatus || 'Available');
-            if (!['Draft', 'Available', 'Sold', 'Returned', 'Donated'].includes(status)) {
+            if (!['Draft', 'Available', 'Sold', 'Returned', 'Donated'].includes(rawStatus)) {
               throw new Error(`Row ${entry.index + 2}: status must be Draft, Available, Sold, Returned, or Donated.`);
             }
             const salePrice = optionalNumber(row.sale_price ?? row.salePrice);
             const commissionPct = Number(row.commission_pct || row.commissionPct || consignor.commissionPct || 50);
             const payoutAmount = sold ? ((salePrice ?? price) * commissionPct) / 100 : 0;
+            const createShopifyProduct = wantsShopifyProduct(row);
+            const status = sold
+              ? 'Sold'
+              : createShopifyProduct
+                ? 'Available'
+                : ['Returned', 'Donated'].includes(rawStatus)
+                  ? rawStatus
+                  : 'Draft';
+            const shopify = importedShopifyFields(row, price);
+
+            if (createShopifyProduct) {
+              await requireTier2(admin);
+              if (!shopify.shopifyTitle) shopify.shopifyTitle = description;
+              if (!shopify.vendor) shopify.vendor = text(row.brand);
+              if (!shopify.productDescription) {
+                shopify.productDescription = [
+                  description,
+                  text(row.brand) ? `Brand: ${text(row.brand)}` : '',
+                  text(row.size) ? `Size: ${text(row.size)}` : '',
+                  text(row.condition) ? `Condition: ${text(row.condition)}` : '',
+                  text(row.category) ? `Category: ${text(row.category)}` : '',
+                ].filter(Boolean).join('\n');
+              }
+              if (!shopify.seoTitle) shopify.seoTitle = description;
+              if (!shopify.seoDescription) {
+                shopify.seoDescription = [
+                  description,
+                  text(row.brand) ? `Brand: ${text(row.brand)}` : '',
+                  text(row.size) ? `Size: ${text(row.size)}` : '',
+                  text(row.condition) ? `Condition: ${text(row.condition)}` : '',
+                ].filter(Boolean).join(' · ').slice(0, 320);
+              }
+              if (!Number.isFinite(Number(shopify.shopifyPrice)) || Number(shopify.shopifyPrice) <= 0) {
+                throw new Error(
+                  `Row ${entry.index + 2}: shopify_price must be greater than 0 when create_shopify_product is true.`,
+                );
+              }
+              if (!shopify.publishToPos && !shopify.publishOnline) {
+                throw new Error(
+                  `Row ${entry.index + 2}: set publish_to_pos or publish_online to true when create_shopify_product is true.`,
+                );
+              }
+            }
+
             const value = {
               itemNumber,
               consignorId: consignor.id,
               dateReceived: text(row.date_received || row.dateReceived) || today(),
+              consignmentTerm: text(row.consignment_term || row.consignmentTerm) || '',
+              expiryDate: calculateExpiryDate(
+                text(row.date_received || row.dateReceived) || today(),
+                text(row.consignment_term || row.consignmentTerm) || '',
+              ),
+              expiryAction: text(row.expiry_action || row.expiryAction),
               category: text(row.category),
-              type: '',
+              type: text(row.item_type || row.itemType),
               description,
               size: text(row.size),
               condition: text(row.condition) || 'Good',
@@ -1238,18 +1369,66 @@ export async function action({ request }) {
               brand: text(row.brand),
               notes: text(row.item_notes || row.notes),
               importKey: itemImportKey,
-              tags: [], vendor: '', productDescription: '', shopifyTitle: '',
+              ...(createShopifyProduct ? shopify : {
+                tags: [],
+                vendor: '',
+                productDescription: '',
+                shopifyTitle: '',
+                shopifyPrice: null,
+                shopifyCategoryId: '',
+                shopifyCategoryName: '',
+                seoTitle: '',
+                seoDescription: '',
+                publishToPos: false,
+                publishOnline: false,
+              }),
               salePrice: sold ? (salePrice ?? price) : null,
               dateSold: sold ? (text(row.sale_date || row.date_sold || row.dateSold) || today()) : null,
-              orderName: null, orderId: null,
+              orderName: null,
+              orderId: null,
               paidOut,
               payoutId: paidOut ? `imported-${itemNumber}` : '',
               payoutDate: paidOut ? (text(row.payout_date || row.payoutDate) || today()) : '',
               payoutMethod: paidOut ? (text(row.payout_method || row.payoutMethod) || 'Imported payment') : '',
-              payoutReference: '', payoutNote: '', payoutAmount,
-              payoutTotal: payoutAmount, payoutAdjustment: 0,
+              payoutReference: '',
+              payoutNote: '',
+              payoutAmount,
+              payoutTotal: payoutAmount,
+              payoutAdjustment: 0,
             };
-            await upsert(admin, 'consignment_item', safeHandle(itemNumber), itemFields(value));
+
+            const itemHandle = safeHandle(itemNumber);
+            let saved = await upsert(
+              admin,
+              'consignment_item',
+              itemHandle,
+              itemFields(value),
+            );
+
+            if (createShopifyProduct && !sold) {
+              const productSource = {
+                ...value,
+                id: saved.id,
+                handle: saved.handle,
+                shopifyProductId: null,
+              };
+              const product = await syncPosProduct(
+                admin,
+                productSource,
+                consignor,
+                current.shop?.name,
+              );
+              saved = await upsert(
+                admin,
+                'consignment_item',
+                itemHandle,
+                itemFields(value, {
+                  shopifyProductId: product.id,
+                  status: 'Available',
+                }),
+              );
+            }
+
             itemsImported += 1;
           }
         }
@@ -1296,15 +1475,20 @@ export async function action({ request }) {
         sequences.set(consignor.id, next);
         const itemNumber = `${consignor.number}-${String(next).padStart(3, '0')}`;
         if (existingItemNumbers.has(itemNumber)) throw new Error(`Row ${index + 2}: generated item number ${itemNumber} already exists.`);
-        const status = text(row.status || 'Available');
-        const sold = status === 'Sold' || Boolean(text(row.sale_date || row.date_sold));
+        const rawStatus = text(row.status || 'Draft');
+        const sold = rawStatus === 'Sold' || Boolean(text(row.sale_date || row.date_sold));
+        const status = sold
+          ? 'Sold'
+          : ['Returned', 'Donated'].includes(rawStatus)
+            ? rawStatus
+            : 'Draft';
         const paidOut = text(row.payout_status).toLowerCase() === 'paid';
         await upsert(admin, 'consignment_item', safeHandle(itemNumber), itemFields({
           itemNumber, consignorId: consignor.id, dateReceived: text(row.date_received) || today(),
           category: text(row.category), type: '', description, size: text(row.size),
           condition: text(row.condition) || 'Good', price,
           commissionPct: Number(row.commission_pct || consignor.commissionPct || 50),
-          status: sold ? 'Sold' : status, brand: text(row.brand), notes: text(row.item_notes || row.notes),
+          status, brand: text(row.brand), notes: text(row.item_notes || row.notes),
           importKey: itemImportKey, tags: [], vendor: '', productDescription: '', shopifyTitle: '',
           salePrice: sold ? (optionalNumber(row.sale_price) ?? price) : null,
           dateSold: sold ? (text(row.sale_date || row.date_sold) || today()) : null,
@@ -1467,7 +1651,7 @@ export async function action({ request }) {
         tags: productInput.tags || '',
         vendor: productInput.vendor || '',
         productDescription: productInput.productDescription || '',
-        shopifyTitle: String(productInput.shopifyTitle || existing.shopifyTitle || '').trim(),
+        shopifyTitle: String(productInput.shopifyTitle || existing.shopifyTitle || existing.description || existing.type || `Consignment item ${existing.itemNumber}`).trim(),
         shopifyPrice: productInput.shopifyPrice === '' || productInput.shopifyPrice == null
           ? (existing.shopifyPrice ?? existing.price)
           : Number(productInput.shopifyPrice),
@@ -1478,12 +1662,6 @@ export async function action({ request }) {
         publishOnline: productInput.publishOnline === true,
         publishToPos: productInput.publishToPos !== false,
       };
-      if (!productSource.shopifyTitle) {
-        return Response.json(
-          { error: 'Enter a Shopify product title before creating or updating the Shopify product.' },
-          { status: 400 },
-        );
-      }
       const sellPrice = Number(productSource.shopifyPrice ?? productSource.price);
       if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
         return Response.json(

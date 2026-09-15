@@ -29,6 +29,16 @@ export async function searchShopifyCategories(search) {
   return payload.categories || [];
 }
 
+export async function searchShopifyFiles(search) {
+  const query = search ? `&filesQuery=${encodeURIComponent(search.trim())}` : '';
+  const response = await fetch(`${API_URL}?files=1${query}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `Could not load Shopify files (${response.status})`);
+  }
+  return payload.files || [];
+}
+
 export function createConsignor(consignor) {
   return request('POST', { operation: 'createConsignor', consignor });
 }

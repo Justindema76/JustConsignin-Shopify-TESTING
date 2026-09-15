@@ -1,0 +1,231 @@
+name: Apply existing tier visibility rules
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-tier-visibility-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Wire existing tier2Enabled flag
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'{label}: expected text not found')
+              return text.replace(old, new, 1)
+
+          intake_path = Path('app/consignment_intake.jsx')
+          intake = intake_path.read_text()
+
+          intake = replace_once(
+              intake,
+              """          <ItemBarcode
+            value={item.itemNumber}
+            description={item.description || item.type || 'Consignment item'}
+            priceLabel={money(item.price)}
+          />""",
+              """          {tier2Enabled && (
+            <ItemBarcode
+              value={item.itemNumber}
+              description={item.description || item.type || 'Consignment item'}
+              priceLabel={money(item.price)}
+            />
+          )}""",
+              'barcode gate',
+          )
+
+          intake = replace_once(
+              intake,
+              """          <ManualSaleStatus
+            item={item}
+            onMarkSold={(itemId, details) =>
+              onUpdateStatus(itemId, 'Sold', details)
+            }
+            money={money}
+            onStartPayout={onStartPayout}
+            onOpenPayoutReceipt={onOpenPayoutReceipt}
+          />""",
+              """          <ManualSaleStatus
+            item={item}
+            allowManualSale={!tier2Enabled}
+            onMarkSold={(itemId, details) =>
+              onUpdateStatus(itemId, 'Sold', details)
+            }
+            money={money}
+            onStartPayout={onStartPayout}
+            onOpenPayoutReceipt={onOpenPayoutReceipt}
+          />""",
+              'manual sale gate',
+          )
+
+          replacements = [
+              ("<ConsignorsScreen consignors={consignors} items={items} query={query} setQuery={setQuery}", "<ConsignorsScreen consignors={consignors} items={items} query={query} setQuery={setQuery} tier2Enabled={tier2Enabled}", 'consignors tier prop'),
+              ("<ItemsScreen items={items} consignors={consignors}", "<ItemsScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled}", 'items tier prop'),
+              ("<SalesScreen items={items} consignors={consignors}", "<SalesScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled}", 'sales tier prop'),
+              ("<PayoutsScreen items={items} consignors={consignors}", "<PayoutsScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled}", 'payouts tier prop'),
+          ]
+          for old, new, label in replacements:
+              intake = replace_once(intake, old, new, label)
+          intake_path.write_text(intake)
+
+          items_path = Path('app/pages/consignment/ItemsScreen.jsx')
+          items = items_path.read_text()
+          items = replace_once(items, """  onStartPayout,
+  onNewItem,
+}) {""", """  onStartPayout,
+  onNewItem,
+  tier2Enabled = false,
+}) {""", 'items signature')
+          items = replace_once(items, "const [productFilter, setProductFilter] = useState('All');", "const [productFilter, setProductFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');", 'items product default')
+          items = replace_once(items, """            {
+              key: 'product',
+              label: 'Product type',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by product type',
+              options: [
+                { value: 'All', label: 'All product types' },
+                { value: 'Manual', label: 'Manual' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+                { value: 'POS + Online', label: 'POS + Online' },
+              ],
+            },""", """            ...(tier2Enabled ? [{
+              key: 'product',
+              label: 'Product type',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by product type',
+              options: [
+                { value: 'All', label: 'All product types' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+                { value: 'POS + Online', label: 'POS + Online' },
+              ],
+            }] : []),""", 'items product filter visibility')
+          items_path.write_text(items)
+
+          consignors_path = Path('app/pages/consignment/ConsignorsScreen.jsx')
+          consignors = consignors_path.read_text()
+          consignors = replace_once(consignors, "export default function ConsignorsScreen({ consignors, items, query, setQuery, onOpenConsignor, onOpenItem, onMarkSold, onStartPayout, onNewConsignor, onNewItem, onImport, onExport }) {", "export default function ConsignorsScreen({ consignors, items, query, setQuery, onOpenConsignor, onOpenItem, onMarkSold, onStartPayout, onNewConsignor, onNewItem, onImport, onExport, tier2Enabled = false }) {", 'consignors signature')
+          consignors = replace_once(consignors, "const [productFilter, setProductFilter] = useState('All');", "const [productFilter, setProductFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');", 'consignors product default')
+          consignors = replace_once(consignors, "if ((statusFilter === 'All' || statusFilter === 'Current') && productFilter === 'All') {", "if ((statusFilter === 'All' || statusFilter === 'Current') && (productFilter === 'All' || !tier2Enabled)) {", 'consignors empty-account behavior')
+          consignors = replace_once(consignors, """            {
+              key: 'product',
+              label: 'Product type',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by product type',
+              options: [
+                { value: 'All', label: 'All product types' },
+                { value: 'Manual', label: 'Manual' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+                { value: 'POS + Online', label: 'POS + Online' },
+              ],
+            },""", """            ...(tier2Enabled ? [{
+              key: 'product',
+              label: 'Product type',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by product type',
+              options: [
+                { value: 'All', label: 'All product types' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+                { value: 'POS + Online', label: 'POS + Online' },
+              ],
+            }] : []),""", 'consignors product filter visibility')
+          consignors_path.write_text(consignors)
+
+          sales_path = Path('app/pages/consignment/SalesScreen.jsx')
+          sales = sales_path.read_text()
+          sales = replace_once(sales, "export default function SalesScreen({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout }) {", "export default function SalesScreen({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout, tier2Enabled = false }) {", 'sales signature')
+          sales = replace_once(sales, "const [productFilter, setProductFilter] = useState('All');", "const [productFilter, setProductFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');", 'sales source default')
+          sales = replace_once(sales, """            {
+              key: 'source',
+              label: 'Sale source',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by sale source',
+              options: [
+                { value: 'All', label: 'All sale sources' },
+                { value: 'Manual', label: 'Manual' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+              ],
+            },""", """            ...(tier2Enabled ? [{
+              key: 'source',
+              label: 'Sale source',
+              value: productFilter,
+              onChange: setProductFilter,
+              ariaLabel: 'Filter by sale source',
+              options: [
+                { value: 'All', label: 'All sale sources' },
+                { value: 'POS', label: 'POS' },
+                { value: 'Online', label: 'Online' },
+              ],
+            }] : []),""", 'sales source filter visibility')
+          sales_path.write_text(sales)
+
+          payouts_path = Path('app/pages/consignment/PayoutsScreen.jsx')
+          payouts = payouts_path.read_text()
+          payouts = replace_once(payouts, """const SOURCE_OPTIONS = [
+  { value: 'All', label: 'All sale sources' },
+  { value: 'Manual', label: 'Manual' },
+  { value: 'POS', label: 'POS' },
+  { value: 'Online', label: 'Online' },
+];""", """const SOURCE_OPTIONS = [
+  { value: 'All', label: 'All sale sources' },
+  { value: 'POS', label: 'POS' },
+  { value: 'Online', label: 'Online' },
+];""", 'payout source options')
+          payouts = replace_once(payouts, "function OwedTab({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout }) {", "function OwedTab({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout, tier2Enabled }) {", 'owed signature')
+          payouts = replace_once(payouts, "const [sourceFilter, setSourceFilter] = useState('All');", "const [sourceFilter, setSourceFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');", 'owed source default')
+          source_block = """          {
+            key: 'source',
+            label: 'Sale source',
+            value: sourceFilter,
+            onChange: setSourceFilter,
+            ariaLabel: 'Filter by sale source',
+            options: SOURCE_OPTIONS,
+          },"""
+          source_hidden = """          ...(tier2Enabled ? [{
+            key: 'source',
+            label: 'Sale source',
+            value: sourceFilter,
+            onChange: setSourceFilter,
+            ariaLabel: 'Filter by sale source',
+            options: SOURCE_OPTIONS,
+          }] : []),"""
+          payouts = replace_once(payouts, source_block, source_hidden, 'owed source filter visibility')
+          payouts = replace_once(payouts, "function HistoryTab({ items, consignors, onOpenConsignor }) {", "function HistoryTab({ items, consignors, onOpenConsignor, tier2Enabled }) {", 'history signature')
+          payouts = replace_once(payouts, "const [sourceFilter, setSourceFilter] = useState('All');", "const [sourceFilter, setSourceFilter] = useState(() => tier2Enabled ? 'All' : 'Manual');", 'history source default')
+          payouts = replace_once(payouts, source_block, source_hidden, 'history source filter visibility')
+          payouts = replace_once(payouts, "export default function PayoutsScreen({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout }) {", "export default function PayoutsScreen({ items, consignors, onOpenItem, onOpenConsignor, onStartPayout, tier2Enabled = false }) {", 'payouts signature')
+          payouts = replace_once(payouts, "<OwedTab items={items} consignors={consignors} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout} />", "<OwedTab items={items} consignors={consignors} onOpenItem={onOpenItem} onOpenConsignor={onOpenConsignor} onStartPayout={onStartPayout} tier2Enabled={tier2Enabled} />", 'owed tier prop')
+          payouts = replace_once(payouts, "<HistoryTab items={items} consignors={consignors} onOpenConsignor={onOpenConsignor} />", "<HistoryTab items={items} consignors={consignors} onOpenConsignor={onOpenConsignor} tier2Enabled={tier2Enabled} />", 'history tier prop')
+          payouts_path.write_text(payouts)
+
+          Path('.github/workflows/one-time-tier-visibility-fix.yml').unlink(missing_ok=True)
+          PY
+
+      - name: Commit application changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Wire existing tier plan across manual and Shopify filters"
+          git push origin main
