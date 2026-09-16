@@ -1,0 +1,257 @@
+import crypto from 'node:crypto';
+import db from '../db.server';
+
+const BUFFER_AUTH_URL = 'https://auth.buffer.com/auth';
+const BUFFER_TOKEN_URL = 'https://auth.buffer.com/token';
+const BUFFER_API_URL = 'https://api.buffer.com';
+const BUFFER_SCOPES = 'posts:read posts:write account:read offline_access';
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is not configured.`);
+  }
+  return value;
+}
+
+function base64url(value) {
+  return Buffer.from(value).toString('base64url');
+}
+
+function encryptionKey() {
+  const secret = requiredEnv('BUFFER_TOKEN_ENCRYPTION_KEY');
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+export function encryptSecret(value) {
+  if (!value) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
+  const encrypted = Buffer.concat([
+    cipher.update(String(value), 'utf8'),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return `v1:${iv.toString('base64url')}:${tag.toString('base64url')}:${encrypted.toString('base64url')}`;
+}
+
+export function decryptSecret(value) {
+  if (!value) return null;
+  const [version, ivValue, tagValue, encryptedValue] = String(value).split(':');
+  if (version !== 'v1' || !ivValue || !tagValue || !encryptedValue) {
+    throw new Error('Stored Buffer credential is invalid.');
+  }
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    encryptionKey(),
+    Buffer.from(ivValue, 'base64url'),
+  );
+  decipher.setAuthTag(Buffer.from(tagValue, 'base64url'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedValue, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8');
+}
+
+export function bufferConfiguration() {
+  const appUrl = String(process.env.SHOPIFY_APP_URL || '').replace(/\/$/, '');
+  return {
+    configured: Boolean(
+      process.env.BUFFER_CLIENT_ID &&
+      process.env.BUFFER_TOKEN_ENCRYPTION_KEY &&
+      appUrl,
+    ),
+    clientId: process.env.BUFFER_CLIENT_ID || '',
+    clientSecret: process.env.BUFFER_CLIENT_SECRET || '',
+    redirectUri: process.env.BUFFER_REDIRECT_URI || (appUrl ? `${appUrl}/buffer/callback` : ''),
+  };
+}
+
+export function createPkcePair() {
+  const verifier = base64url(crypto.randomBytes(48));
+  const challenge = crypto
+    .createHash('sha256')
+    .update(verifier)
+    .digest('base64url');
+  return { verifier, challenge };
+}
+
+export function createOAuthState() {
+  return base64url(crypto.randomBytes(32));
+}
+
+export function buildBufferAuthorizationUrl({ state, challenge }) {
+  const config = bufferConfiguration();
+  if (!config.configured) {
+    throw new Error('Buffer OAuth is not configured on this server.');
+  }
+
+  const url = new URL(BUFFER_AUTH_URL);
+  url.searchParams.set('client_id', config.clientId);
+  url.searchParams.set('redirect_uri', config.redirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', BUFFER_SCOPES);
+  url.searchParams.set('state', state);
+  url.searchParams.set('code_challenge', challenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('prompt', 'consent');
+  return url.toString();
+}
+
+export async function exchangeBufferCode({ code, verifier }) {
+  const config = bufferConfiguration();
+  if (!config.configured) {
+    throw new Error('Buffer OAuth is not configured on this server.');
+  }
+
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: config.redirectUri,
+    code_verifier: verifier,
+  });
+
+  if (config.clientSecret) {
+    body.set('client_secret', config.clientSecret);
+  }
+
+  const response = await fetch(BUFFER_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error_description || data.error || 'Buffer token exchange failed.');
+  }
+  return data;
+}
+
+async function bufferGraphql(accessToken, query, variables = {}) {
+  const response = await fetch(BUFFER_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  if (!response.ok || data.errors?.length) {
+    const message = data.errors?.map((entry) => entry.message).join(', ');
+    throw new Error(message || `Buffer API request failed (${response.status}).`);
+  }
+  return data.data;
+}
+
+export async function getBufferAccountSnapshot(accessToken) {
+  const accountData = await bufferGraphql(
+    accessToken,
+    `query JustConsignInBufferAccount {
+      account {
+        id
+        name
+        email
+        organizations {
+          id
+          name
+        }
+      }
+    }`,
+  );
+
+  const organizations = accountData?.account?.organizations || [];
+  const channelLists = await Promise.all(
+    organizations.map(async (organization) => {
+      const data = await bufferGraphql(
+        accessToken,
+        `query JustConsignInBufferChannels($organizationId: OrganizationId!) {
+          channels(input: { organizationId: $organizationId }) {
+            id
+            name
+            displayName
+            service
+            avatar
+            isDisconnected
+            isLocked
+          }
+        }`,
+        { organizationId: organization.id },
+      );
+      return (data?.channels || []).map((channel) => ({
+        ...channel,
+        organizationId: organization.id,
+        organizationName: organization.name,
+      }));
+    }),
+  );
+
+  return {
+    account: accountData?.account || null,
+    organizations,
+    channels: channelLists.flat(),
+  };
+}
+
+export async function saveBufferConnection({ shop, tokens, snapshot }) {
+  const expiresAt = tokens.expires_in
+    ? new Date(Date.now() + Number(tokens.expires_in) * 1000)
+    : null;
+
+  const firstOrganization = snapshot.organizations?.[0] || null;
+
+  return db.bufferConnection.upsert({
+    where: { shop },
+    update: {
+      accessToken: encryptSecret(tokens.access_token),
+      refreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token) : null,
+      expiresAt,
+      scope: tokens.scope || '',
+      accountId: snapshot.account?.id || null,
+      accountName: snapshot.account?.name || snapshot.account?.email || null,
+      organizationId: firstOrganization?.id || null,
+      organizationName: firstOrganization?.name || null,
+      channelsJson: JSON.stringify(snapshot.channels || []),
+    },
+    create: {
+      shop,
+      accessToken: encryptSecret(tokens.access_token),
+      refreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token) : null,
+      expiresAt,
+      scope: tokens.scope || '',
+      accountId: snapshot.account?.id || null,
+      accountName: snapshot.account?.name || snapshot.account?.email || null,
+      organizationId: firstOrganization?.id || null,
+      organizationName: firstOrganization?.name || null,
+      channelsJson: JSON.stringify(snapshot.channels || []),
+    },
+  });
+}
+
+export async function getBufferConnectionSummary(shop) {
+  const connection = await db.bufferConnection.findUnique({ where: { shop } });
+  if (!connection) return null;
+
+  let channels = [];
+  try {
+    channels = JSON.parse(connection.channelsJson || '[]');
+  } catch {
+    channels = [];
+  }
+
+  return {
+    connected: true,
+    accountName: connection.accountName,
+    organizationName: connection.organizationName,
+    channels,
+    connectedAt: connection.createdAt,
+    updatedAt: connection.updatedAt,
+  };
+}
+
+export async function deleteBufferConnection(shop) {
+  await db.bufferConnection.deleteMany({ where: { shop } });
+}
