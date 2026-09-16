@@ -4,21 +4,18 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Camera,
   Check,
-  ExternalLink,
-  Link2,
+  ChevronRight,
   Loader2,
-  MessageCircle,
-  Music2,
-  Share2,
+  Tag,
+  Users,
 } from 'lucide-react';
 
 const SUPPORTED_SERVICES = new Set(['instagram', 'facebook', 'tiktok']);
 
 function ChannelIcon({ service }) {
   if (service === 'instagram') return <Camera size={17} aria-hidden="true" />;
-  if (service === 'facebook') return <MessageCircle size={17} aria-hidden="true" />;
-  if (service === 'tiktok') return <Music2 size={17} aria-hidden="true" />;
-  return <Link2 size={17} aria-hidden="true" />;
+  if (service === 'facebook') return <Users size={17} aria-hidden="true" />;
+  return <Tag size={17} aria-hidden="true" />;
 }
 
 function moneyValue(value) {
@@ -57,6 +54,9 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [error, setError] = useState('');
 
   const imageUrl = item.shopifyPhoto || item.photo || '';
+  const socialSettingsHref = typeof window === 'undefined'
+    ? '/app/social'
+    : `/app/social${window.location.search || ''}`;
 
   const channels = useMemo(
     () => (connection?.channels || []).filter((channel) => {
@@ -142,7 +142,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
       <summary className="consignment-form-section-head social-post-summary">
         <span>
           <span className="consignment-form-section-marker" aria-hidden="true" />
-          <Share2 size={17} aria-hidden="true" />
+          <Tag size={17} aria-hidden="true" />
           <h2>Social media</h2>
         </span>
         <span className="consignment-row-sub">
@@ -164,7 +164,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
                 Each merchant uses their own Buffer account. Once connected, this item can create ready-to-review social drafts.
               </p>
             </div>
-            <a className="consignment-btn" href="/app/social">
+            <a className="consignment-btn" href={socialSettingsHref}>
               {configured ? 'Connect Buffer' : 'Social Media setup'}
             </a>
           </div>
@@ -240,7 +240,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
                 onClick={saveDrafts}
                 disabled={disabled || saving || !caption.trim() || selectedIds.length === 0}
               >
-                {saving ? <Loader2 className="consignment-spin" size={16} /> : <Share2 size={16} />}
+                {saving ? <Loader2 className="consignment-spin" size={16} /> : <Tag size={16} />}
                 Save to Buffer drafts
               </button>
 
@@ -250,7 +250,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Open Buffer <ExternalLink size={14} aria-hidden="true" />
+                Open Buffer <ChevronRight size={14} aria-hidden="true" />
               </a>
             </div>
           </>
