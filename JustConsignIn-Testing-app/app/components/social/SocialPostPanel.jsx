@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Camera,
   Check,
   ExternalLink,
-  Facebook,
-  Instagram,
   Link2,
   Loader2,
+  MessageCircle,
   Music2,
   Share2,
 } from 'lucide-react';
@@ -15,8 +15,8 @@ import {
 const SUPPORTED_SERVICES = new Set(['instagram', 'facebook', 'tiktok']);
 
 function ChannelIcon({ service }) {
-  if (service === 'instagram') return <Instagram size={17} aria-hidden="true" />;
-  if (service === 'facebook') return <Facebook size={17} aria-hidden="true" />;
+  if (service === 'instagram') return <Camera size={17} aria-hidden="true" />;
+  if (service === 'facebook') return <MessageCircle size={17} aria-hidden="true" />;
   if (service === 'tiktok') return <Music2 size={17} aria-hidden="true" />;
   return <Link2 size={17} aria-hidden="true" />;
 }
