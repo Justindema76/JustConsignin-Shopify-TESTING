@@ -1,22 +1,22 @@
 /* eslint-disable react/prop-types */
 
 import {
+  Camera,
   CheckCircle2,
   ExternalLink,
-  Facebook,
-  Instagram,
   Link2,
+  MessageCircle,
   Music2,
-  Youtube,
+  PlayCircle,
 } from 'lucide-react';
 import { Form } from 'react-router';
 
 function NetworkIcon({ service }) {
   const normalized = String(service || '').toLowerCase();
-  if (normalized === 'instagram') return <Instagram size={17} aria-hidden="true" />;
-  if (normalized === 'facebook') return <Facebook size={17} aria-hidden="true" />;
+  if (normalized === 'instagram') return <Camera size={17} aria-hidden="true" />;
+  if (normalized === 'facebook') return <MessageCircle size={17} aria-hidden="true" />;
   if (normalized === 'tiktok') return <Music2 size={17} aria-hidden="true" />;
-  if (normalized === 'youtube') return <Youtube size={17} aria-hidden="true" />;
+  if (normalized === 'youtube') return <PlayCircle size={17} aria-hidden="true" />;
   return <Link2 size={17} aria-hidden="true" />;
 }
 
