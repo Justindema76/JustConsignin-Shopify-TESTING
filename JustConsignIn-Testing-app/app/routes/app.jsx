@@ -186,6 +186,10 @@ export default function App() {
 
       <s-app-nav>
 
+        <s-link href="/app/social">
+          Social Media
+        </s-link>
+
         <s-link href="/app/plans">
           Pricing
         </s-link>
