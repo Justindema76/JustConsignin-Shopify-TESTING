@@ -5,6 +5,7 @@ const BUFFER_AUTH_URL = 'https://auth.buffer.com/auth';
 const BUFFER_TOKEN_URL = 'https://auth.buffer.com/token';
 const BUFFER_API_URL = 'https://api.buffer.com';
 const BUFFER_SCOPES = 'posts:read posts:write account:read offline_access';
+const SOCIAL_DRAFT_SERVICES = new Set(['instagram', 'facebook', 'tiktok']);
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -129,6 +130,34 @@ export async function exchangeBufferCode({ code, verifier }) {
   return data;
 }
 
+async function refreshBufferTokens(refreshToken) {
+  const config = bufferConfiguration();
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+  });
+
+  if (config.clientSecret) {
+    body.set('client_secret', config.clientSecret);
+  }
+
+  const response = await fetch(BUFFER_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error_description || data.error || 'Buffer token refresh failed.');
+  }
+  if (!data.access_token || !data.refresh_token) {
+    throw new Error('Buffer did not return a complete refreshed token pair.');
+  }
+  return data;
+}
+
 async function bufferGraphql(accessToken, query, variables = {}) {
   const response = await fetch(BUFFER_API_URL, {
     method: 'POST',
@@ -231,6 +260,40 @@ export async function saveBufferConnection({ shop, tokens, snapshot }) {
   });
 }
 
+async function validBufferAccessToken(shop) {
+  const connection = await db.bufferConnection.findUnique({ where: { shop } });
+  if (!connection) {
+    throw new Error('Buffer is not connected for this Shopify store.');
+  }
+
+  const accessToken = decryptSecret(connection.accessToken);
+  const expiresSoon = connection.expiresAt
+    ? connection.expiresAt.getTime() <= Date.now() + 60_000
+    : false;
+
+  if (!expiresSoon) return accessToken;
+  if (!connection.refreshToken) {
+    throw new Error('Buffer authorization expired. Reconnect Buffer in Social Media settings.');
+  }
+
+  const refreshed = await refreshBufferTokens(decryptSecret(connection.refreshToken));
+  const expiresAt = refreshed.expires_in
+    ? new Date(Date.now() + Number(refreshed.expires_in) * 1000)
+    : null;
+
+  await db.bufferConnection.update({
+    where: { shop },
+    data: {
+      accessToken: encryptSecret(refreshed.access_token),
+      refreshToken: encryptSecret(refreshed.refresh_token),
+      expiresAt,
+      scope: refreshed.scope || connection.scope || '',
+    },
+  });
+
+  return refreshed.access_token;
+}
+
 export async function getBufferConnectionSummary(shop) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
   if (!connection) return null;
@@ -250,6 +313,80 @@ export async function getBufferConnectionSummary(shop) {
     connectedAt: connection.createdAt,
     updatedAt: connection.updatedAt,
   };
+}
+
+export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
+  const connection = await db.bufferConnection.findUnique({ where: { shop } });
+  if (!connection) {
+    throw new Error('Connect Buffer before creating social drafts.');
+  }
+
+  let knownChannels = [];
+  try {
+    knownChannels = JSON.parse(connection.channelsJson || '[]');
+  } catch {
+    knownChannels = [];
+  }
+
+  const requestedIds = [...new Set((channelIds || []).map(String))];
+  if (!requestedIds.length) {
+    throw new Error('Select at least one social channel.');
+  }
+
+  const selectedChannels = requestedIds.map((channelId) => {
+    const channel = knownChannels.find((entry) => String(entry.id) === channelId);
+    if (!channel) throw new Error('One of the selected Buffer channels is no longer available.');
+    if (channel.isDisconnected || channel.isLocked) {
+      throw new Error(`${channel.displayName || channel.name} is not available for posting.`);
+    }
+    if (!SOCIAL_DRAFT_SERVICES.has(String(channel.service || '').toLowerCase())) {
+      throw new Error(`${channel.service} posting is not enabled in this first JustConsignIn version.`);
+    }
+    if (['instagram', 'tiktok'].includes(String(channel.service).toLowerCase()) && !imageUrl) {
+      throw new Error(`${channel.service} requires an item image.`);
+    }
+    return channel;
+  });
+
+  const accessToken = await validBufferAccessToken(shop);
+  const mutation = `mutation JustConsignInCreateDraft($input: CreatePostInput!) {
+    createPost(input: $input) {
+      ... on PostActionSuccess {
+        post { id text }
+      }
+      ... on MutationError {
+        message
+      }
+    }
+  }`;
+
+  const results = [];
+  for (const channel of selectedChannels) {
+    const input = {
+      text: String(text || '').trim(),
+      channelId: channel.id,
+      schedulingType: 'automatic',
+      mode: 'addToQueue',
+      saveToDraft: true,
+      source: 'JustConsignIn',
+      assets: imageUrl ? [{ image: { url: imageUrl } }] : [],
+    };
+
+    const data = await bufferGraphql(accessToken, mutation, { input });
+    const payload = data?.createPost;
+    if (!payload?.post?.id) {
+      throw new Error(payload?.message || `Buffer could not create a draft for ${channel.displayName || channel.name}.`);
+    }
+
+    results.push({
+      channelId: channel.id,
+      channelName: channel.displayName || channel.name,
+      service: channel.service,
+      postId: payload.post.id,
+    });
+  }
+
+  return results;
 }
 
 export async function deleteBufferConnection(shop) {
