@@ -1,4 +1,4 @@
-import { Share2 } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { useLoaderData, useLocation, useNavigate } from 'react-router';
 import { authenticate } from '../shopify.server';
 import Header from '../components/consignment/Header';
@@ -61,7 +61,7 @@ export default function SocialMediaRoute() {
           <section className="consignment-form-section">
             <div className="consignment-form-section-head">
               <span className="consignment-form-section-marker" aria-hidden="true" />
-              <Share2 size={18} aria-hidden="true" />
+              <Tag size={18} aria-hidden="true" />
               <div>
                 <h2>Post from your consignment inventory</h2>
                 <p>
