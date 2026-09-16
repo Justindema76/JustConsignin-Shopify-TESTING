@@ -2,22 +2,20 @@
 
 import {
   Camera,
-  CheckCircle2,
-  ExternalLink,
-  Link2,
-  MessageCircle,
-  Music2,
-  PlayCircle,
+  Check,
+  ChevronRight,
+  Image,
+  Tag,
+  Users,
 } from 'lucide-react';
 import { Form } from 'react-router';
 
 function NetworkIcon({ service }) {
   const normalized = String(service || '').toLowerCase();
   if (normalized === 'instagram') return <Camera size={17} aria-hidden="true" />;
-  if (normalized === 'facebook') return <MessageCircle size={17} aria-hidden="true" />;
-  if (normalized === 'tiktok') return <Music2 size={17} aria-hidden="true" />;
-  if (normalized === 'youtube') return <PlayCircle size={17} aria-hidden="true" />;
-  return <Link2 size={17} aria-hidden="true" />;
+  if (normalized === 'facebook') return <Users size={17} aria-hidden="true" />;
+  if (normalized === 'youtube') return <Image size={17} aria-hidden="true" />;
+  return <Tag size={17} aria-hidden="true" />;
 }
 
 export default function SocialConnectionCard({
@@ -32,7 +30,7 @@ export default function SocialConnectionCard({
     <section className="consignment-form-section social-connection-card">
       <div className="consignment-form-section-head">
         <span className="consignment-form-section-marker" aria-hidden="true" />
-        <Link2 size={18} aria-hidden="true" />
+        <Tag size={18} aria-hidden="true" />
         <div>
           <h2>Social media publishing</h2>
           <p>Connect this Shopify store to its own Buffer account.</p>
@@ -43,7 +41,7 @@ export default function SocialConnectionCard({
         {connection ? (
           <>
             <div className="social-connection-status connected">
-              <CheckCircle2 size={20} aria-hidden="true" />
+              <Check size={20} aria-hidden="true" />
               <div>
                 <strong>Buffer connected</strong>
                 <span>
@@ -91,7 +89,7 @@ export default function SocialConnectionCard({
                 target="_blank"
                 rel="noreferrer"
               >
-                Open Buffer <ExternalLink size={15} aria-hidden="true" />
+                Open Buffer <ChevronRight size={15} aria-hidden="true" />
               </a>
 
               <a className="consignment-btn" href={connectHref} target="_top">
@@ -109,7 +107,7 @@ export default function SocialConnectionCard({
         ) : (
           <>
             <div className="social-connection-status">
-              <Link2 size={20} aria-hidden="true" />
+              <Tag size={20} aria-hidden="true" />
               <div>
                 <strong>Buffer not connected</strong>
                 <span>
