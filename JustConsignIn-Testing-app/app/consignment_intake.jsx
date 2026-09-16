@@ -34,9 +34,11 @@ import PayoutReceiptScreen from './pages/consignment/PayoutReceiptScreen';
 import ConsignorDashboard from './pages/consignment/ConsignorDashboard';
 import CreateConsignorScreen from './pages/consignment/CreateConsignorScreen';
 import ConsignmentFilterBar from './components/consignment/ConsignmentFilterBar';
+import SocialPostPanel from './components/social/SocialPostPanel';
 import './styles/consignment-global.css';
 import './styles/consignment-forms.css';
 import './styles/shopify-file-picker.css';
+import './styles/social-media.css';
 /* ============================================================================
    STYLING
    All app CSS is external. This intake file contains no embedded GlobalStyle().
@@ -1295,6 +1297,8 @@ function EditItemScreen({
               }
             }}
           />
+
+          <SocialPostPanel item={item} disabled={isSold} />
 
           {!confirmingDelete ? (
             <button
