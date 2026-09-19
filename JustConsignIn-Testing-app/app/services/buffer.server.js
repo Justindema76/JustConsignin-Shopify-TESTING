@@ -343,6 +343,162 @@ export async function getBufferConnectionSummary(shop) {
   };
 }
 
+function normalizeSocialAssets(assets = []) {
+  return (Array.isArray(assets) ? assets : [])
+    .filter((asset) => asset && asset.url && ['image', 'video'].includes(asset.type))
+    .slice(0, 10)
+    .map((asset) => (
+      asset.type === 'video'
+        ? { video: { url: String(asset.url) } }
+        : { image: { url: String(asset.url) } }
+    ));
+}
+
+function bufferMetadataForChannel(service, type) {
+  const normalizedService = String(service || '').toLowerCase();
+  const normalizedType = ['post', 'story', 'reel'].includes(String(type || '').toLowerCase())
+    ? String(type).toLowerCase()
+    : 'post';
+
+  if (normalizedService === 'facebook') {
+    return { facebook: { type: normalizedType } };
+  }
+
+  if (normalizedService === 'instagram') {
+    return {
+      instagram: {
+        type: normalizedType,
+        shouldShareToFeed: normalizedType !== 'story',
+      },
+    };
+  }
+
+  return undefined;
+}
+
+export async function createBufferPosts({
+  shop,
+  channels,
+  assets,
+  action = 'draft',
+  dueAt = null,
+}) {
+  const connection = await db.bufferConnection.findUnique({ where: { shop } });
+  const apiKey = process.env.BUFFER_API_KEY || '';
+
+  let knownChannels = [];
+  let accessToken = '';
+
+  if (connection) {
+    try {
+      knownChannels = JSON.parse(connection.channelsJson || '[]');
+    } catch {
+      knownChannels = [];
+    }
+    accessToken = await validBufferAccessToken(shop);
+  } else if (apiKey) {
+    const snapshot = await getBufferAccountSnapshot(apiKey);
+    knownChannels = snapshot.channels || [];
+    accessToken = apiKey;
+  } else {
+    throw new Error('Connect Buffer before creating social posts.');
+  }
+
+  const requested = Array.isArray(channels) ? channels : [];
+  if (!requested.length) {
+    throw new Error('Select at least one social channel.');
+  }
+
+  const normalizedAssets = normalizeSocialAssets(assets);
+  const normalizedAction = ['draft', 'now', 'schedule'].includes(action) ? action : 'draft';
+
+  if (normalizedAction === 'schedule') {
+    const scheduledTime = new Date(dueAt || '');
+    if (!dueAt || Number.isNaN(scheduledTime.getTime())) {
+      throw new Error('Choose a valid date and time before scheduling.');
+    }
+    if (scheduledTime.getTime() <= Date.now()) {
+      throw new Error('Scheduled posts must be set for a future time.');
+    }
+  }
+
+  const selectedChannels = requested.map((requestChannel) => {
+    const channelId = String(requestChannel?.id || '');
+    const channel = knownChannels.find((entry) => String(entry.id) === channelId);
+    if (!channel) throw new Error('One of the selected Buffer channels is no longer available.');
+    if (channel.isDisconnected || channel.isLocked) {
+      throw new Error(`${channel.displayName || channel.name} is not available for posting.`);
+    }
+
+    const service = String(channel.service || '').toLowerCase();
+    if (!SOCIAL_DRAFT_SERVICES.has(service)) {
+      throw new Error(`${channel.service} posting is not enabled in this JustConsignIn version.`);
+    }
+    if (['instagram', 'tiktok'].includes(service) && normalizedAssets.length === 0) {
+      throw new Error(`${channel.displayName || channel.name} requires an image or video.`);
+    }
+
+    return {
+      channel,
+      text: String(requestChannel?.text || '').trim(),
+      type: String(requestChannel?.type || 'post').toLowerCase(),
+    };
+  });
+
+  const mutation = `mutation JustConsignInCreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
+      ... on PostActionSuccess {
+        post { id text status dueAt }
+      }
+      ... on MutationError {
+        message
+      }
+    }
+  }`;
+
+  const results = [];
+  for (const selected of selectedChannels) {
+    const service = String(selected.channel.service || '').toLowerCase();
+    const input = {
+      text: selected.text,
+      channelId: selected.channel.id,
+      schedulingType: 'automatic',
+      mode: normalizedAction === 'now'
+        ? 'shareNow'
+        : normalizedAction === 'schedule'
+          ? 'customScheduled'
+          : 'addToQueue',
+      saveToDraft: normalizedAction === 'draft',
+      source: 'JustConsignIn',
+      assets: normalizedAssets,
+    };
+
+    if (normalizedAction === 'schedule') {
+      input.dueAt = new Date(dueAt).toISOString();
+    }
+
+    const metadata = bufferMetadataForChannel(service, selected.type);
+    if (metadata) input.metadata = metadata;
+
+    const data = await bufferGraphql(accessToken, mutation, { input });
+    const payload = data?.createPost;
+    if (!payload?.post?.id) {
+      throw new Error(payload?.message || `Buffer could not create a post for ${selected.channel.displayName || selected.channel.name}.`);
+    }
+
+    results.push({
+      channelId: selected.channel.id,
+      channelName: selected.channel.displayName || selected.channel.name,
+      service: selected.channel.service,
+      postId: payload.post.id,
+      status: payload.post.status,
+      dueAt: payload.post.dueAt || null,
+    });
+  }
+
+  return results;
+}
+
 export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
   const apiKey = process.env.BUFFER_API_KEY || '';
