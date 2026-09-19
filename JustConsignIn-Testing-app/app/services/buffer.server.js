@@ -164,11 +164,16 @@ async function refreshBufferTokens(refreshToken) {
 }
 
 async function bufferGraphql(accessToken, query, variables = {}) {
+  const normalizedAccessToken = String(accessToken || '').trim();
+  if (!normalizedAccessToken) {
+    throw new Error('Buffer API key is missing.');
+  }
+
   const response = await fetch(BUFFER_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${normalizedAccessToken}`,
     },
     body: JSON.stringify({ query, variables }),
   });
