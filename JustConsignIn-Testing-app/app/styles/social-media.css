@@ -322,3 +322,271 @@
     width: 100%;
   }
 }
+
+
+/* Social composer */
+.social-composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.social-composer-editor,
+.social-live-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.social-media-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.social-upload-button {
+  cursor: pointer;
+}
+
+.social-uploading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--consignment-muted, #637381);
+  font-size: 12px;
+}
+
+.social-media-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.social-media-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--consignment-border, #dfe3e8);
+  border-radius: 9px;
+}
+
+.social-media-thumb {
+  position: relative;
+  width: 64px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--consignment-surface-subtle, #f8fafc);
+}
+
+.social-media-thumb img,
+.social-media-thumb video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.social-media-thumb span {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  min-width: 20px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+}
+
+.social-media-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.social-media-meta strong,
+.social-media-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-media-meta small {
+  color: var(--consignment-muted, #637381);
+  text-transform: capitalize;
+}
+
+.social-media-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.social-media-actions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--consignment-border, #dfe3e8);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.social-media-actions button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.social-media-actions button.danger {
+  color: #b42318;
+}
+
+.social-live-preview {
+  position: sticky;
+  top: 10px;
+}
+
+.social-preview-card {
+  overflow: hidden;
+  border: 1px solid var(--consignment-border, #dfe3e8);
+  border-radius: 12px;
+  background: var(--consignment-surface, #fff);
+}
+
+.social-preview-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.social-preview-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #111;
+}
+
+.social-preview-card.story .social-preview-media,
+.social-preview-card.reel .social-preview-media {
+  aspect-ratio: 9 / 16;
+}
+
+.social-preview-media img,
+.social-preview-media video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.social-preview-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.68);
+  color: #fff;
+  font-size: 10px;
+}
+
+.social-preview-caption {
+  min-height: 64px;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.social-post-channel {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.social-post-type-select {
+  min-width: 88px;
+  padding: 7px 8px;
+  border: 1px solid var(--consignment-border, #dfe3e8);
+  border-radius: 8px;
+  background: var(--consignment-surface, #fff);
+  color: inherit;
+}
+
+.social-schedule-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 280px);
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .social-composer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .social-live-preview {
+    position: static;
+  }
+
+  .social-preview-card {
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 760px) {
+  .social-post-channel {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .social-post-type-select {
+    grid-column: 2 / -1;
+    width: 100%;
+  }
+
+  .social-media-card {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .social-media-thumb {
+    width: 56px;
+  }
+
+  .social-media-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .social-schedule-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .social-post-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .social-post-actions > * {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-media-toolbar,
+  .social-post-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .social-media-toolbar > *,
+  .social-post-actions > * {
+    width: 100%;
+  }
+}
