@@ -1160,6 +1160,8 @@ function IntakeScreen({
               shopifyTitle: shopifyForm.shopifyTitle,
               shopifyPrice: shopifyForm.shopifyPrice,
               vendor: shopifyForm.vendor,
+              productDescription: shopifyForm.productDescription,
+              tags: shopifyForm.tags,
               photo: shopifyForm.photo,
               shopifyPhoto: shopifyForm.photo,
             }}
