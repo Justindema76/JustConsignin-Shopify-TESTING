@@ -56,12 +56,17 @@ export function decryptSecret(value) {
 
 export function bufferConfiguration() {
   const appUrl = String(process.env.SHOPIFY_APP_URL || '').replace(/\/$/, '');
+  const oauthConfigured = Boolean(
+    process.env.BUFFER_CLIENT_ID &&
+    process.env.BUFFER_TOKEN_ENCRYPTION_KEY &&
+    appUrl
+  );
+  const apiKeyConfigured = Boolean(process.env.BUFFER_API_KEY);
+
   return {
-    configured: Boolean(
-      process.env.BUFFER_CLIENT_ID &&
-      process.env.BUFFER_TOKEN_ENCRYPTION_KEY &&
-      appUrl,
-    ),
+    configured: oauthConfigured || apiKeyConfigured,
+    oauthConfigured,
+    apiKeyConfigured,
     clientId: process.env.BUFFER_CLIENT_ID || '',
     clientSecret: process.env.BUFFER_CLIENT_SECRET || '',
     redirectUri: process.env.BUFFER_REDIRECT_URI || (appUrl ? `${appUrl}/buffer/callback` : ''),
@@ -83,7 +88,7 @@ export function createOAuthState() {
 
 export function buildBufferAuthorizationUrl({ state, challenge }) {
   const config = bufferConfiguration();
-  if (!config.configured) {
+  if (!config.oauthConfigured) {
     throw new Error('Buffer OAuth is not configured on this server.');
   }
 
@@ -101,7 +106,7 @@ export function buildBufferAuthorizationUrl({ state, challenge }) {
 
 export async function exchangeBufferCode({ code, verifier }) {
   const config = bufferConfiguration();
-  if (!config.configured) {
+  if (!config.oauthConfigured) {
     throw new Error('Buffer OAuth is not configured on this server.');
   }
 
@@ -296,7 +301,24 @@ async function validBufferAccessToken(shop) {
 
 export async function getBufferConnectionSummary(shop) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
-  if (!connection) return null;
+
+  if (!connection) {
+    const apiKey = process.env.BUFFER_API_KEY;
+    if (!apiKey) return null;
+
+    const snapshot = await getBufferAccountSnapshot(apiKey);
+    const firstOrganization = snapshot.organizations?.[0] || null;
+
+    return {
+      connected: true,
+      mode: 'api-key',
+      accountName: snapshot.account?.name || snapshot.account?.email || 'Buffer account',
+      organizationName: firstOrganization?.name || null,
+      channels: snapshot.channels || [],
+      connectedAt: null,
+      updatedAt: null,
+    };
+  }
 
   let channels = [];
   try {
@@ -307,6 +329,7 @@ export async function getBufferConnectionSummary(shop) {
 
   return {
     connected: true,
+    mode: 'oauth',
     accountName: connection.accountName,
     organizationName: connection.organizationName,
     channels,
@@ -317,15 +340,24 @@ export async function getBufferConnectionSummary(shop) {
 
 export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
-  if (!connection) {
-    throw new Error('Connect Buffer before creating social drafts.');
-  }
+  const apiKey = process.env.BUFFER_API_KEY || '';
 
   let knownChannels = [];
-  try {
-    knownChannels = JSON.parse(connection.channelsJson || '[]');
-  } catch {
-    knownChannels = [];
+  let accessToken = '';
+
+  if (connection) {
+    try {
+      knownChannels = JSON.parse(connection.channelsJson || '[]');
+    } catch {
+      knownChannels = [];
+    }
+    accessToken = await validBufferAccessToken(shop);
+  } else if (apiKey) {
+    const snapshot = await getBufferAccountSnapshot(apiKey);
+    knownChannels = snapshot.channels || [];
+    accessToken = apiKey;
+  } else {
+    throw new Error('Connect Buffer before creating social drafts.');
   }
 
   const requestedIds = [...new Set((channelIds || []).map(String))];
@@ -348,7 +380,6 @@ export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
     return channel;
   });
 
-  const accessToken = await validBufferAccessToken(shop);
   const mutation = `mutation JustConsignInCreateDraft($input: CreatePostInput!) {
     createPost(input: $input) {
       ... on PostActionSuccess {
