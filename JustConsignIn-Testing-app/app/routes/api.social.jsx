@@ -8,12 +8,23 @@ import {
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const configuration = bufferConfiguration();
-  const connection = await getBufferConnectionSummary(session.shop);
 
-  return Response.json({
-    configured: configuration.configured,
-    connection,
-  });
+  try {
+    const connection = await getBufferConnectionSummary(session.shop);
+    return Response.json({
+      configured: configuration.configured,
+      connection,
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        configured: configuration.configured,
+        connection: null,
+        error: error instanceof Error ? error.message : 'Could not connect to Buffer.',
+      },
+      { status: 502 },
+    );
+  }
 };
 
 export const action = async ({ request }) => {

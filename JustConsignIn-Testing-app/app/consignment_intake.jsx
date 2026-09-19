@@ -1148,6 +1148,22 @@ function IntakeScreen({
             syncing={syncing}
             onSync={canSave ? saveShopifyProduct : null}
           />
+
+          <SocialPostPanel
+            item={{
+              id: `new-${nextItemNumber}`,
+              description: form.description,
+              brand: form.brand,
+              size: form.size,
+              condition: form.condition,
+              price: form.price,
+              shopifyTitle: shopifyForm.shopifyTitle,
+              shopifyPrice: shopifyForm.shopifyPrice,
+              vendor: shopifyForm.vendor,
+              photo: shopifyForm.photo,
+              shopifyPhoto: shopifyForm.photo,
+            }}
+          />
         </div>
       </div>
     </>
