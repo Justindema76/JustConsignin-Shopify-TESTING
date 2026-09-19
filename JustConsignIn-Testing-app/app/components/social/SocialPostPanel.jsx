@@ -42,22 +42,34 @@ function moneyValue(value) {
 
 function defaultCaption(item) {
   const title = String(item.shopifyTitle || item.description || '').trim();
+  const productDescription = String(item.productDescription || '').trim();
   const brand = String(item.brand || item.vendor || '').trim();
   const size = String(item.size || '').trim();
   const condition = String(item.condition || '').trim();
   const price = moneyValue(item.shopifyPrice ?? item.price);
+  const rawTags = Array.isArray(item.tags) ? item.tags.join(',') : String(item.tags || '');
+  const hashtags = rawTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => `#${tag.replace(/[^a-zA-Z0-9]/g, '')}`)
+    .filter((tag) => tag.length > 1)
+    .join(' ');
+
+  const details = productDescription
+    ? [productDescription]
+    : [
+        brand ? `Brand: ${brand}` : '',
+        size ? `Size: ${size}` : '',
+        condition ? `Condition: ${condition}` : '',
+      ].filter(Boolean);
 
   return [
-    'New arrival',
-    '',
     title,
-    brand ? `Brand: ${brand}` : '',
-    size ? `Size: ${size}` : '',
-    condition ? `Condition: ${condition}` : '',
+    ...details,
     price,
-    '',
-    '#consignment #shoplocal',
-  ].filter((line, index, lines) => line || (index > 0 && lines[index - 1])).join('\n').trim();
+    hashtags || '#consignment #shoplocal',
+  ].filter(Boolean).join('\n\n').trim();
 }
 
 export default function SocialPostPanel({ item, disabled = false }) {
@@ -66,6 +78,8 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [configured, setConfigured] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [caption, setCaption] = useState(() => defaultCaption(item));
+  const [captionTouched, setCaptionTouched] = useState(false);
+  const [mediaTouched, setMediaTouched] = useState(false);
   const [media, setMedia] = useState(() => {
     const url = item.shopifyPhoto || item.photo || '';
     return url ? [{ id: 'product-image', type: 'image', url, previewUrl: url, name: 'Product image' }] : [];
@@ -91,12 +105,37 @@ export default function SocialPostPanel({ item, disabled = false }) {
   );
 
   useEffect(() => {
-    setCaption(defaultCaption(item));
-    const url = item.shopifyPhoto || item.photo || '';
-    setMedia(url ? [{ id: 'product-image', type: 'image', url, previewUrl: url, name: 'Product image' }] : []);
+    setCaptionTouched(false);
+    setMediaTouched(false);
     setMessage('');
     setError('');
   }, [item.id]);
+
+  useEffect(() => {
+    if (!captionTouched) {
+      setCaption(defaultCaption(item));
+    }
+  }, [
+    item.id,
+    item.shopifyTitle,
+    item.productDescription,
+    item.description,
+    item.brand,
+    item.vendor,
+    item.size,
+    item.condition,
+    item.shopifyPrice,
+    item.price,
+    item.tags,
+    captionTouched,
+  ]);
+
+  useEffect(() => {
+    if (!mediaTouched) {
+      const url = item.shopifyPhoto || item.photo || '';
+      setMedia(url ? [{ id: 'product-image', type: 'image', url, previewUrl: url, name: 'Product image' }] : []);
+    }
+  }, [item.id, item.shopifyPhoto, item.photo, mediaTouched]);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,6 +255,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
         const ready = await waitForMedia(finalized);
         uploaded.push({ ...ready, name: file.name });
       }
+      setMediaTouched(true);
       setMedia((current) => [...current, ...uploaded]);
       setMessage(`${uploaded.length} media file${uploaded.length === 1 ? '' : 's'} added.`);
     } catch (uploadError) {
@@ -226,10 +266,12 @@ export default function SocialPostPanel({ item, disabled = false }) {
   }
 
   function removeMedia(index) {
+    setMediaTouched(true);
     setMedia((current) => current.filter((_, mediaIndex) => mediaIndex !== index));
   }
 
   function moveMedia(index, direction) {
+    setMediaTouched(true);
     setMedia((current) => {
       const nextIndex = index + direction;
       if (nextIndex < 0 || nextIndex >= current.length) return current;
@@ -329,7 +371,10 @@ export default function SocialPostPanel({ item, disabled = false }) {
                   className="consignment-textarea"
                   rows={8}
                   value={caption}
-                  onChange={(event) => setCaption(event.target.value)}
+                  onChange={(event) => {
+                    setCaptionTouched(true);
+                    setCaption(event.target.value);
+                  }}
                   disabled={disabled}
                 />
 
