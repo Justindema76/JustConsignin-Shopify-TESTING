@@ -382,6 +382,7 @@ export async function createBufferPosts({
   assets,
   action = 'draft',
   dueAt = null,
+  existingPosts = [],
 }) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
   const apiKey = process.env.BUFFER_API_KEY || '';
@@ -445,7 +446,7 @@ export async function createBufferPosts({
     };
   });
 
-  const mutation = `mutation JustConsignInCreatePost($input: CreatePostInput!) {
+  const createMutation = `mutation JustConsignInCreatePost($input: CreatePostInput!) {
     createPost(input: $input) {
       ... on PostActionSuccess {
         post { id text status dueAt }
@@ -455,6 +456,23 @@ export async function createBufferPosts({
       }
     }
   }`;
+
+  const editMutation = `mutation JustConsignInEditPost($input: EditPostInput!) {
+    editPost(input: $input) {
+      ... on PostActionSuccess {
+        post { id text status dueAt }
+      }
+      ... on MutationError {
+        message
+      }
+    }
+  }`;
+
+  const existingByChannel = new Map(
+    (Array.isArray(existingPosts) ? existingPosts : [])
+      .filter((entry) => entry?.channelId && entry?.postId)
+      .map((entry) => [String(entry.channelId), String(entry.postId)]),
+  );
 
   const results = [];
   for (const selected of selectedChannels) {
@@ -480,10 +498,31 @@ export async function createBufferPosts({
     const metadata = bufferMetadataForChannel(service, selected.type);
     if (metadata) input.metadata = metadata;
 
-    const data = await bufferGraphql(accessToken, mutation, { input });
-    const payload = data?.createPost;
+    const existingPostId = existingByChannel.get(String(selected.channel.id));
+    let payload;
+
+    if (existingPostId) {
+      const editInput = {
+        id: existingPostId,
+        text: input.text,
+        schedulingType: input.schedulingType,
+        mode: input.mode,
+        saveToDraft: input.saveToDraft,
+        source: input.source,
+        assets: input.assets,
+      };
+      if (input.dueAt) editInput.dueAt = input.dueAt;
+      if (input.metadata) editInput.metadata = input.metadata;
+
+      const data = await bufferGraphql(accessToken, editMutation, { input: editInput });
+      payload = data?.editPost;
+    } else {
+      const data = await bufferGraphql(accessToken, createMutation, { input });
+      payload = data?.createPost;
+    }
+
     if (!payload?.post?.id) {
-      throw new Error(payload?.message || `Buffer could not create a post for ${selected.channel.displayName || selected.channel.name}.`);
+      throw new Error(payload?.message || `Buffer could not save a post for ${selected.channel.displayName || selected.channel.name}.`);
     }
 
     results.push({
