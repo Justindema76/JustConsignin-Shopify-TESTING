@@ -29,6 +29,11 @@ function postTypeOptions(service) {
     : ['post'];
 }
 
+function toLocalDateTimeInput(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
 function ChannelIcon({ service }) {
   if (service === 'instagram') return <Camera size={17} aria-hidden="true" />;
   if (service === 'facebook') return <Users size={17} aria-hidden="true" />;
@@ -88,6 +93,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [uploading, setUploading] = useState(false);
   const [savingAction, setSavingAction] = useState('');
   const [scheduleAt, setScheduleAt] = useState('');
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -286,10 +292,6 @@ export default function SocialPostPanel({ item, disabled = false }) {
       setError('Choose a date and time before scheduling.');
       return;
     }
-    if (action === 'now' && typeof window !== 'undefined' && !window.confirm('Post this item to the selected social channels now?')) {
-      return;
-    }
-
     setSavingAction(action);
     setMessage('');
     setError('');
@@ -519,18 +521,17 @@ export default function SocialPostPanel({ item, disabled = false }) {
               </div>
             )}
 
-            <div className="social-schedule-row">
-              <CalendarClock size={17} />
-              <input
-                type="datetime-local"
-                className="consignment-input"
-                value={scheduleAt}
-                onChange={(event) => setScheduleAt(event.target.value)}
-                disabled={disabled || Boolean(savingAction)}
-              />
-            </div>
+            <div className="social-post-actions social-post-actions-primary">
+              <button
+                type="button"
+                className="consignment-btn social-post-now"
+                onClick={() => submitPosts('now')}
+                disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0}
+              >
+                {savingAction === 'now' ? <Loader2 className="consignment-spin" size={16} /> : <Send size={16} />}
+                Post Now
+              </button>
 
-            <div className="social-post-actions">
               <button
                 type="button"
                 className="consignment-btn secondary"
@@ -543,22 +544,12 @@ export default function SocialPostPanel({ item, disabled = false }) {
 
               <button
                 type="button"
-                className="consignment-btn"
-                onClick={() => submitPosts('now')}
-                disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0}
-              >
-                {savingAction === 'now' ? <Loader2 className="consignment-spin" size={16} /> : <Send size={16} />}
-                Post Now
-              </button>
-
-              <button
-                type="button"
                 className="consignment-btn secondary"
-                onClick={() => submitPosts('schedule')}
-                disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0 || !scheduleAt}
+                onClick={() => setScheduleOpen((current) => !current)}
+                disabled={disabled || Boolean(savingAction)}
               >
-                {savingAction === 'schedule' ? <Loader2 className="consignment-spin" size={16} /> : <CalendarClock size={16} />}
-                Schedule
+                <CalendarClock size={16} />
+                {scheduleOpen ? 'Hide Schedule' : 'Schedule'}
               </button>
 
               <a
@@ -570,6 +561,59 @@ export default function SocialPostPanel({ item, disabled = false }) {
                 Open Buffer <ChevronRight size={14} aria-hidden="true" />
               </a>
             </div>
+
+            {scheduleOpen && (
+              <div className="social-schedule-panel">
+                <div className="social-schedule-presets">
+                  <button
+                    type="button"
+                    className="consignment-btn secondary"
+                    onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 30 * 60 * 1000)))}
+                  >
+                    +30 min
+                  </button>
+                  <button
+                    type="button"
+                    className="consignment-btn secondary"
+                    onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)))}
+                  >
+                    +1 hour
+                  </button>
+                  <button
+                    type="button"
+                    className="consignment-btn secondary"
+                    onClick={() => {
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      tomorrow.setHours(9, 0, 0, 0);
+                      setScheduleAt(toLocalDateTimeInput(tomorrow));
+                    }}
+                  >
+                    Tomorrow 9 AM
+                  </button>
+                </div>
+
+                <div className="social-schedule-row">
+                  <CalendarClock size={17} />
+                  <input
+                    type="datetime-local"
+                    className="consignment-input"
+                    value={scheduleAt}
+                    onChange={(event) => setScheduleAt(event.target.value)}
+                    disabled={disabled || Boolean(savingAction)}
+                  />
+                  <button
+                    type="button"
+                    className="consignment-btn"
+                    onClick={() => submitPosts('schedule')}
+                    disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0 || !scheduleAt}
+                  >
+                    {savingAction === 'schedule' ? <Loader2 className="consignment-spin" size={16} /> : <CalendarClock size={16} />}
+                    Schedule Post
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
