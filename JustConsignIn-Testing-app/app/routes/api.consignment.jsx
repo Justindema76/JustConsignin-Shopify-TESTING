@@ -342,7 +342,6 @@ const CONSIGNMENT_ITEM_FIELDS = [
   { key: 'shopify_description', name: 'Shopify Description', type: 'multi_line_text_field' },
   { key: 'shopify_vendor', name: 'Shopify Vendor', type: 'single_line_text_field' },
   { key: 'shopify_tags', name: 'Shopify Tags', type: 'single_line_text_field' },
-  { key: 'social_draft', name: 'Social Media Draft', type: 'multi_line_text_field' },
   { key: 'shopify_category_id', name: 'Shopify Category ID', type: 'single_line_text_field' },
   { key: 'shopify_category_name', name: 'Shopify Category Name', type: 'single_line_text_field' },
   { key: 'publish_to_pos', name: 'Publish to POS', type: 'boolean' },
@@ -480,14 +479,6 @@ function mapItem(node) {
     seoDescription: productReference?.seo?.description || field.seo_description || savedDetails.seoDescription,
     publishToPos: field.publish_to_pos !== false && field.publish_to_pos !== 'false',
     publishOnline: field.publish_online === true || field.publish_online === 'true' || savedDetails.publishOnline === true,
-    socialDraft: (() => {
-      try {
-        const parsed = field.social_draft ? JSON.parse(String(field.social_draft)) : null;
-        return parsed?.schema === 'social-draft-v1' ? parsed : null;
-      } catch {
-        return null;
-      }
-    })(),
     payoutId: savedDetails.payoutId || '',
     payoutDate: savedDetails.payoutDate || '',
     payoutMethod: savedDetails.payoutMethod || '',
@@ -761,7 +752,6 @@ function itemFields(item, overrides = {}) {
     field('shopify_description', value.productDescription),
     field('shopify_vendor', value.vendor),
     field('shopify_tags', Array.isArray(value.tags) ? value.tags.join(', ') : value.tags),
-    field('social_draft', value.socialDraft ? JSON.stringify(value.socialDraft) : null),
     field('shopify_category_id', value.shopifyCategoryId),
     field('shopify_category_name', value.shopifyCategoryName),
     field('seo_title', value.seoTitle),
@@ -1595,60 +1585,6 @@ export async function action({ request }) {
         }),
       );
       return Response.json(mapItem(saved));
-    }
-
-    if (request.method === 'POST' && body.operation === 'saveSocialDraft') {
-      const existing = current.items.find((entry) => entry.id === body.itemId);
-      if (!existing) {
-        return Response.json({ error: 'Save the item before saving its social media draft.' }, { status: 404 });
-      }
-
-      const incoming = body.socialDraft && typeof body.socialDraft === 'object'
-        ? body.socialDraft
-        : {};
-
-      const socialDraft = {
-        schema: 'social-draft-v1',
-        caption: String(incoming.caption || '').slice(0, 10000),
-        selectedIds: Array.isArray(incoming.selectedIds)
-          ? incoming.selectedIds.map(String).slice(0, 20)
-          : [],
-        postTypes: incoming.postTypes && typeof incoming.postTypes === 'object'
-          ? incoming.postTypes
-          : {},
-        media: Array.isArray(incoming.media)
-          ? incoming.media.slice(0, 10).map((entry) => ({
-              id: entry?.id ? String(entry.id) : '',
-              type: entry?.type === 'video' ? 'video' : 'image',
-              url: entry?.url ? String(entry.url) : '',
-              previewUrl: entry?.previewUrl ? String(entry.previewUrl) : '',
-              name: entry?.name ? String(entry.name).slice(0, 255) : '',
-            })).filter((entry) => entry.url)
-          : [],
-        scheduleAt: incoming.scheduleAt ? String(incoming.scheduleAt) : '',
-        scheduleOpen: incoming.scheduleOpen === true,
-        bufferPosts: Array.isArray(incoming.bufferPosts)
-          ? incoming.bufferPosts.slice(0, 20).map((entry) => ({
-              channelId: entry?.channelId ? String(entry.channelId) : '',
-              postId: entry?.postId ? String(entry.postId) : '',
-              channelName: entry?.channelName ? String(entry.channelName) : '',
-              service: entry?.service ? String(entry.service) : '',
-              status: entry?.status ? String(entry.status) : '',
-              dueAt: entry?.dueAt ? String(entry.dueAt) : '',
-            })).filter((entry) => entry.channelId && entry.postId)
-          : [],
-        lastAction: incoming.lastAction ? String(incoming.lastAction) : 'draft',
-        updatedAt: new Date().toISOString(),
-      };
-
-      const saved = await upsert(
-        admin,
-        'consignment_item',
-        existing.handle,
-        itemFields(existing, { socialDraft }),
-      );
-
-      return Response.json({ socialDraft: mapItem(saved).socialDraft });
     }
 
     if (request.method === 'POST' && body.operation === 'updateItemStatus') {
