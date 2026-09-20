@@ -590,3 +590,69 @@
     width: 100%;
   }
 }
+
+
+.social-post-actions-primary .social-post-now {
+  font-weight: 700;
+}
+
+.social-schedule-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--consignment-border, #dfe3e8);
+  border-radius: 10px;
+  background: var(--consignment-surface-subtle, #f8fafc);
+}
+
+.social-schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.social-schedule-panel .social-schedule-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+@media (max-width: 760px) {
+  .social-post-actions-primary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .social-post-actions-primary .social-post-now {
+    grid-column: 1 / -1;
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .social-schedule-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .social-schedule-panel .social-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .social-schedule-panel .social-schedule-row > svg {
+    display: none;
+  }
+
+  .social-schedule-panel .social-schedule-row .consignment-input,
+  .social-schedule-panel .social-schedule-row .consignment-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-post-actions-primary,
+  .social-schedule-presets {
+    grid-template-columns: 1fr;
+  }
+
+  .social-post-actions-primary .social-post-now {
+    grid-column: auto;
+  }
+}
