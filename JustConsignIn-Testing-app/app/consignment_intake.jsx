@@ -38,7 +38,6 @@ import SocialPostPanel from './components/social/SocialPostPanel';
 import './styles/consignment-global.css';
 import './styles/consignment-forms.css';
 import './styles/shopify-file-picker.css';
-import './styles/social-media.css';
 /* ============================================================================
    STYLING
    All app CSS is external. This intake file contains no embedded GlobalStyle().
