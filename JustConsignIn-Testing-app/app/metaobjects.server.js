@@ -68,7 +68,6 @@ const DEFINITIONS = [
       },
       { key: "shopify_vendor", name: "Shopify Vendor", type: "single_line_text_field" },
       { key: "shopify_tags", name: "Shopify Tags", type: "multi_line_text_field" },
-      { key: "social_draft", name: "Social Media Draft", type: "multi_line_text_field" },
       {
         key: "shopify_category_id",
         name: "Shopify Category ID",
