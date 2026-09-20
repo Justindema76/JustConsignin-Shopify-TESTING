@@ -1,5 +1,7 @@
 /* eslint-disable react/prop-types */
 
+import '../../styles/social-media.css';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
