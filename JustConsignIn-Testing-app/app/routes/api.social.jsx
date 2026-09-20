@@ -40,6 +40,7 @@ export const action = async ({ request }) => {
         assets: Array.isArray(body.assets) ? body.assets : [],
         action: body.action || 'draft',
         dueAt: body.dueAt || null,
+        existingPosts: Array.isArray(body.existingPosts) ? body.existingPosts : [],
       });
 
       return Response.json({ posts });
