@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   Camera,
@@ -15,6 +15,12 @@ import {
   Users,
   Video,
 } from 'lucide-react';
+
+import {
+  canPersistSocialDraft,
+  loadSocialDraft,
+  saveSocialDraft,
+} from './socialDraft.client';
 
 const SUPPORTED_SERVICES = new Set(['instagram', 'facebook', 'tiktok']);
 const MAX_MEDIA_ITEMS = 10;
@@ -94,6 +100,9 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [savingAction, setSavingAction] = useState('');
   const [scheduleAt, setScheduleAt] = useState('');
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [bufferPosts, setBufferPosts] = useState([]);
+  const [lastAction, setLastAction] = useState('');
+  const savedDraftRef = useRef(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -111,10 +120,47 @@ export default function SocialPostPanel({ item, disabled = false }) {
   );
 
   useEffect(() => {
+    savedDraftRef.current = false;
     setCaptionTouched(false);
     setMediaTouched(false);
+    setBufferPosts([]);
+    setLastAction('');
+    setScheduleAt('');
+    setScheduleOpen(false);
     setMessage('');
     setError('');
+  }, [item.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreDraft() {
+      if (!canPersistSocialDraft(item.id)) return;
+
+      try {
+        const draft = await loadSocialDraft(item.id);
+        if (cancelled || !draft) return;
+
+        savedDraftRef.current = true;
+        setCaptionTouched(true);
+        setMediaTouched(true);
+        setCaption(String(draft.caption || ''));
+        setMedia(Array.isArray(draft.media) ? draft.media : []);
+        setSelectedIds(Array.isArray(draft.selectedIds) ? draft.selectedIds.map(String) : []);
+        setPostTypes(draft.postTypes && typeof draft.postTypes === 'object' ? draft.postTypes : {});
+        setScheduleAt(String(draft.scheduleAt || ''));
+        setScheduleOpen(draft.scheduleOpen === true);
+        setBufferPosts(Array.isArray(draft.bufferPosts) ? draft.bufferPosts : []);
+        setLastAction(String(draft.lastAction || 'draft'));
+      } catch (draftError) {
+        if (!cancelled) {
+          setError(draftError instanceof Error ? draftError.message : 'Could not load the saved social draft.');
+        }
+      }
+    }
+
+    restoreDraft();
+    return () => { cancelled = true; };
   }, [item.id]);
 
   useEffect(() => {
@@ -160,10 +206,15 @@ export default function SocialPostPanel({ item, disabled = false }) {
           const service = String(channel.service || '').toLowerCase();
           return SUPPORTED_SERVICES.has(service) && !channel.isDisconnected && !channel.isLocked;
         });
-        setSelectedIds(available.map((channel) => String(channel.id)));
-        setPostTypes(Object.fromEntries(
-          available.map((channel) => [String(channel.id), 'post']),
-        ));
+        if (!savedDraftRef.current) {
+          setSelectedIds(available.map((channel) => String(channel.id)));
+          setPostTypes(Object.fromEntries(
+            available.map((channel) => [String(channel.id), 'post']),
+          ));
+        } else {
+          const availableIds = new Set(available.map((channel) => String(channel.id)));
+          setSelectedIds((current) => current.filter((id) => availableIds.has(String(id))));
+        }
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Could not load social media connection.');
       } finally {
@@ -287,16 +338,36 @@ export default function SocialPostPanel({ item, disabled = false }) {
     });
   }
 
+  function draftSnapshot(nextBufferPosts = bufferPosts, nextAction = lastAction || 'draft') {
+    return {
+      caption,
+      selectedIds,
+      postTypes,
+      media,
+      scheduleAt,
+      scheduleOpen,
+      bufferPosts: nextBufferPosts,
+      lastAction: nextAction,
+    };
+  }
+
   async function submitPosts(action) {
     if (action === 'schedule' && !scheduleAt) {
       setError('Choose a date and time before scheduling.');
       return;
     }
+
     setSavingAction(action);
     setMessage('');
     setError('');
 
+    let localDraftSaved = false;
+
     try {
+      if (action === 'draft' && canPersistSocialDraft(item.id)) {
+        await saveSocialDraft(item.id, draftSnapshot(bufferPosts, 'draft'));
+        localDraftSaved = true;
+      }
       const response = await fetch('/api/social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -313,18 +384,38 @@ export default function SocialPostPanel({ item, disabled = false }) {
           })),
           action,
           dueAt: action === 'schedule' ? new Date(scheduleAt).toISOString() : null,
+          existingPosts: ['draft', 'schedule'].includes(lastAction) ? bufferPosts : [],
           itemId: item.id,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Could not create social posts.');
 
-      const count = payload.posts?.length || 0;
-      if (action === 'draft') setMessage(`${count} Buffer draft${count === 1 ? '' : 's'} created.`);
+      const posts = Array.isArray(payload.posts) ? payload.posts : [];
+      const count = posts.length;
+
+      setBufferPosts(posts);
+      setLastAction(action);
+      savedDraftRef.current = true;
+      setCaptionTouched(true);
+      setMediaTouched(true);
+
+      if (canPersistSocialDraft(item.id)) {
+        await saveSocialDraft(item.id, draftSnapshot(posts, action));
+      }
+
+      if (action === 'draft') {
+        setMessage(`${count} draft${count === 1 ? '' : 's'} saved in JustConsignIn and Buffer.`);
+      }
       if (action === 'now') setMessage(`${count} post${count === 1 ? '' : 's'} sent for publishing.`);
       if (action === 'schedule') setMessage(`${count} post${count === 1 ? '' : 's'} scheduled.`);
+
+      if (!canPersistSocialDraft(item.id) && action === 'draft') {
+        setMessage(`${count} Buffer draft${count === 1 ? '' : 's'} saved. Save the item first to keep these social edits in JustConsignIn.`);
+      }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Could not create social posts.');
+      const detail = saveError instanceof Error ? saveError.message : 'Could not create social posts.';
+      setError(localDraftSaved ? `Draft saved in JustConsignIn. Buffer: ${detail}` : detail);
     } finally {
       setSavingAction('');
     }
