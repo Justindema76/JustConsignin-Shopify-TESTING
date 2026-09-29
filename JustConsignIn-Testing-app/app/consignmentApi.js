@@ -96,7 +96,8 @@ async function uploadImage(dataUrl, alt) {
 }
 
 async function prepareItemPhotos(item) {
-  const sourceImages = Array.isArray(item.images) && item.images.length
+  const hasImagesField = Array.isArray(item.images);
+  const sourceImages = hasImagesField
     ? item.images
     : (item.photo || item.photoId)
       ? [{ id: item.photoId || null, url: item.photo || null }]
@@ -135,8 +136,12 @@ async function prepareItemPhotos(item) {
     ...item,
     images: preparedImages,
     photoIds,
-    photoId: photoIds[0] || item.photoId || null,
-    photo: preparedImages[0]?.url || item.photo || null,
+    photoId: hasImagesField
+      ? (photoIds[0] || null)
+      : (photoIds[0] || item.photoId || null),
+    photo: hasImagesField
+      ? (preparedImages[0]?.url || null)
+      : (preparedImages[0]?.url || item.photo || null),
   };
 }
 
