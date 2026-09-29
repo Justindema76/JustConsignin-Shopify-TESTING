@@ -35,9 +35,11 @@ import ConsignorDashboard from './pages/consignment/ConsignorDashboard';
 import CreateConsignorScreen from './pages/consignment/CreateConsignorScreen';
 import ConsignmentFilterBar from './components/consignment/ConsignmentFilterBar';
 import SocialPostPanel from './components/social/SocialPostPanel';
+import ShopifyTagPicker from './components/consignment/ShopifyTagPicker';
 import './styles/consignment-global.css';
 import './styles/consignment-forms.css';
 import './styles/shopify-file-picker.css';
+import './styles/consignment-mobile-intake.css';
 /* ============================================================================
    STYLING
    All app CSS is external. This intake file contains no embedded GlobalStyle().
@@ -48,7 +50,7 @@ import { csvValue, downloadCsv, money } from './lib/consignmentHelpers';
 
 /* ---------- image helper ---------- */
 
-function resizeImage(file, maxWidth = 320, quality = 0.55) {
+function resizeImage(file, maxWidth = 1600, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -172,11 +174,20 @@ function useIsDesktopAdmin() {
   return isDesktop;
 }
 
-async function handlePhotoFile(e, onChange) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const dataUrl = await resizeImage(file);
-  onChange(dataUrl);
+async function handlePhotoFiles(event) {
+  const files = [...(event.target.files || [])].slice(0, 12);
+  if (!files.length) return [];
+
+  const images = [];
+  for (const file of files) {
+    images.push({
+      id: null,
+      url: await resizeImage(file),
+    });
+  }
+
+  event.target.value = '';
+  return images;
 }
 
 function ShopifyFilePicker({ onClose, onSelect }) {
@@ -242,22 +253,138 @@ function ShopifyFilePicker({ onClose, onSelect }) {
   );
 }
 
-function PhotoPicker({ value, onChange, onChooseShopify }) {
+function PhotoPicker({ images = [], onChange }) {
   const [showShopifyFiles, setShowShopifyFiles] = useState(false);
+  const normalizedImages = (Array.isArray(images) ? images : [])
+    .filter((image) => image?.url)
+    .slice(0, 12);
+
+  async function addLocalImages(event) {
+    const added = await handlePhotoFiles(event);
+    if (!added.length) return;
+    onChange([...normalizedImages, ...added].slice(0, 12));
+  }
+
+  function addShopifyImage(file) {
+    if (!file?.id || !file?.url) return;
+
+    const exists = normalizedImages.some(
+      (image) => image.id === file.id || image.url === file.url,
+    );
+
+    if (!exists) {
+      onChange([
+        ...normalizedImages,
+        { id: file.id, url: file.url },
+      ].slice(0, 12));
+    }
+
+    setShowShopifyFiles(false);
+  }
+
+  function removeImage(index) {
+    onChange(normalizedImages.filter((_, imageIndex) => imageIndex !== index));
+  }
+
+  function makeMain(index) {
+    if (index <= 0 || index >= normalizedImages.length) return;
+    const next = [...normalizedImages];
+    const [selected] = next.splice(index, 1);
+    next.unshift(selected);
+    onChange(next);
+  }
+
   return (
     <>
-      <div className="consignment-photo-wrap">
-        <label className="consignment-photo-btn">
-          {value ? <img src={value} alt="Item" /> : <><Camera size={20} /><span>Take Photo</span></>}
-          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handlePhotoFile(e, onChange)} />
-        </label>
-        <label className="consignment-photo-alt">
-          {value ? 'Retake or choose' : 'Choose from library'}
-          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhotoFile(e, onChange)} />
-        </label>
-        <button type="button" className="shopify-file-picker-trigger" onClick={() => setShowShopifyFiles(true)}><Image size={15} /><span>Choose from Shopify Files</span></button>
+      <div className="consignment-product-images">
+        <div className="consignment-product-images-toolbar">
+          <label>
+            <Camera size={15} />
+            Take photo
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={addLocalImages}
+            />
+          </label>
+
+          <label>
+            <Image size={15} />
+            Add from library
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={addLocalImages}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => setShowShopifyFiles(true)}
+          >
+            <Image size={15} />
+            Shopify Files
+          </button>
+        </div>
+
+        {normalizedImages.length ? (
+          <div className="consignment-product-image-grid">
+            {normalizedImages.map((image, index) => (
+              <div
+                className={`consignment-product-image-card ${index === 0 ? 'main' : ''}`}
+                key={image.id || image.url}
+              >
+                <img src={image.url} alt={index === 0 ? 'Main product' : `Product ${index + 1}`} />
+
+                {index === 0 && (
+                  <span className="consignment-product-image-main-badge">
+                    MAIN
+                  </span>
+                )}
+
+                <div className="consignment-product-image-actions">
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => makeMain(index)}
+                      aria-label={`Make image ${index + 1} the main image`}
+                      title="Make main"
+                    >
+                      <Check size={13} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    aria-label={`Remove image ${index + 1}`}
+                    title="Remove"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="consignment-product-image-empty">
+            Add product photos from the camera, photo library, or Shopify Files.
+          </div>
+        )}
+
+        <div className="consignment-form-help">
+          Up to 12 photos. Crop or adjust photos in your phone's Photos app.
+        </div>
       </div>
-      {showShopifyFiles && <ShopifyFilePicker onClose={() => setShowShopifyFiles(false)} onSelect={(file) => { onChooseShopify(file); setShowShopifyFiles(false); }} />}
+
+      {showShopifyFiles && (
+        <ShopifyFilePicker
+          onClose={() => setShowShopifyFiles(false)}
+          onSelect={addShopifyImage}
+        />
+      )}
     </>
   );
 }
@@ -583,10 +710,337 @@ function EditConsignorScreen({ consignor, onBack, onSave }) {
 function ConsignmentItemFields({ form, setForm }) { const set=(key)=>(event)=>setForm((current)=>({...current,[key]:event.target.value})); function setCategory(category){setForm((current)=>({...current,category,type:''}));} return <div className="consignment-card consignment-detail-card"><div className="consignment-section-heading"><label className="consignment-label">Consignment item information</label><span className="consignment-row-sub">Manual metaobject record</span></div><div className="consignment-detail-grid"><div className="consignment-field"><label className="consignment-label">Category</label><select className="consignment-select" value={form.category} onChange={(event)=>setCategory(event.target.value)}>{CATEGORIES.map((category)=><option key={category} value={category}>{category}</option>)}</select></div><div className="consignment-field"><label className="consignment-label">Brand</label><input className="consignment-input" value={form.brand} onChange={set('brand')} placeholder="e.g. Gap"/></div><div className="consignment-field"><label className="consignment-label">Size</label><input className="consignment-input" value={form.size} onChange={set('size')} placeholder="Optional"/></div><div className="consignment-field"><label className="consignment-label">Condition</label><select className="consignment-select" value={form.condition} onChange={set('condition')}>{CONDITIONS.map((condition)=><option key={condition} value={condition}>{condition}</option>)}</select></div><div className="consignment-field wide"><label className="consignment-label">Internal notes</label><textarea className="consignment-textarea" rows={2} value={form.notes} onChange={set('notes')} placeholder="Notes about this consigned item"/></div></div></div>; }
 
 function ShopifyProductFields({ form, setForm }) {
-  const [categorySearch,setCategorySearch]=useState(form.shopifyCategoryName||''); const [categoryResults,setCategoryResults]=useState([]); const [searchingCategories,setSearchingCategories]=useState(false);
-  useEffect(()=>{const query=categorySearch.trim();if(query.length<2||query===form.shopifyCategoryName){setCategoryResults([]);return undefined;}const timer=setTimeout(()=>{setSearchingCategories(true);searchShopifyCategories(query).then(setCategoryResults).catch(()=>setCategoryResults([])).finally(()=>setSearchingCategories(false));},350);return()=>clearTimeout(timer);},[categorySearch,form.shopifyCategoryName]);
-  const set=(key)=>(event)=>setForm((current)=>({...current,[key]:event.target.value}));
-  return <div className="consignment-shopify-fields"><div className="consignment-detail-grid"><div className="consignment-field wide"><label className="consignment-label">Shopify title</label><input className="consignment-input" value={form.shopifyTitle||''} onChange={set('shopifyTitle')} placeholder="Auto-filled from item description"/></div><div className="consignment-field"><label className="consignment-label">Shopify price</label><input className="consignment-input" type="number" inputMode="decimal" min="0" step="0.01" value={form.shopifyPrice??''} onChange={set('shopifyPrice')} placeholder="Defaults to the manual item price"/></div><div className="consignment-field"><label className="consignment-label">Vendor</label><input className="consignment-input" value={form.vendor} onChange={set('vendor')} placeholder="Defaults to store name"/></div><div className="consignment-field"><label className="consignment-label">Tags</label><input className="consignment-input" value={form.tags} onChange={set('tags')} placeholder="summer, baby"/></div><div className="consignment-field wide"><label className="consignment-label">Shopify product category</label><input className="consignment-input" value={categorySearch} onChange={(event)=>{setCategorySearch(event.target.value);if(event.target.value!==form.shopifyCategoryName){setForm((current)=>({...current,shopifyCategoryId:'',shopifyCategoryName:''}));}}} placeholder="Search Shopify categories"/>{searchingCategories&&<div className="consignment-row-sub" style={{ marginTop:6 }}>Searching ShopifyÃ¢â‚¬Â¦</div>}{categoryResults.length>0&&<div className="consignment-category-results">{categoryResults.map((category)=><button key={category.id} type="button" className="consignment-category-result" onClick={()=>{setForm((current)=>({...current,shopifyCategoryId:category.id,shopifyCategoryName:category.name}));setCategorySearch(category.name);setCategoryResults([]);}}>{category.name}</button>)}</div>}{form.shopifyCategoryId&&<div className="consignment-selected-category"><span>{form.shopifyCategoryName}</span><button type="button" className="consignment-batch-remove" aria-label="Remove Shopify category" onClick={()=>{setForm((current)=>({...current,shopifyCategoryId:'',shopifyCategoryName:''}));setCategorySearch('');}}><X size={13}/></button></div>}</div><div className="consignment-field wide"><label className="consignment-label">Product description</label><textarea className="consignment-textarea" rows={3} value={form.productDescription} onChange={set('productDescription')} placeholder="Shown to customers on Shopify"/></div><div className="consignment-field"><label className="consignment-label">SEO title</label><input className="consignment-input" value={form.seoTitle} onChange={set('seoTitle')} placeholder="Defaults to item title"/></div><div className="consignment-field"><label className="consignment-label">SEO description</label><textarea className="consignment-textarea" rows={2} value={form.seoDescription} onChange={set('seoDescription')} placeholder="Optional search description"/></div></div></div>;
+  const [categorySearch, setCategorySearch] = useState(form.shopifyCategoryName || '');
+  const [categoryResults, setCategoryResults] = useState([]);
+  const [searchingCategories, setSearchingCategories] = useState(false);
+
+  useEffect(() => {
+    const query = categorySearch.trim();
+    if (query.length < 2 || query === form.shopifyCategoryName) {
+      setCategoryResults([]);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setSearchingCategories(true);
+      searchShopifyCategories(query)
+        .then(setCategoryResults)
+        .catch(() => setCategoryResults([]))
+        .finally(() => setSearchingCategories(false));
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [categorySearch, form.shopifyCategoryName]);
+
+  const set = (key) => (event) =>
+    setForm((current) => ({
+      ...current,
+      [key]: event.target.value,
+    }));
+
+  return (
+    <div className="consignment-shopify-fields">
+      <div className="consignment-detail-grid">
+        <div className="consignment-field wide">
+          <label className="consignment-label">Shopify title</label>
+          <input
+            className="consignment-input"
+            value={form.shopifyTitle || ''}
+            onChange={set('shopifyTitle')}
+            placeholder="Auto-filled from item description"
+          />
+        </div>
+
+        <div className="consignment-field">
+          <label className="consignment-label">Shopify price</label>
+          <input
+            className="consignment-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={form.shopifyPrice ?? ''}
+            onChange={set('shopifyPrice')}
+            placeholder="Defaults to manual price"
+          />
+        </div>
+
+        <div className="consignment-field">
+          <label className="consignment-label">Vendor</label>
+          <input
+            className="consignment-input"
+            value={form.vendor}
+            onChange={set('vendor')}
+            placeholder="Defaults to brand/store"
+          />
+        </div>
+
+        <div className="consignment-field wide">
+          <label className="consignment-label">Tags</label>
+          <ShopifyTagPicker
+            value={form.tags}
+            onChange={(tags) =>
+              setForm((current) => ({
+                ...current,
+                tags,
+              }))
+            }
+          />
+        </div>
+
+        <div className="consignment-field wide">
+          <label className="consignment-label">Shopify product category</label>
+          <input
+            className="consignment-input"
+            value={categorySearch}
+            onChange={(event) => {
+              setCategorySearch(event.target.value);
+              if (event.target.value !== form.shopifyCategoryName) {
+                setForm((current) => ({
+                  ...current,
+                  shopifyCategoryId: '',
+                  shopifyCategoryName: '',
+                }));
+              }
+            }}
+            placeholder="Search Shopify categories"
+          />
+
+          {searchingCategories && (
+            <div className="consignment-row-sub" style={{ marginTop: 6 }}>
+              Searching Shopify…
+            </div>
+          )}
+
+          {categoryResults.length > 0 && (
+            <div className="consignment-category-results">
+              {categoryResults.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  className="consignment-category-result"
+                  onClick={() => {
+                    setForm((current) => ({
+                      ...current,
+                      shopifyCategoryId: category.id,
+                      shopifyCategoryName: category.name,
+                    }));
+                    setCategorySearch(category.name);
+                    setCategoryResults([]);
+                  }}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {form.shopifyCategoryId && (
+            <div className="consignment-selected-category">
+              <span>{form.shopifyCategoryName}</span>
+              <button
+                type="button"
+                className="consignment-batch-remove"
+                aria-label="Remove Shopify category"
+                onClick={() => {
+                  setForm((current) => ({
+                    ...current,
+                    shopifyCategoryId: '',
+                    shopifyCategoryName: '',
+                  }));
+                  setCategorySearch('');
+                }}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="consignment-field wide">
+          <label className="consignment-label">Product description</label>
+          <textarea
+            className="consignment-textarea"
+            rows={3}
+            value={form.productDescription}
+            onChange={set('productDescription')}
+            placeholder="Shown to customers on Shopify"
+          />
+        </div>
+
+        <details className="consignment-shopify-advanced">
+          <summary>SEO / advanced Shopify fields</summary>
+          <div className="consignment-shopify-advanced-fields">
+            <div className="consignment-field">
+              <label className="consignment-label">SEO title</label>
+              <input
+                className="consignment-input"
+                value={form.seoTitle}
+                onChange={set('seoTitle')}
+                placeholder="Defaults to item title"
+              />
+            </div>
+
+            <div className="consignment-field wide">
+              <label className="consignment-label">SEO description</label>
+              <textarea
+                className="consignment-textarea"
+                rows={2}
+                value={form.seoDescription}
+                onChange={set('seoDescription')}
+                placeholder="Optional search description"
+              />
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+function ManualIntakeCore({
+  form,
+  setForm,
+  onSave,
+  saveLabel = 'Save manual item',
+  saveDisabled = false,
+  helperText = 'Saves only the consignment metaobject record. No Shopify product is created.',
+}) {
+  const set = (key) => (event) => {
+    setForm((current) => ({
+      ...current,
+      [key]: event.target.value,
+    }));
+  };
+
+  const setCategory = (category) => {
+    setForm((current) => ({
+      ...current,
+      category,
+      type: '',
+    }));
+  };
+
+  return (
+    <>
+      <div className="consignment-intake-manual-grid">
+        <div className="consignment-form-field wide">
+          <label className="consignment-label">Item description *</label>
+          <input
+            className="consignment-input"
+            value={form.description}
+            onChange={set('description')}
+            placeholder="What is it?"
+          />
+        </div>
+
+        <div className="consignment-form-field">
+          <label className="consignment-label">Price *</label>
+          <input
+            className="consignment-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={form.price}
+            onChange={set('price')}
+            placeholder="0.00"
+          />
+        </div>
+
+        <div className="consignment-form-field">
+          <label className="consignment-label">Size</label>
+          <input
+            className="consignment-input"
+            value={form.size}
+            onChange={set('size')}
+            placeholder="Optional"
+          />
+        </div>
+
+        <div className="consignment-form-field">
+          <label className="consignment-label">Category</label>
+          <select
+            className="consignment-select"
+            value={form.category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            {CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="consignment-form-field">
+          <label className="consignment-label">Condition</label>
+          <select
+            className="consignment-select"
+            value={form.condition}
+            onChange={set('condition')}
+          >
+            {CONDITIONS.map((condition) => (
+              <option key={condition} value={condition}>
+                {condition}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="consignment-form-field wide">
+          <label className="consignment-label">Brand</label>
+          <input
+            className="consignment-input"
+            value={form.brand}
+            onChange={set('brand')}
+            placeholder="e.g. Nike"
+          />
+        </div>
+
+        <div className="consignment-form-field wide">
+          <label className="consignment-label">Consignment term</label>
+          <select
+            className="consignment-select"
+            value={form.consignmentTerm}
+            onChange={set('consignmentTerm')}
+          >
+            <option value="">No term</option>
+            <option value="30">30 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+
+        <div className="consignment-form-field wide">
+          <label className="consignment-label">Internal notes</label>
+          <textarea
+            className="consignment-textarea"
+            rows={2}
+            value={form.notes}
+            onChange={set('notes')}
+            placeholder="Notes about this consigned item"
+          />
+        </div>
+      </div>
+
+      <div className="consignment-form-help">{helperText}</div>
+
+      <div
+        className="consignment-form-actions-inner"
+        style={{ marginBottom: 14 }}
+      >
+        <button
+          className="consignment-btn"
+          disabled={saveDisabled}
+          onClick={onSave}
+        >
+          <Check size={18} />
+          {saveLabel}
+        </button>
+      </div>
+    </>
+  );
 }
 
 function ManualItemCore({
