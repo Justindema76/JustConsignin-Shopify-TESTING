@@ -1225,12 +1225,40 @@ function ShopifyProductSection({
   onSync = null,
   syncing = false,
   tier2Enabled = true,
+  sectionId = undefined,
+  autoFillFromManual = false,
+  onAutoFillChange = null,
 }) {
   const canSync = Boolean(onSync) && tier2Enabled;
 
+  const currentImages = Array.isArray(shopifyForm.images) && shopifyForm.images.length
+    ? shopifyForm.images
+    : (shopifyForm.photo || shopifyForm.photoId)
+      ? [{
+        id: shopifyForm.photoId || null,
+        url: shopifyForm.photo || null,
+      }].filter((image) => image.url)
+      : [];
+
+  function setImages(images) {
+    const next = (Array.isArray(images) ? images : [])
+      .filter((image) => image?.url)
+      .slice(0, 12);
+
+    setShopifyForm((current) => ({
+      ...current,
+      images: next,
+      photo: next[0]?.url || null,
+      photoId: next[0]?.id || null,
+    }));
+  }
+
   if (!tier2Enabled) {
     return (
-      <section className="consignment-form-section">
+      <section
+        id={sectionId}
+        className="consignment-form-section"
+      >
         <div className="consignment-form-section-head consignment-shopify-summary consignment-shopify-locked">
           <span>
             <span
@@ -1250,7 +1278,10 @@ function ShopifyProductSection({
   }
 
   return (
-    <details className="consignment-form-section">
+    <details
+      id={sectionId}
+      className="consignment-form-section"
+    >
       <summary className="consignment-form-section-head consignment-shopify-summary">
         <span>
           <span
@@ -1262,11 +1293,7 @@ function ShopifyProductSection({
         </span>
 
         <span className="consignment-row-sub">
-          {!tier2Enabled
-            ? 'Requires Manual + Shopify Sync plan'
-            : linkedProductId
-              ? 'Connected'
-              : 'Separate optional workflow'}
+          {linkedProductId ? 'Connected' : 'Separate optional workflow'}
         </span>
       </summary>
 
@@ -1281,119 +1308,97 @@ function ShopifyProductSection({
             opacity: disabled ? 0.45 : 1,
           }}
         >
-        <p className="consignment-shopify-help">
-          This section only controls the linked Shopify product. Manual item
-          saving never creates or updates a Shopify product.
-        </p>
+          {typeof onAutoFillChange === 'function' && (
+            <label className="consignment-shopify-autofill">
+              <span>
+                <strong>Use manual item details</strong>
+                <span>
+                  Keeps title, price, brand, category, size and condition synced
+                  while you enter the manual item.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={autoFillFromManual}
+                onChange={(event) => onAutoFillChange(event.target.checked)}
+              />
+            </label>
+          )}
 
-        <div className="consignment-shopify-photo-row">
-          <PhotoPicker
-            value={shopifyForm.photo}
-            onChange={(value) =>
-              setShopifyForm((current) => ({
-                ...current,
-                photo: value,
-                photoId: null,
-              }))
-            }
-            onChooseShopify={(file) =>
-              setShopifyForm((current) => ({
-                ...current,
-                photo: file.url,
-                photoId: file.id,
-              }))
-            }
-          />
-
-          <ShopifyProductFields
-            form={shopifyForm}
-            setForm={setShopifyForm}
-          />
-        </div>
-
-        <label className="consignment-product-choice">
-          <input
-            type="checkbox"
-            checked={shopifyForm.publishToPos !== false}
-            onChange={(event) =>
-              setShopifyForm((current) => ({
-                ...current,
-                publishToPos: event.target.checked,
-              }))
-            }
-          />
-          <span>
-            <strong>Create Shopify POS Product</strong>
-            <span>
-              Creates or updates an Active product with inventory of one and
-              publishes it to Point of Sale.
-            </span>
-          </span>
-        </label>
-
-        <label className="consignment-product-choice online">
-          <input
-            type="checkbox"
-            checked={shopifyForm.publishOnline === true}
-            onChange={(event) =>
-              setShopifyForm((current) => ({
-                ...current,
-                publishOnline: event.target.checked,
-              }))
-            }
-          />
-          <span>
-            <strong>Also publish to Online Store</strong>
-            <span>Publishes the same synced product to the Online Store.</span>
-          </span>
-        </label>
-
-        {linkedProductId && (
-          <p
-            style={{
-              margin: '12px 0 0',
-              color: 'var(--green-dark)',
-              fontSize: 12,
-            }}
-          >
-            <Check
-              size={14}
-              style={{ verticalAlign: 'middle', marginRight: 5 }}
-            />
-            Linked Shopify product Â· {linkedStatus || 'Connected'}
+          <p className="consignment-shopify-help">
+            This section only controls the linked Shopify product. Manual item
+            saving never creates or updates a Shopify product.
           </p>
-        )}
 
-        {!linkedProductId ? (
-          <button
-            className="consignment-btn"
-            style={{ marginTop: 14 }}
-            disabled={
-              !canSync ||
-              disabled ||
-              syncing ||
-              shopifyForm.publishToPos === false
-            }
-            onClick={onSync}
-          >
-            {syncing ? (
-              <Loader2 className="consignment-spin" size={16} />
-            ) : (
-              <ShoppingBag size={16} />
-            )}
-            Create Shopify product
-          </button>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              marginTop: 14,
-            }}
-          >
+          <div className="consignment-shopify-photo-row">
+            <PhotoPicker
+              images={currentImages}
+              onChange={setImages}
+            />
+
+            <ShopifyProductFields
+              form={shopifyForm}
+              setForm={setShopifyForm}
+            />
+          </div>
+
+          <label className="consignment-product-choice">
+            <input
+              type="checkbox"
+              checked={shopifyForm.publishToPos !== false}
+              onChange={(event) =>
+                setShopifyForm((current) => ({
+                  ...current,
+                  publishToPos: event.target.checked,
+                }))
+              }
+            />
+            <span>
+              <strong>Create Shopify POS Product</strong>
+              <span>
+                Creates or updates an Active product with inventory of one and
+                publishes it to Point of Sale.
+              </span>
+            </span>
+          </label>
+
+          <label className="consignment-product-choice online">
+            <input
+              type="checkbox"
+              checked={shopifyForm.publishOnline === true}
+              onChange={(event) =>
+                setShopifyForm((current) => ({
+                  ...current,
+                  publishOnline: event.target.checked,
+                }))
+              }
+            />
+            <span>
+              <strong>Also publish to Online Store</strong>
+              <span>Publishes the same synced product to the Online Store.</span>
+            </span>
+          </label>
+
+          {linkedProductId && (
+            <p
+              style={{
+                margin: '12px 0 0',
+                color: 'var(--green-dark)',
+                fontSize: 12,
+              }}
+            >
+              <Check
+                size={14}
+                style={{ verticalAlign: 'middle', marginRight: 5 }}
+              />
+              Linked Shopify product · {linkedStatus || 'Connected'}
+            </p>
+          )}
+
+          {!linkedProductId ? (
             <button
               className="consignment-btn"
+              style={{ marginTop: 14 }}
               disabled={
                 !canSync ||
                 disabled ||
@@ -1405,31 +1410,57 @@ function ShopifyProductSection({
               {syncing ? (
                 <Loader2 className="consignment-spin" size={16} />
               ) : (
-                <Check size={16} />
+                <ShoppingBag size={16} />
               )}
-              Update Shopify product
+              Create Shopify product
             </button>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 10,
+                marginTop: 14,
+              }}
+            >
+              <button
+                className="consignment-btn"
+                disabled={
+                  !canSync ||
+                  disabled ||
+                  syncing ||
+                  shopifyForm.publishToPos === false
+                }
+                onClick={onSync}
+              >
+                {syncing ? (
+                  <Loader2 className="consignment-spin" size={16} />
+                ) : (
+                  <Check size={16} />
+                )}
+                Update Shopify product
+              </button>
 
-            {disabled ? (
-              <span
-                className="consignment-btn secondary"
-                aria-disabled="true"
-              >
-                <span aria-hidden="true">↗</span>
-                Edit in Shopify
-              </span>
-            ) : (
-              <a
-                className="consignment-btn secondary"
-                href={productAdminUrl(linkedProductId)}
-                target="_top"
-              >
-                <span aria-hidden="true">↗</span>
-                Edit in Shopify
-              </a>
-            )}
-          </div>
-        )}
+              {disabled ? (
+                <span
+                  className="consignment-btn secondary"
+                  aria-disabled="true"
+                >
+                  <span aria-hidden="true">↗</span>
+                  Edit in Shopify
+                </span>
+              ) : (
+                <a
+                  className="consignment-btn secondary"
+                  href={productAdminUrl(linkedProductId)}
+                  target="_top"
+                >
+                  <span aria-hidden="true">↗</span>
+                  Edit in Shopify
+                </a>
+              )}
+            </div>
+          )}
         </fieldset>
       </div>
     </details>
@@ -1459,6 +1490,7 @@ function IntakeScreen({
   const emptyShopifyForm = {
     photo: null,
     photoId: null,
+    images: [],
     shopifyTitle: '',
     shopifyPrice: '',
     tags: '',
@@ -1475,6 +1507,7 @@ function IntakeScreen({
   const [form, setForm] = useState(emptyForm);
   const [shopifyForm, setShopifyForm] = useState(emptyShopifyForm);
   const [syncing, setSyncing] = useState(false);
+  const [autoFillShopify, setAutoFillShopify] = useState(true);
 
   const canSave = Boolean(
     form.description.trim() && form.price !== '',
@@ -1499,6 +1532,8 @@ function IntakeScreen({
     `${consignor.number}-${String(savedSequence + 1).padStart(3, '0')}`;
 
   useEffect(() => {
+    if (!autoFillShopify) return;
+
     const auto = buildShopifyAutoFill(form, consignor);
 
     setShopifyForm((current) => ({
@@ -1508,10 +1543,12 @@ function IntakeScreen({
       shopifyCategoryName: current.shopifyCategoryName,
       photo: current.photo,
       photoId: current.photoId,
+      images: current.images,
       publishToPos: current.publishToPos,
       publishOnline: current.publishOnline,
     }));
   }, [
+    autoFillShopify,
     form.description,
     form.price,
     form.brand,
@@ -1546,8 +1583,41 @@ function IntakeScreen({
       />
 
       <div className="consignment-body">
-        <div className="consignment-form-shell">
-          <section className="consignment-form-section">
+        <div className="consignment-form-shell consignment-intake-compact">
+          <div className="consignment-intake-jump">
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById('intake-manual')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                })
+              }
+            >
+              Manual item
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const section = document.getElementById('intake-shopify');
+                if (section) {
+                  section.open = true;
+                  section.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  });
+                }
+              }}
+            >
+              Shopify product
+            </button>
+          </div>
+
+          <section
+            id="intake-manual"
+            className="consignment-form-section"
+          >
             <div className="consignment-form-section-head">
               <span
                 className="consignment-form-section-marker"
@@ -1577,7 +1647,7 @@ function IntakeScreen({
             </div>
 
             <div className="consignment-form-section-body">
-              <ManualItemCore
+              <ManualIntakeCore
                 form={form}
                 setForm={setForm}
                 onSave={() => onSaveBatch([form])}
@@ -1600,6 +1670,9 @@ function IntakeScreen({
             tier2Enabled={tier2Enabled}
             syncing={syncing}
             onSync={canSave ? saveShopifyProduct : null}
+            sectionId="intake-shopify"
+            autoFillFromManual={autoFillShopify}
+            onAutoFillChange={setAutoFillShopify}
           />
 
           <SocialPostPanel
@@ -1648,7 +1721,15 @@ function EditItemScreen({
   });
   const [shopifyForm, setShopifyForm] = useState({
     photo: item.shopifyPhoto || item.photo || null,
-    photoId: item.photoId || null,
+    photoId: item.shopifyImages?.[0]?.id || item.photoId || null,
+    images: item.shopifyImages?.length
+      ? item.shopifyImages
+      : (item.shopifyPhoto || item.photo)
+        ? [{
+          id: item.photoId || null,
+          url: item.shopifyPhoto || item.photo,
+        }]
+        : [],
     shopifyTitle: item.shopifyTitle || '',
     shopifyPrice: item.shopifyPrice ?? item.price ?? '',
     tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
@@ -1676,6 +1757,7 @@ function EditItemScreen({
       shopifyCategoryName: current.shopifyCategoryName,
       photo: current.photo,
       photoId: current.photoId,
+      images: current.images,
       publishToPos: current.publishToPos,
       publishOnline: current.publishOnline,
     }));
