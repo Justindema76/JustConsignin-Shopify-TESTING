@@ -963,13 +963,15 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
   }
   const collection = await ensureConsignmentCollection(admin, publications);
 
-  const photoIds = [...new Set([
-    ...(Array.isArray(item.photoIds) ? item.photoIds : []),
-    item.photoId,
-  ].filter(Boolean))];
-  const files = photoIds.length
+  const hasPhotoIds = Array.isArray(item.photoIds);
+  const photoIds = [...new Set(
+    (hasPhotoIds ? item.photoIds : [item.photoId]).filter(Boolean),
+  )];
+  const files = hasPhotoIds
     ? photoIds.slice(0, 12).map((id) => ({ id }))
-    : undefined;
+    : photoIds.length
+      ? photoIds.slice(0, 12).map((id) => ({ id }))
+      : undefined;
   const customTags = Array.isArray(item.tags)
     ? item.tags
     : String(item.tags || '')
@@ -1688,9 +1690,13 @@ export async function action({ request }) {
         ...existing,
         photoIds: Array.isArray(productInput.photoIds)
           ? productInput.photoIds.filter(Boolean)
-          : [],
-        photoId: productInput.photoId || existing.photoId,
-        photo: productInput.photo || existing.photo,
+          : undefined,
+        photoId: Object.prototype.hasOwnProperty.call(productInput, 'photoId')
+          ? productInput.photoId
+          : existing.photoId,
+        photo: Object.prototype.hasOwnProperty.call(productInput, 'photo')
+          ? productInput.photo
+          : existing.photo,
         tags: productInput.tags || '',
         vendor: productInput.vendor || '',
         productDescription: productInput.productDescription || '',
