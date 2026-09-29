@@ -46,6 +46,14 @@ const DATA_QUERY = `#graphql
                   image { url }
                 }
               }
+              media(first: 20) {
+                nodes {
+                  ... on MediaImage {
+                    id
+                    image { url }
+                  }
+                }
+              }
               seo {
                 title
                 description
@@ -143,6 +151,14 @@ const SHOPIFY_FILES_QUERY = `#graphql
           }
         }
       }
+    }
+  }
+`;
+
+const PRODUCT_TAGS_QUERY = `#graphql
+  query ConsignmentProductTags($first: Int!) {
+    productTags(first: $first) {
+      nodes
     }
   }
 `;
@@ -468,6 +484,12 @@ function mapItem(node) {
     shopifyTitle: productReference?.title || field.shopify_title || savedDetails.shopifyTitle || '',
     shopifyPrice: Number(productReference?.variants?.nodes?.[0]?.price ?? field.shopify_price ?? savedDetails.shopifyPrice ?? field.price ?? 0),
     shopifyPhoto: productReference?.featuredMedia?.image?.url || null,
+    shopifyImages: (productReference?.media?.nodes || [])
+      .filter((media) => media?.id && media?.image?.url)
+      .map((media) => ({
+        id: media.id,
+        url: media.image.url,
+      })),
     notes: savedDetails.notes,
     tags: productReference?.tags || (field.shopify_tags ? String(field.shopify_tags).split(',').map((tag) => tag.trim()).filter(Boolean) : savedDetails.tags),
     vendor: productReference?.vendor || field.shopify_vendor || savedDetails.vendor,
@@ -941,7 +963,13 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
   }
   const collection = await ensureConsignmentCollection(admin, publications);
 
-  const files = item.photoId ? [{ id: item.photoId }] : undefined;
+  const photoIds = [...new Set([
+    ...(Array.isArray(item.photoIds) ? item.photoIds : []),
+    item.photoId,
+  ].filter(Boolean))];
+  const files = photoIds.length
+    ? photoIds.slice(0, 12).map((id) => ({ id }))
+    : undefined;
   const customTags = Array.isArray(item.tags)
     ? item.tags
     : String(item.tags || '')
@@ -1064,6 +1092,18 @@ export async function loader({ request }) {
       throw new Error(setup.errors.map((error) => error.message).join(', '));
     }
     const url = new URL(request.url);
+
+    if (url.searchParams.get('productTags') === '1') {
+      const tagData = await adminGraphql(admin, PRODUCT_TAGS_QUERY, {
+        first: 1000,
+      });
+
+      return Response.json({
+        tags: (tagData.productTags?.nodes || [])
+          .map((tag) => String(tag || '').trim())
+          .filter(Boolean),
+      });
+    }
 
     if (url.searchParams.get('files') === '1') {
       const filesQuery = url.searchParams.get('filesQuery')?.trim() || '';
@@ -1646,6 +1686,9 @@ export async function action({ request }) {
       const productInput = body.product || {};
       const productSource = {
         ...existing,
+        photoIds: Array.isArray(productInput.photoIds)
+          ? productInput.photoIds.filter(Boolean)
+          : [],
         photoId: productInput.photoId || existing.photoId,
         photo: productInput.photo || existing.photo,
         tags: productInput.tags || '',
