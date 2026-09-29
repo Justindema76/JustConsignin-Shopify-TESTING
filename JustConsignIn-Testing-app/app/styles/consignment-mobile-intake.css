@@ -1,0 +1,417 @@
+/* Mobile-first Add Item improvements.
+   Scoped to .consignment-intake-compact so Edit Item and other forms keep
+   their current layouts. This file can be copied to the live app unchanged. */
+
+.consignment-intake-jump {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.consignment-intake-jump button {
+  flex: 1 1 0;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--button-radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.consignment-intake-jump button:hover {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.consignment-intake-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.consignment-intake-manual-grid .consignment-form-field {
+  margin: 0;
+}
+
+.consignment-intake-manual-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.consignment-intake-compact .consignment-form-section-body {
+  padding-bottom: 12px;
+}
+
+.consignment-intake-compact .consignment-shopify-photo-row {
+  display: block;
+  margin-top: 8px;
+}
+
+.consignment-intake-compact .consignment-shopify-fields {
+  margin-top: 14px;
+}
+
+.consignment-intake-compact .consignment-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.consignment-intake-compact .consignment-detail-grid .consignment-field.wide {
+  grid-column: 1 / -1;
+}
+
+.consignment-intake-compact .consignment-shopify-help {
+  margin: 4px 0 10px;
+}
+
+
+.consignment-shopify-autofill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+
+.consignment-shopify-autofill > span {
+  min-width: 0;
+}
+
+.consignment-shopify-autofill strong {
+  display: block;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.consignment-shopify-autofill > span > span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.consignment-shopify-autofill input {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  accent-color: var(--green);
+}
+
+.consignment-product-images {
+  display: grid;
+  gap: 9px;
+}
+
+.consignment-product-images-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.consignment-product-images-toolbar label,
+.consignment-product-images-toolbar button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--button-radius);
+  background: var(--surface);
+  color: var(--green-dark);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.consignment-product-images-toolbar label:hover,
+.consignment-product-images-toolbar button:hover {
+  background: var(--green-soft);
+}
+
+.consignment-product-images-toolbar input {
+  display: none;
+}
+
+.consignment-product-image-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.consignment-product-image-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+  aspect-ratio: 1 / 1;
+}
+
+.consignment-product-image-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.consignment-product-image-card.main {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.consignment-product-image-main-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .72);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.consignment-product-image-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 4px;
+}
+
+.consignment-product-image-actions button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .68);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.consignment-product-image-empty {
+  min-height: 92px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 12px;
+}
+
+.consignment-tag-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.consignment-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.consignment-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid #C9DDCE;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  padding: 5px 8px 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.consignment-tag-chip button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: currentColor;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.consignment-tag-entry {
+  position: relative;
+}
+
+.consignment-tag-create {
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--button-radius);
+  background: var(--surface);
+  color: var(--green-dark);
+  padding: 7px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.consignment-tag-help {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.consignment-tag-suggestions > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.consignment-tag-suggestions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.consignment-tag-suggestions button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.consignment-tag-suggestions button:hover {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.consignment-shopify-advanced {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+
+.consignment-shopify-advanced > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.consignment-shopify-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.consignment-shopify-advanced > summary::after {
+  content: "⌄";
+  float: right;
+  color: var(--muted);
+}
+
+.consignment-shopify-advanced[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.consignment-shopify-advanced-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 0 12px 12px;
+}
+
+.consignment-shopify-advanced-fields .consignment-field {
+  margin: 0;
+}
+
+.consignment-shopify-advanced-fields .wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .consignment-intake-compact {
+    gap: 12px;
+  }
+
+  .consignment-intake-compact .consignment-form-section-head {
+    padding: 10px 12px;
+  }
+
+  .consignment-intake-compact .consignment-form-section-body {
+    padding: 12px;
+  }
+
+  .consignment-intake-compact .consignment-form-field {
+    margin-bottom: 0;
+  }
+
+  .consignment-intake-compact .consignment-input,
+  .consignment-intake-compact .consignment-select {
+    min-height: 44px;
+  }
+
+  .consignment-intake-compact .consignment-textarea {
+    min-height: 76px;
+  }
+
+  .consignment-intake-compact .consignment-form-actions-inner {
+    margin-top: 10px;
+    margin-bottom: 0 !important;
+  }
+
+  .consignment-intake-compact .consignment-product-choice {
+    margin-top: 10px;
+    padding: 10px;
+  }
+
+  .consignment-intake-compact .consignment-product-choice.online {
+    margin-left: 0;
+  }
+
+  .consignment-intake-jump {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    padding: 7px 0;
+    background: var(--app-bg);
+  }
+}
+
+@media (max-width: 390px) {
+  .consignment-intake-manual-grid,
+  .consignment-intake-compact .consignment-detail-grid,
+  .consignment-shopify-advanced-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .consignment-product-image-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .consignment-product-image-card.main {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+}
