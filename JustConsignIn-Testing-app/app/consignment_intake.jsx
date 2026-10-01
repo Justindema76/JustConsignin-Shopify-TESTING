@@ -1379,6 +1379,19 @@ function ShopifyProductSection({
             </span>
           </label>
 
+          <p className="consignment-shopify-help" style={{ marginTop: 8 }}>
+            Want to tag this product in Facebook or Instagram posts? Install and
+            connect Meta's official Facebook &amp; Instagram sales channel so Shopify
+            can sync eligible products to your Meta catalog.{' '}
+            <a
+              href="https://apps.shopify.com/facebook"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Install Facebook &amp; Instagram by Meta
+            </a>
+          </p>
+
           {linkedProductId && (
             <p
               style={{
