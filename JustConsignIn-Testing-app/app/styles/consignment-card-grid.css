@@ -4,7 +4,6 @@
    Mobile  = compact 2-column cards
    ========================================================= */
 
-.consignment-entity-grid,
 .consignment-readable-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -355,9 +354,7 @@
   min-height: 32px;
 }
 
-.consignment-readable-card-actions .consignment-list-action,
 .consignment-readable-card-actions .consignment-quick-sold-btn,
-.consignment-readable-card-actions .consignment-grid-open-btn,
 .consignment-readable-card-actions .consignment-sales-pay-btn,
 .consignment-readable-card-actions .consignment-item-open-btn {
   width: auto;
@@ -419,17 +416,13 @@
    ========================================================= */
 
 @media (max-width: 1050px) {
-  .consignment-entity-grid,
-  .consignment-readable-grid,
-  .consignment-sales-grid-view {
+  .consignment-readable-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 850px) {
-  .consignment-entity-grid,
-  .consignment-readable-grid,
-  .consignment-sales-grid-view {
+  .consignment-readable-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -440,10 +433,7 @@
    ========================================================= */
 
 @media (max-width: 500px) {
-
-  .consignment-entity-grid,
-  .consignment-readable-grid,
-  .consignment-sales-grid-view {
+  .consignment-readable-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px;
     margin-left: -6px;
@@ -600,13 +590,9 @@
   }
 
   .consignment-readable-card-actions > *,
-  .consignment-readable-card-actions .consignment-list-action,
   .consignment-readable-card-actions .consignment-quick-sold-btn,
-  .consignment-readable-card-actions .consignment-grid-open-btn,
   .consignment-readable-card-actions .consignment-sales-pay-btn,
-  .consignment-readable-card-actions .consignment-item-open-btn,
-  .consignment-sales-grid-actions .consignment-sales-pay-btn,
-  .consignment-sales-pay-btn.compact {
+  .consignment-readable-card-actions .consignment-item-open-btn {
     min-height: 32px;
     padding: 6px 7px;
     font-size: var(--font-size-sm);

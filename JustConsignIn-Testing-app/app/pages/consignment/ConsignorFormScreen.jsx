@@ -5,8 +5,9 @@ import Header from '../../components/consignment/Header';
 import '../../styles/consignment-forms.css';
 
 /* ============================================================================
-   PAGE: ADD NEW CONSIGNOR
-   Creates a new consignor record.
+   PAGE: NEW / EDIT CONSIGNOR
+   One form for both. Pass `consignor` to edit an existing record;
+   leave it out (and pass `nextNumber`) to create a new one.
 
    GLOBAL STYLES USED:
    - consignment-body
@@ -19,23 +20,30 @@ import '../../styles/consignment-forms.css';
    - consignment-forms.css
    ============================================================================ */
 
-export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
+export default function ConsignorFormScreen({
+  consignor = null,
+  nextNumber,
+  onBack,
+  onSave,
+}) {
+  const editing = Boolean(consignor);
+
   /* --------------------------------------------------------------------------
      FORM STATE
      -------------------------------------------------------------------------- */
   const [form, setForm] = useState({
-    number: nextNumber,
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    address: '',
-    city: '',
-    province: 'Ontario',
-    postalCode: '',
-    commissionPct: 50,
-    unsoldPreference: 'Please return',
-    notes: '',
+    number: editing ? consignor.number : nextNumber,
+    firstName: consignor?.firstName || '',
+    lastName: consignor?.lastName || '',
+    phone: consignor?.phone || '',
+    email: consignor?.email || '',
+    address: consignor?.address || '',
+    city: consignor?.city || '',
+    province: consignor?.province || 'Ontario',
+    postalCode: consignor?.postalCode || '',
+    commissionPct: consignor?.commissionPct ?? 50,
+    unsoldPreference: consignor?.unsoldPreference || 'Please return',
+    notes: consignor?.notes || '',
   });
 
   const set = (key) => (event) => {
@@ -52,17 +60,23 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
       {/* ======================================================================
           PAGE HEADER
           ====================================================================== */}
-      <Header eyebrow="New consignor" title="Create consignor" onBack={onBack} />
+      <Header
+        eyebrow={editing ? `Consignor #${consignor.number}` : 'New consignor'}
+        title={editing ? 'Edit consignor' : 'Create consignor'}
+        onBack={onBack}
+      />
 
       <div className="consignment-body consignment-form-page">
         <div className="consignment-form-shell">
-
           {/* ==================================================================
               SECTION: IDENTITY
               ================================================================== */}
           <section className="consignment-form-section">
             <div className="consignment-form-section-head">
-              <span className="consignment-form-section-marker" aria-hidden="true" />
+              <span
+                className="consignment-form-section-marker"
+                aria-hidden="true"
+              />
               <div>
                 <h2>Identity</h2>
                 <p>Basic consignor information</p>
@@ -71,7 +85,6 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
 
             <div className="consignment-form-section-body">
               <div className="consignment-form-grid consignment-form-grid-identity">
-
                 {/* CONSIGNOR NUMBER */}
                 <div className="consignment-form-field consignment-form-field-number">
                   <label className="consignment-label">Consignor #</label>
@@ -84,9 +97,9 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
                     value={form.number}
                     onChange={set('number')}
                   />
-                  <div className="consignment-form-help">
-                    Auto-assigned
-                  </div>
+                  {!editing && (
+                    <div className="consignment-form-help">Auto-assigned</div>
+                  )}
                 </div>
 
                 {/* FIRST NAME */}
@@ -119,7 +132,10 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
               ================================================================== */}
           <section className="consignment-form-section">
             <div className="consignment-form-section-head">
-              <span className="consignment-form-section-marker" aria-hidden="true" />
+              <span
+                className="consignment-form-section-marker"
+                aria-hidden="true"
+              />
               <div>
                 <h2>Contact</h2>
                 <p>Phone, email, and mailing address</p>
@@ -127,7 +143,6 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
             </div>
 
             <div className="consignment-form-section-body">
-
               {/* PHONE + EMAIL */}
               <div className="consignment-form-grid consignment-form-grid-2">
                 <div className="consignment-form-field">
@@ -210,7 +225,10 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
               ================================================================== */}
           <section className="consignment-form-section">
             <div className="consignment-form-section-head">
-              <span className="consignment-form-section-marker" aria-hidden="true" />
+              <span
+                className="consignment-form-section-marker"
+                aria-hidden="true"
+              />
               <div>
                 <h2>Consignment settings</h2>
                 <p>Default terms used for this consignor</p>
@@ -219,7 +237,6 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
 
             <div className="consignment-form-section-body">
               <div className="consignment-form-grid consignment-form-grid-2">
-
                 {/* COMMISSION */}
                 <div className="consignment-form-field">
                   <label className="consignment-label">
@@ -275,10 +292,12 @@ export default function CreateConsignorScreen({ onBack, onSave, nextNumber }) {
           <button
             className="consignment-btn"
             disabled={!valid}
-            onClick={() => onSave(form)}
+            onClick={() =>
+              editing ? onSave(consignor.id, form) : onSave(form)
+            }
           >
             <Check size={18} />
-            Save consignor
+            {editing ? 'Save changes' : 'Save consignor'}
           </button>
         </div>
       </div>

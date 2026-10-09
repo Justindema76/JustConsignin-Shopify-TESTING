@@ -3,29 +3,6 @@
    This file styles ONLY the Shopify Content → Files picker.
    ========================================================= */
 
-.shopify-file-picker-trigger {
-  width: 100%;
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--green);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.shopify-file-picker-trigger:hover {
-  background: var(--green-soft);
-}
-
 .shopify-file-picker-overlay {
   position: fixed;
   inset: 0;
@@ -135,7 +112,7 @@
 }
 
 .shopify-file-picker-card.is-added {
-  opacity: .5;
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -188,7 +165,7 @@
   color: #fff;
   background: var(--green);
   border-radius: 999px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .shopify-file-picker-added-mark {
@@ -287,12 +264,4 @@
     width: 100%;
     min-width: 0;
   }
-}
-
-@media (max-width: 420px) {
-
-  .shopify-file-picker-trigger {
-    display: none !important;
-  }
-
 }

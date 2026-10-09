@@ -9,7 +9,9 @@
   align-items: center;
 }
 
-.consignment-dashboard-header-actions .consignment-btn { min-width: 0; }
+.consignment-dashboard-header-actions .consignment-btn {
+  min-width: 0;
+}
 
 .consignment-dashboard-data-btn {
   display: inline-flex;
@@ -25,8 +27,12 @@
   cursor: pointer;
 }
 
-.consignment-dashboard-data-btn:hover { border-color: #AEB4B8; }
-.consignment-dashboard-data-btn:active { background: var(--green-soft); }
+.consignment-dashboard-data-btn:hover {
+  border-color: #aeb4b8;
+}
+.consignment-dashboard-data-btn:active {
+  background: var(--green-soft);
+}
 
 .consignment-dashboard-context {
   display: flex;
@@ -42,7 +48,9 @@
   font-size: 13px;
 }
 
-.consignment-dashboard-expiry { margin-bottom: 20px; }
+.consignment-dashboard-expiry {
+  margin-bottom: 20px;
+}
 
 .consignment-dashboard-section-copy {
   margin: 0 0 16px;
@@ -66,13 +74,15 @@
   display: block;
 }
 
-.consignment-expiry-stat:hover { border-color: #AEB4B8; }
+.consignment-expiry-stat:hover {
+  border-color: #aeb4b8;
+}
 
 .consignment-dashboard-expiry-label {
   display: block;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -85,11 +95,13 @@
   color: var(--ink);
 }
 
-.consignment-expiry-stat strong.alert { color: #C0392B; }
+.consignment-expiry-stat strong.alert {
+  color: #c0392b;
+}
 
 .consignment-dashboard-lower-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, .8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, 0.8fr);
   gap: 14px;
 }
 
@@ -109,8 +121,12 @@
   cursor: pointer;
 }
 
-.consignment-dashboard-summary-row:last-of-type { border-bottom: 0; }
-.consignment-dashboard-summary-row:active { background: var(--green-soft); }
+.consignment-dashboard-summary-row:last-of-type {
+  border-bottom: 0;
+}
+.consignment-dashboard-summary-row:active {
+  background: var(--green-soft);
+}
 
 .consignment-dashboard-summary-row.static {
   cursor: default;
@@ -156,7 +172,9 @@
   cursor: pointer;
 }
 
-.consignment-dashboard-report-link:active { background: var(--green-soft); }
+.consignment-dashboard-report-link:active {
+  background: var(--green-soft);
+}
 
 .consignment-dashboard-report-link strong {
   display: block;
@@ -172,38 +190,36 @@
 }
 
 @media (max-width: 900px) {
-  .consignment-dashboard-lower-grid { grid-template-columns: 1fr 1fr; }
-  .consignment-dashboard-reports-card { grid-column: 1 / -1; }
+  .consignment-dashboard-lower-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .consignment-dashboard-reports-card {
+    grid-column: 1 / -1;
+  }
 }
-/* Tablet + mobile app navigation */
-@media (max-width: 900px) {
-  .consignment-main-nav {
-    justify-content: space-around;
-    padding: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.06);
-  }
-
-  .consignment-brand {
-    display: none;
-  }
-
-  .consignment-nav-button {
-    flex: 1;
-    flex-direction: column;
-    gap: 3px;
-    font-size: 10px;
-    padding: 6px 2px;
-  }
-
-}
-
 @media (max-width: 640px) {
-  .consignment-dashboard-context { flex-direction: column; align-items: stretch; gap: 10px; }
-  .consignment-dashboard-expiry-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .consignment-expiry-stat { padding: 12px 13px; }
-  .consignment-expiry-stat strong { font-size: 21px; margin: 4px 0; }
-  .consignment-dashboard-lower-grid { grid-template-columns: 1fr; }
-  .consignment-dashboard-reports-card { grid-column: auto; }
+  .consignment-dashboard-context {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .consignment-dashboard-expiry-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .consignment-expiry-stat {
+    padding: 12px 13px;
+  }
+  .consignment-expiry-stat strong {
+    font-size: 21px;
+    margin: 4px 0;
+  }
+  .consignment-dashboard-lower-grid {
+    grid-template-columns: 1fr;
+  }
+  .consignment-dashboard-reports-card {
+    grid-column: auto;
+  }
   .consignment-dashboard-header-actions .consignment-btn {
     width: calc(50% - 4px);
     flex: 0 0 auto;
