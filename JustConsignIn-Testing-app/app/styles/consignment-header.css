@@ -109,6 +109,14 @@
     position: static;
   }
 
+  .consignment-eyebrow {
+    font-size: 11px;
+  }
+
+  .consignment-title {
+    font-size: 20px;
+  }
+
   .consignment-header-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

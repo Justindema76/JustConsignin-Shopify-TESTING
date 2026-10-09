@@ -64,7 +64,7 @@ export function bufferConfiguration() {
   const apiKeyConfigured = Boolean(process.env.BUFFER_API_KEY);
 
   return {
-    configured: oauthConfigured || apiKeyConfigured,
+    configured: oauthConfigured,
     oauthConfigured,
     apiKeyConfigured,
     clientId: process.env.BUFFER_CLIENT_ID || '',
@@ -102,6 +102,66 @@ export function buildBufferAuthorizationUrl({ state, challenge }) {
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('prompt', 'consent');
   return url.toString();
+}
+
+// The Buffer login has to run in a real browser tab, not inside the Shopify
+// Admin iframe or the Shopify mobile app's webview (Google sign-in refuses
+// embedded webviews). The Social page links to /buffer/start with a signed,
+// short-lived ticket so that route knows which shop to connect without
+// needing a Shopify session in that browser.
+const CONNECT_TICKET_TTL_MS = 30 * 60 * 1000;
+
+function connectTicketSignature(payload) {
+  return crypto
+    .createHmac('sha256', encryptionKey())
+    .update(`buffer-connect:${payload}`)
+    .digest('base64url');
+}
+
+export function createConnectTicket(shop) {
+  const payload = `${base64url(shop)}.${Date.now() + CONNECT_TICKET_TTL_MS}`;
+  return `${payload}.${connectTicketSignature(payload)}`;
+}
+
+export function readConnectTicket(ticket) {
+  const [shopValue, expiresValue, signature] = String(ticket || '').split('.');
+  if (!shopValue || !expiresValue || !signature) return { ok: false, reason: 'invalid' };
+
+  const expected = Buffer.from(connectTicketSignature(`${shopValue}.${expiresValue}`));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (Number(expiresValue) < Date.now()) return { ok: false, reason: 'expired' };
+
+  return { ok: true, shop: Buffer.from(shopValue, 'base64url').toString('utf8') };
+}
+
+export function bufferConnectUrl(shop) {
+  const appUrl = String(process.env.SHOPIFY_APP_URL || '').replace(/\/$/, '');
+  const url = new URL(`${appUrl}/buffer/start`);
+  url.searchParams.set('ticket', createConnectTicket(shop));
+  return url.toString();
+}
+
+export async function startBufferAuthorization(shop) {
+  const { verifier, challenge } = createPkcePair();
+  const state = createOAuthState();
+
+  await db.bufferOAuthState.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  });
+
+  await db.bufferOAuthState.create({
+    data: {
+      state,
+      shop,
+      codeVerifier: encryptSecret(verifier),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  });
+
+  return buildBufferAuthorizationUrl({ state, challenge });
 }
 
 export async function exchangeBufferCode({ code, verifier }) {
@@ -307,23 +367,7 @@ async function validBufferAccessToken(shop) {
 export async function getBufferConnectionSummary(shop) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
 
-  if (!connection) {
-    const apiKey = process.env.BUFFER_API_KEY;
-    if (!apiKey) return null;
-
-    const snapshot = await getBufferAccountSnapshot(apiKey);
-    const firstOrganization = snapshot.organizations?.[0] || null;
-
-    return {
-      connected: true,
-      mode: 'api-key',
-      accountName: snapshot.account?.name || snapshot.account?.email || 'Buffer account',
-      organizationName: firstOrganization?.name || null,
-      channels: snapshot.channels || [],
-      connectedAt: null,
-      updatedAt: null,
-    };
-  }
+  if (!connection) return null;
 
   let channels = [];
   try {
@@ -385,7 +429,6 @@ export async function createBufferPosts({
   existingPosts = [],
 }) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
-  const apiKey = process.env.BUFFER_API_KEY || '';
 
   let knownChannels = [];
   let accessToken = '';
@@ -397,10 +440,6 @@ export async function createBufferPosts({
       knownChannels = [];
     }
     accessToken = await validBufferAccessToken(shop);
-  } else if (apiKey) {
-    const snapshot = await getBufferAccountSnapshot(apiKey);
-    knownChannels = snapshot.channels || [];
-    accessToken = apiKey;
   } else {
     throw new Error('Connect Buffer before creating social posts.');
   }
@@ -540,7 +579,6 @@ export async function createBufferPosts({
 
 export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
   const connection = await db.bufferConnection.findUnique({ where: { shop } });
-  const apiKey = process.env.BUFFER_API_KEY || '';
 
   let knownChannels = [];
   let accessToken = '';
@@ -552,10 +590,6 @@ export async function createBufferDrafts({ shop, channelIds, text, imageUrl }) {
       knownChannels = [];
     }
     accessToken = await validBufferAccessToken(shop);
-  } else if (apiKey) {
-    const snapshot = await getBufferAccountSnapshot(apiKey);
-    knownChannels = snapshot.channels || [];
-    accessToken = apiKey;
   } else {
     throw new Error('Connect Buffer before creating social drafts.');
   }

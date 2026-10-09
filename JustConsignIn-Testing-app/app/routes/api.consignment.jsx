@@ -50,8 +50,16 @@ const DATA_QUERY = `#graphql
                 nodes {
                   ... on MediaImage {
                     id
+                    alt
                     image { url }
                   }
+                }
+              }
+              collections(first: 20) {
+                nodes {
+                  id
+                  title
+                  handle
                 }
               }
               seo {
@@ -66,6 +74,7 @@ const DATA_QUERY = `#graphql
                 nodes {
                   price
                   sku
+                  inventoryItem { measurement { weight { value unit } } }
                 }
               }
             }
@@ -155,13 +164,51 @@ const SHOPIFY_FILES_QUERY = `#graphql
   }
 `;
 
-const PRODUCT_TAGS_QUERY = `#graphql
-  query ConsignmentProductTags($first: Int!) {
-    productTags(first: $first) {
+const SHOPIFY_PRODUCTS_SEARCH_QUERY = `#graphql
+  query SearchExistingShopifyProducts($query: String) {
+    products(first: 40, query: $query, sortKey: UPDATED_AT, reverse: true) {
+      nodes {
+        id
+        title
+        handle
+        description
+        vendor
+        productType
+        tags
+        status
+        featuredMedia {
+          ... on MediaImage { id alt image { url } }
+        }
+        media(first: 10) {
+          nodes {
+            ... on MediaImage { id alt image { url } }
+          }
+        }
+        variants(first: 1) { nodes { price } }
+      }
+    }
+  }
+`;
+
+const PRODUCT_ORGANIZATION_QUERY = `#graphql
+  query ConsignmentProductOrganization {
+    shop { primaryDomain { url } }
+    collections(first: 100, sortKey: TITLE) {
+      nodes {
+        id
+        title
+        handle
+        ruleSet {
+          appliedDisjunctively
+        }
+      }
+    }
+    productTags(first: 250) {
       nodes
     }
   }
 `;
+
 
 
 const CONSIGNMENT_COLLECTION_QUERY = `#graphql
@@ -480,16 +527,26 @@ function mapItem(node) {
     shopifyProductId: productReference?.id || field.shopify_product || null,
     shopifyProductTitle: productReference?.title || null,
     shopifyProductStatus: productReference?.status || null,
-    shopifyProductHandle: productReference?.handle || null,
+    shopifyProductHandle: productReference?.handle || savedDetails.shopifyHandle || null,
+    sku: productReference?.variants?.nodes?.[0]?.sku ?? savedDetails.sku ?? field.item_number ?? '',
+    weight: productReference?.variants?.nodes?.[0]?.inventoryItem?.measurement?.weight?.value ?? savedDetails.weight ?? '',
+    weightUnit: productReference?.variants?.nodes?.[0]?.inventoryItem?.measurement?.weight?.unit || savedDetails.weightUnit || 'KILOGRAMS',
     shopifyTitle: productReference?.title || field.shopify_title || savedDetails.shopifyTitle || '',
     shopifyPrice: Number(productReference?.variants?.nodes?.[0]?.price ?? field.shopify_price ?? savedDetails.shopifyPrice ?? field.price ?? 0),
     shopifyPhoto: productReference?.featuredMedia?.image?.url || null,
-    shopifyImages: (productReference?.media?.nodes || [])
-      .filter((media) => media?.id && media?.image?.url)
-      .map((media) => ({
-        id: media.id,
-        url: media.image.url,
+    shopifyMedia: (productReference?.media?.nodes || [])
+      .filter((entry) => entry?.id && entry?.image?.url)
+      .map((entry) => ({
+        id: entry.id,
+        url: entry.image.url,
+        alt: entry.alt || '',
       })),
+    shopifyCollections: (productReference?.collections?.nodes || []).map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      handle: entry.handle,
+    })),
+    shopifyProductType: productReference?.productType || '',
     notes: savedDetails.notes,
     tags: productReference?.tags || (field.shopify_tags ? String(field.shopify_tags).split(',').map((tag) => tag.trim()).filter(Boolean) : savedDetails.tags),
     vendor: productReference?.vendor || field.shopify_vendor || savedDetails.vendor,
@@ -497,8 +554,8 @@ function mapItem(node) {
     productDescription: shopifyDescriptionToPlainText(productReference?.descriptionHtml || field.shopify_description || savedDetails.productDescription),
     shopifyCategoryId: productReference?.category?.id || field.shopify_category_id || savedDetails.shopifyCategoryId,
     shopifyCategoryName: productReference?.category?.fullName || field.shopify_category_name || savedDetails.shopifyCategoryName,
-    seoTitle: productReference?.seo?.title || field.seo_title || savedDetails.seoTitle,
-    seoDescription: productReference?.seo?.description || field.seo_description || savedDetails.seoDescription,
+    seoTitle: productReference ? (productReference.seo?.title || '') : (field.seo_title || savedDetails.seoTitle),
+    seoDescription: productReference ? (productReference.seo?.description || '') : (field.seo_description || savedDetails.seoDescription),
     publishToPos: field.publish_to_pos !== false && field.publish_to_pos !== 'false',
     publishOnline: field.publish_online === true || field.publish_online === 'true' || savedDetails.publishOnline === true,
     payoutId: savedDetails.payoutId || '',
@@ -573,6 +630,10 @@ function itemDetails(value) {
     shopifyPrice: value.shopifyPrice === '' || value.shopifyPrice == null ? null : Number(value.shopifyPrice),
     shopifyCategoryId: value.shopifyCategoryId || '',
     shopifyCategoryName: value.shopifyCategoryName || '',
+    sku: value.sku ?? value.itemNumber ?? '',
+    weight: value.weight ?? '',
+    weightUnit: value.weightUnit || 'KILOGRAMS',
+    shopifyHandle: value.shopifyHandle || value.shopifyProductHandle || '',
     seoTitle: value.seoTitle || '',
     seoDescription: value.seoDescription || '',
     publishOnline: value.publishOnline === true,
@@ -802,7 +863,12 @@ async function getProductSetup(admin) {
     const name = String(entry.name || '').toLowerCase();
     return name.includes('online store');
   });
-  return { location, posPublication, onlineStorePublication };
+  const metaPublication = data.publications.nodes.find((entry) => {
+    const name = String(entry.name || '').toLowerCase();
+    return name.includes('facebook') || name.includes('instagram') || name.includes('meta');
+  });
+  return { location, posPublication, onlineStorePublication, metaPublication };
+
 }
 
 async function publishResource(admin, resourceId, publications, resourceName) {
@@ -931,11 +997,12 @@ async function activateForPos(admin, productId) {
   return updateData.productUpdate.product;
 }
 
-async function syncPosProduct(admin, item, consignor, merchantName) {
+async function syncPosProduct(admin, item, consignor, merchantName, { consignment = true } = {}) {
   const {
     location,
     posPublication,
     onlineStorePublication,
+    metaPublication,
   } = await getProductSetup(admin);
   if (!location) {
     throw new Error(
@@ -947,30 +1014,38 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
       'The Point of Sale sales channel is not available. Add Shopify POS, then try again.',
     );
   }
-  if (item.publishOnline && !onlineStorePublication?.id) {
+  if (item.publishMeta && !metaPublication?.id) {
+    throw new Error(
+      'Facebook & Instagram by Meta is not available. Connect the Meta sales channel or turn off Meta publishing.',
+    );
+  }
+  const publishOnline = Boolean(item.publishOnline || item.publishMeta);
+  if (publishOnline && !onlineStorePublication?.id) {
     throw new Error(
       'The Online Store sales channel is not available. Add Online Store or turn off online publishing.',
     );
   }
   const publications = [
     ...(item.publishToPos !== false ? [posPublication] : []),
-    ...(item.publishOnline ? [onlineStorePublication] : []),
+    ...(publishOnline ? [onlineStorePublication] : []),
+    ...(item.publishMeta ? [metaPublication] : []),
   ];
   if (!publications.length) {
     throw new Error(
-      'Choose at least one Shopify sales channel: Point of Sale or Online Store.',
+      'Choose at least one Shopify sales channel: Point of Sale, Online Store, or Facebook & Instagram.',
     );
   }
-  const collection = await ensureConsignmentCollection(admin, publications);
+  const collection = consignment
+    ? await ensureConsignmentCollection(admin, publications)
+    : null;
 
-  const hasPhotoIds = Array.isArray(item.photoIds);
-  const photoIds = [...new Set(
-    (hasPhotoIds ? item.photoIds : [item.photoId]).filter(Boolean),
-  )];
-  const files = hasPhotoIds
-    ? photoIds.slice(0, 12).map((id) => ({ id }))
-    : photoIds.length
-      ? photoIds.slice(0, 12).map((id) => ({ id }))
+  const mediaIds = Array.isArray(item.media)
+    ? item.media.map((entry) => entry?.id).filter(Boolean)
+    : [];
+  const files = mediaIds.length
+    ? mediaIds.map((id) => ({ id }))
+    : item.photoId
+      ? [{ id: item.photoId }]
       : undefined;
   const customTags = Array.isArray(item.tags)
     ? item.tags
@@ -978,9 +1053,16 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean);
+  if (item.weight !== '' && item.weight != null && (!Number.isFinite(Number(item.weight)) || Number(item.weight) < 0)) {
+    throw new Error('Enter a valid weight of zero or greater.');
+  }
+  if (item.weightUnit && !['KILOGRAMS', 'GRAMS', 'POUNDS', 'OUNCES'].includes(item.weightUnit)) {
+    throw new Error('Choose a valid weight unit.');
+  }
   const input = {
+    ...(item.shopifyHandle ? { handle: String(item.shopifyHandle).trim() } : {}),
     ...(item.shopifyProductId ? { id: item.shopifyProductId } : {}),
-    title: String(item.shopifyTitle || item.description || item.type || `Consignment item ${item.itemNumber}`).trim(),
+    title: String(item.shopifyTitle || item.description || item.type || (consignment ? `Consignment item ${item.itemNumber}` : 'Shopify product')).trim(),
     descriptionHtml: item.productDescription
       ? `<p>${escapeHtml(item.productDescription).replaceAll('\n', '<br>')}</p>`
       : [
@@ -988,23 +1070,12 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
         item.condition ? `<p><strong>Condition:</strong> ${escapeHtml(item.condition)}</p>` : '',
         item.size ? `<p><strong>Size:</strong> ${escapeHtml(item.size)}</p>` : '',
       ].join(''),
-    productType: item.type || item.category,
-    vendor: item.vendor || merchantName || 'Consignment',
+    productType: item.productType || item.type || item.category,
+    vendor: item.vendor || merchantName || (consignment ? 'Consignment' : ''),
     status: 'ACTIVE',
-    tags: [
-      'Consignment',
-      item.category,
-      item.type,
-      item.condition,
-      item.brand,
-      `Consignor ${consignor.number}`,
-      ...customTags,
-    ].filter(Boolean),
+    tags: customTags,
     category: item.shopifyCategoryId || undefined,
-    seo: (item.seoTitle || item.seoDescription) ? {
-      title: item.seoTitle || item.shopifyTitle || item.description || undefined,
-      description: item.seoDescription || undefined,
-    } : undefined,
+    seo: { title: item.seoTitle || '', description: item.seoDescription || '' },
     files,
     productOptions: [{
       name: 'Title',
@@ -1014,11 +1085,12 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
     variants: [{
       optionValues: [{ optionName: 'Title', name: 'Default Title' }],
       price: Number(item.shopifyPrice ?? item.price ?? 0).toFixed(2),
-      sku: item.itemNumber,
+      sku: String(item.sku ?? item.itemNumber ?? ''),
       inventoryPolicy: 'DENY',
       taxable: true,
       inventoryItem: {
-        sku: item.itemNumber,
+        sku: String(item.sku ?? item.itemNumber ?? ''),
+        ...(item.weight !== '' && item.weight != null ? { measurement: { weight: { value: Number(item.weight), unit: item.weightUnit || 'KILOGRAMS' } } } : {}),
         tracked: true,
         requiresShipping: true,
       },
@@ -1039,6 +1111,26 @@ async function syncPosProduct(admin, item, consignor, merchantName) {
     await addProductToManualCollection(
       admin,
       collection.id,
+      data.productSet.product.id,
+    );
+  }
+
+  const selectedCollectionIds = Array.isArray(item.collections)
+    ? item.collections
+        .filter(
+          (entry) =>
+            entry &&
+            typeof entry === 'object' &&
+            String(entry.id || '').startsWith('gid://shopify/Collection/') &&
+            entry.isManual !== false,
+        )
+        .map((entry) => entry.id)
+    : [];
+  for (const collectionId of [...new Set(selectedCollectionIds)]) {
+    if (collectionId === collection?.id) continue;
+    await addProductToManualCollection(
+      admin,
+      collectionId,
       data.productSet.product.id,
     );
   }
@@ -1095,15 +1187,57 @@ export async function loader({ request }) {
     }
     const url = new URL(request.url);
 
-    if (url.searchParams.get('productTags') === '1') {
-      const tagData = await adminGraphql(admin, PRODUCT_TAGS_QUERY, {
-        first: 1000,
+    if (url.searchParams.get('publishing') === '1') {
+      const publishing = await getProductSetup(admin);
+      return Response.json({
+        metaInstalled: Boolean(publishing.metaPublication?.id),
+        metaPublicationName: publishing.metaPublication?.name || '',
       });
+    }
+
+    if (url.searchParams.get('products') === '1') {
+      const productsQuery = url.searchParams.get('productsQuery')?.trim() || '';
+      const productsData = await adminGraphql(admin, SHOPIFY_PRODUCTS_SEARCH_QUERY, {
+        query: productsQuery || null,
+      });
+      return Response.json({
+        products: (productsData.products?.nodes || []).map((product) => ({
+          id: product.id,
+          title: product.title || '',
+          handle: product.handle || '',
+          description: product.description || '',
+          vendor: product.vendor || '',
+          productType: product.productType || '',
+          tags: product.tags || [],
+          status: product.status || '',
+          price: product.variants?.nodes?.[0]?.price || '',
+          media: (product.media?.nodes || [])
+            .filter((entry) => entry?.image?.url)
+            .map((entry) => ({
+              id: entry.id,
+              url: entry.image.url,
+              alt: entry.alt || product.title || '',
+            })),
+          photo: product.featuredMedia?.image?.url || '',
+        })),
+      });
+    }
+
+    if (url.searchParams.get('organization') === '1') {
+      const organizationData = await adminGraphql(
+        admin,
+        PRODUCT_ORGANIZATION_QUERY,
+      );
 
       return Response.json({
-        tags: (tagData.productTags?.nodes || [])
-          .map((tag) => String(tag || '').trim())
-          .filter(Boolean),
+        collections: (organizationData.collections?.nodes || []).map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          handle: entry.handle,
+          isManual: !entry.ruleSet,
+        })),
+        tags: organizationData.productTags?.nodes || [],
+        storefrontUrl: organizationData.shop?.primaryDomain?.url || '',
       });
     }
 
@@ -1675,6 +1809,42 @@ export async function action({ request }) {
       return Response.json(mapItem(saved));
     }
 
+    if (request.method === 'POST' && body.operation === 'createShopifyProduct') {
+      await requireTier2(admin);
+      const productInput = body.product || {};
+      const sellPrice = Number(productInput.shopifyPrice);
+      if (!String(productInput.shopifyTitle || '').trim()) {
+        return Response.json({ error: 'Enter a Shopify product title.' }, { status: 400 });
+      }
+      if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
+        return Response.json(
+          { error: 'Enter a Shopify price greater than $0.00 before creating the product.' },
+          { status: 400 },
+        );
+      }
+      const productSource = {
+        ...productInput,
+        description: String(productInput.shopifyTitle || '').trim(),
+        shopifyTitle: String(productInput.shopifyTitle || '').trim(),
+        shopifyPrice: sellPrice,
+        publishOnline: productInput.publishOnline === true,
+        publishMeta: productInput.publishMeta === true,
+        publishToPos: productInput.publishToPos !== false,
+      };
+      const product = await syncPosProduct(
+        admin,
+        productSource,
+        null,
+        current.shop?.name,
+        { consignment: false },
+      );
+      return Response.json({
+        id: product.id,
+        status: product.status || 'ACTIVE',
+        title: product.title || productSource.shopifyTitle,
+      });
+    }
+
     if (request.method === 'POST' && body.operation === 'syncProduct') {
       await requireTier2(admin);
       const existing = current.items.find((entry) => entry.id === body.itemId);
@@ -1688,15 +1858,15 @@ export async function action({ request }) {
       const productInput = body.product || {};
       const productSource = {
         ...existing,
-        photoIds: Array.isArray(productInput.photoIds)
-          ? productInput.photoIds.filter(Boolean)
-          : undefined,
-        photoId: Object.prototype.hasOwnProperty.call(productInput, 'photoId')
-          ? productInput.photoId
-          : existing.photoId,
-        photo: Object.prototype.hasOwnProperty.call(productInput, 'photo')
-          ? productInput.photo
-          : existing.photo,
+        photoId: productInput.photoId || existing.photoId,
+        photo: productInput.photo || existing.photo,
+        media: Array.isArray(productInput.media)
+          ? productInput.media
+          : (existing.shopifyMedia || []),
+        productType: productInput.productType || existing.shopifyProductType || existing.type || existing.category,
+        collections: Array.isArray(productInput.collections)
+          ? productInput.collections
+          : (existing.shopifyCollections || []),
         tags: productInput.tags || '',
         vendor: productInput.vendor || '',
         productDescription: productInput.productDescription || '',
@@ -1706,9 +1876,14 @@ export async function action({ request }) {
           : Number(productInput.shopifyPrice),
         shopifyCategoryId: productInput.shopifyCategoryId || '',
         shopifyCategoryName: productInput.shopifyCategoryName || '',
+        sku: productInput.sku ?? existing.sku ?? existing.itemNumber ?? '',
+        weight: productInput.weight ?? existing.weight ?? '',
+        weightUnit: productInput.weightUnit || existing.weightUnit || 'KILOGRAMS',
+        shopifyHandle: productInput.shopifyHandle ?? existing.shopifyProductHandle ?? '',
         seoTitle: productInput.seoTitle || '',
         seoDescription: productInput.seoDescription || '',
         publishOnline: productInput.publishOnline === true,
+        publishMeta: productInput.publishMeta === true,
         publishToPos: productInput.publishToPos !== false,
       };
       const sellPrice = Number(productSource.shopifyPrice ?? productSource.price);
@@ -1735,6 +1910,10 @@ export async function action({ request }) {
           shopifyPrice: productSource.shopifyPrice,
           shopifyCategoryId: productSource.shopifyCategoryId,
           shopifyCategoryName: productSource.shopifyCategoryName,
+          sku: productSource.sku,
+          weight: productSource.weight,
+          weightUnit: productSource.weightUnit,
+          shopifyHandle: productSource.shopifyHandle,
           seoTitle: productSource.seoTitle,
           seoDescription: productSource.seoDescription,
           publishOnline: productSource.publishOnline,

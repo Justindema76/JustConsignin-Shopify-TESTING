@@ -1,10 +1,12 @@
+import { useEffect } from 'react';
 import { Tag } from 'lucide-react';
-import { useLoaderData, useLocation, useNavigate } from 'react-router';
+import { useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import { authenticate } from '../shopify.server';
 import Header from '../components/consignment/Header';
 import SocialConnectionCard from '../components/social/SocialConnectionCard';
 import {
   bufferConfiguration,
+  bufferConnectUrl,
   deleteBufferConnection,
   getBufferConnectionSummary,
 } from '../services/buffer.server';
@@ -20,6 +22,7 @@ export const loader = async ({ request }) => {
   return {
     connection,
     bufferConfigured: configuration.configured,
+    bufferConnectUrl: configuration.configured ? bufferConnectUrl(session.shop) : '',
     bufferRedirectUri: configuration.redirectUri,
   };
 };
@@ -39,14 +42,29 @@ export const action = async ({ request }) => {
 
 export default function SocialMediaRoute() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const revalidator = useRevalidator();
   const {
     connection,
     bufferConfigured,
+    bufferConnectUrl: connectHref,
     bufferRedirectUri,
   } = useLoaderData();
 
-  const connectHref = `/app/buffer-connect${location.search || ''}`;
+  // The Buffer login finishes in a separate browser window. Reload the
+  // connection status when the merchant comes back to this page.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && revalidator.state === 'idle') {
+        revalidator.revalidate();
+      }
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [revalidator]);
 
   return (
     <div className="consignment">

@@ -18,6 +18,7 @@ import {
   Video,
 } from 'lucide-react';
 
+import { searchShopifyFiles } from '../../consignmentApi';
 import {
   canPersistSocialDraft,
   loadSocialDraft,
@@ -26,6 +27,113 @@ import {
 
 const SUPPORTED_SERVICES = new Set(['instagram', 'facebook', 'tiktok']);
 const MAX_MEDIA_ITEMS = 10;
+
+function ShopifySocialFilePicker({ onClose, onConfirm, existingIds = [] }) {
+  const [search, setSearch] = useState('');
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pickerError, setPickerError] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setPickerError('');
+      try {
+        const results = await searchShopifyFiles(search);
+        if (!cancelled) setFiles(results);
+      } catch (error) {
+        if (!cancelled) {
+          setFiles([]);
+          setPickerError(error instanceof Error ? error.message : 'Could not load Shopify Files.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, search.trim() ? 300 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [search]);
+
+  const existingSet = useMemo(() => new Set(existingIds.filter(Boolean)), [existingIds]);
+
+  function toggle(file) {
+    if (existingSet.has(file.id)) return;
+    setSelectedIds((current) => current.includes(file.id)
+      ? current.filter((id) => id !== file.id)
+      : [...current, file.id]);
+  }
+
+  return (
+    <div className="shopify-file-picker-overlay" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="shopify-file-picker-modal" role="dialog" aria-modal="true">
+        <header className="shopify-file-picker-header">
+          <div className="shopify-file-picker-heading">
+            <strong>Choose from Shopify Files</strong>
+            <span>Select one or more images for this social post.</span>
+          </div>
+          <button type="button" className="shopify-file-picker-close" onClick={onClose} aria-label="Close Shopify Files">×</button>
+        </header>
+        <div className="shopify-file-picker-search">
+          <input className="consignment-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search Shopify Files" autoFocus />
+        </div>
+        <div className="shopify-file-picker-content">
+          {loading && <div className="shopify-file-picker-state"><Loader2 className="consignment-spin" size={18} /> Loading Shopify Files…</div>}
+          {!loading && pickerError && <div className="shopify-file-picker-state error">{pickerError}</div>}
+          {!loading && !pickerError && files.length === 0 && <div className="shopify-file-picker-state">No Shopify images found.</div>}
+          {!loading && !pickerError && files.length > 0 && (
+            <div className="shopify-file-picker-grid">
+              {files.map((file) => {
+                const selected = selectedIds.includes(file.id);
+                const alreadyAdded = existingSet.has(file.id);
+                return (
+                  <button key={file.id} type="button" className={['shopify-file-picker-card', selected ? 'is-selected' : '', alreadyAdded ? 'is-added' : ''].filter(Boolean).join(' ')} onClick={() => toggle(file)} disabled={alreadyAdded} aria-pressed={selected}>
+                    <span className="shopify-file-picker-image">
+                      <img src={file.url} alt={file.alt || 'Shopify file'} />
+                      {selected && <span className="shopify-file-picker-selected-mark"><Check size={16} /></span>}
+                      {alreadyAdded && <span className="shopify-file-picker-added-mark">Added</span>}
+                    </span>
+                    <span className="shopify-file-picker-name">{file.alt || 'Shopify image'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <footer className="shopify-file-picker-footer">
+          <span className="shopify-file-picker-selection-count">{selectedIds.length ? `${selectedIds.length} selected` : 'Select images to add'}</span>
+          <div className="shopify-file-picker-footer-actions">
+            <button type="button" className="consignment-btn secondary" onClick={onClose}>Cancel</button>
+            <button type="button" className="consignment-btn" disabled={!selectedIds.length} onClick={() => onConfirm(files.filter((file) => selectedIds.includes(file.id)))}>
+              Add selected{selectedIds.length ? ` (${selectedIds.length})` : ''}
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function productMedia(item) {
+  const source = Array.isArray(item.shopifyMedia) && item.shopifyMedia.length
+    ? item.shopifyMedia
+    : (item.shopifyPhoto || item.photo)
+      ? [{ id: 'product-image', url: item.shopifyPhoto || item.photo, alt: item.shopifyTitle || item.description || '' }]
+      : [];
+  return source
+    .filter((entry) => entry?.url)
+    .slice(0, MAX_MEDIA_ITEMS)
+    .map((entry, index) => ({
+      id: entry.id || `shopify-product-image-${index}`,
+      type: 'image',
+      sourceKey: entry.clientKey || entry.id || entry.url,
+      url: entry.url,
+      previewUrl: entry.url,
+      name: entry.alt || `Shopify product image ${index + 1}`,
+    }));
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -93,12 +201,17 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [caption, setCaption] = useState(() => defaultCaption(item));
   const [captionTouched, setCaptionTouched] = useState(false);
   const [mediaTouched, setMediaTouched] = useState(false);
-  const [media, setMedia] = useState(() => {
-    const url = item.shopifyPhoto || item.photo || '';
-    return url ? [{ id: 'product-image', type: 'image', url, previewUrl: url, name: 'Product image' }] : [];
-  });
+  const [media, setMedia] = useState(() => productMedia(item));
+  const itemMedia = useMemo(() => productMedia({
+    shopifyMedia: item.shopifyMedia,
+    shopifyPhoto: item.shopifyPhoto,
+    photo: item.photo,
+    shopifyTitle: item.shopifyTitle,
+    description: item.description,
+  }), [item.shopifyMedia, item.shopifyPhoto, item.photo, item.shopifyTitle, item.description]);
   const [postTypes, setPostTypes] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [showShopifyFiles, setShowShopifyFiles] = useState(false);
   const [savingAction, setSavingAction] = useState('');
   const [scheduleAt, setScheduleAt] = useState('');
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -108,7 +221,6 @@ export default function SocialPostPanel({ item, disabled = false }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const imageUrl = item.shopifyPhoto || item.photo || '';
   const socialSettingsHref = typeof window === 'undefined'
     ? '/app/social'
     : `/app/social${window.location.search || ''}`;
@@ -185,11 +297,25 @@ export default function SocialPostPanel({ item, disabled = false }) {
   ]);
 
   useEffect(() => {
+    const productImages = itemMedia;
     if (!mediaTouched) {
-      const url = item.shopifyPhoto || item.photo || '';
-      setMedia(url ? [{ id: 'product-image', type: 'image', url, previewUrl: url, name: 'Product image' }] : []);
+      setMedia(productImages);
+    } else {
+      // Finish pending product uploads without undoing social selections or removals.
+      setMedia((current) => {
+        let changed = false;
+        const next = current.map((entry) => {
+          const ready = productImages.find((image) => image.sourceKey === entry.sourceKey);
+          if (entry.sourceKey && ready && entry.url !== ready.url) {
+            changed = true;
+            return ready;
+          }
+          return entry;
+        });
+        return changed ? next : current;
+      });
     }
-  }, [item.id, item.shopifyPhoto, item.photo, mediaTouched]);
+  }, [item.id, itemMedia, mediaTouched]);
 
   useEffect(() => {
     let cancelled = false;
@@ -354,6 +480,10 @@ export default function SocialPostPanel({ item, disabled = false }) {
   }
 
   async function submitPosts(action) {
+    if (media.some((entry) => String(entry.url || '').startsWith('blob:'))) {
+      setError('Wait for the product images to finish uploading.');
+      return;
+    }
     if (action === 'schedule' && !scheduleAt) {
       setError('Choose a date and time before scheduling.');
       return;
@@ -501,6 +631,14 @@ export default function SocialPostPanel({ item, disabled = false }) {
                       }}
                     />
                   </label>
+                  <button
+                    type="button"
+                    className="consignment-btn secondary social-upload-button"
+                    disabled={disabled || uploading}
+                    onClick={() => setShowShopifyFiles(true)}
+                  >
+                    <ImagePlus size={16} /> Shopify Files
+                  </button>
                   {uploading && <span className="social-uploading"><Loader2 className="consignment-spin" size={15} /> Uploading…</span>}
                 </div>
 
@@ -708,6 +846,27 @@ export default function SocialPostPanel({ item, disabled = false }) {
               </div>
             )}
           </>
+        )}
+
+        {showShopifyFiles && (
+          <ShopifySocialFilePicker
+            onClose={() => setShowShopifyFiles(false)}
+            existingIds={media.map((entry) => entry.id).filter(Boolean)}
+            onConfirm={(files) => {
+              const available = Math.max(0, MAX_MEDIA_ITEMS - media.length);
+              const additions = files.slice(0, available).map((file) => ({
+                id: file.id,
+                type: 'image',
+                url: file.url,
+                previewUrl: file.url,
+                name: file.alt || 'Shopify image',
+              }));
+              setMediaTouched(true);
+              setMedia((current) => [...current, ...additions]);
+              setShowShopifyFiles(false);
+              if (files.length > available) setError(`You can attach up to ${MAX_MEDIA_ITEMS} media items.`);
+            }}
+          />
         )}
 
         {!loading && error && !connection && (

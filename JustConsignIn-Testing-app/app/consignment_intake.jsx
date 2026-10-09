@@ -31,15 +31,16 @@ import ConsignorsScreen from './pages/consignment/ConsignorsScreen';
 import SalesScreen from './pages/consignment/SalesScreen';
 import PayoutsScreen from './pages/consignment/PayoutsScreen';
 import PayoutReceiptScreen from './pages/consignment/PayoutReceiptScreen';
+import ShopifyProductScreen from './pages/shopify/ShopifyProductScreen';
+import ExistingProductMetaPostScreen from './pages/shopify/ExistingProductMetaPostScreen';
 import ConsignorDashboard from './pages/consignment/ConsignorDashboard';
 import CreateConsignorScreen from './pages/consignment/CreateConsignorScreen';
 import ConsignmentFilterBar from './components/consignment/ConsignmentFilterBar';
 import SocialPostPanel from './components/social/SocialPostPanel';
-import ShopifyTagPicker from './components/consignment/ShopifyTagPicker';
+import ShopifyProductPanel from './components/consignment/ShopifyProductPanel';
 import './styles/consignment-global.css';
 import './styles/consignment-forms.css';
 import './styles/shopify-file-picker.css';
-import './styles/consignment-mobile-intake.css';
 /* ============================================================================
    STYLING
    All app CSS is external. This intake file contains no embedded GlobalStyle().
@@ -50,7 +51,7 @@ import { csvValue, downloadCsv, money } from './lib/consignmentHelpers';
 
 /* ---------- image helper ---------- */
 
-function resizeImage(file, maxWidth = 1600, quality = 0.82) {
+function resizeImage(file, maxWidth = 320, quality = 0.55) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -129,6 +130,7 @@ function buildShopifyAutoFill(item = {}, consignor = null) {
       condition ? `Condition: ${condition}` : '',
       category ? `Category: ${category}` : '',
     ].filter(Boolean).join('\n'),
+    productType: type || category,
     seoTitle: '',
     seoDescription: '',
   };
@@ -174,20 +176,11 @@ function useIsDesktopAdmin() {
   return isDesktop;
 }
 
-async function handlePhotoFiles(event) {
-  const files = [...(event.target.files || [])].slice(0, 12);
-  if (!files.length) return [];
-
-  const images = [];
-  for (const file of files) {
-    images.push({
-      id: null,
-      url: await resizeImage(file),
-    });
-  }
-
-  event.target.value = '';
-  return images;
+async function handlePhotoFile(e, onChange) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const dataUrl = await resizeImage(file);
+  onChange(dataUrl);
 }
 
 function ShopifyFilePicker({ onClose, onSelect }) {
@@ -253,138 +246,22 @@ function ShopifyFilePicker({ onClose, onSelect }) {
   );
 }
 
-function PhotoPicker({ images = [], onChange }) {
+function PhotoPicker({ value, onChange, onChooseShopify }) {
   const [showShopifyFiles, setShowShopifyFiles] = useState(false);
-  const normalizedImages = (Array.isArray(images) ? images : [])
-    .filter((image) => image?.url)
-    .slice(0, 12);
-
-  async function addLocalImages(event) {
-    const added = await handlePhotoFiles(event);
-    if (!added.length) return;
-    onChange([...normalizedImages, ...added].slice(0, 12));
-  }
-
-  function addShopifyImage(file) {
-    if (!file?.id || !file?.url) return;
-
-    const exists = normalizedImages.some(
-      (image) => image.id === file.id || image.url === file.url,
-    );
-
-    if (!exists) {
-      onChange([
-        ...normalizedImages,
-        { id: file.id, url: file.url },
-      ].slice(0, 12));
-    }
-
-    setShowShopifyFiles(false);
-  }
-
-  function removeImage(index) {
-    onChange(normalizedImages.filter((_, imageIndex) => imageIndex !== index));
-  }
-
-  function makeMain(index) {
-    if (index <= 0 || index >= normalizedImages.length) return;
-    const next = [...normalizedImages];
-    const [selected] = next.splice(index, 1);
-    next.unshift(selected);
-    onChange(next);
-  }
-
   return (
     <>
-      <div className="consignment-product-images">
-        <div className="consignment-product-images-toolbar">
-          <label>
-            <Camera size={15} />
-            Take photo
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={addLocalImages}
-            />
-          </label>
-
-          <label>
-            <Image size={15} />
-            Add from library
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={addLocalImages}
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => setShowShopifyFiles(true)}
-          >
-            <Image size={15} />
-            Shopify Files
-          </button>
-        </div>
-
-        {normalizedImages.length ? (
-          <div className="consignment-product-image-grid">
-            {normalizedImages.map((image, index) => (
-              <div
-                className={`consignment-product-image-card ${index === 0 ? 'main' : ''}`}
-                key={image.id || image.url}
-              >
-                <img src={image.url} alt={index === 0 ? 'Main product' : `Product ${index + 1}`} />
-
-                {index === 0 && (
-                  <span className="consignment-product-image-main-badge">
-                    MAIN
-                  </span>
-                )}
-
-                <div className="consignment-product-image-actions">
-                  {index > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => makeMain(index)}
-                      aria-label={`Make image ${index + 1} the main image`}
-                      title="Make main"
-                    >
-                      <Check size={13} />
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    aria-label={`Remove image ${index + 1}`}
-                    title="Remove"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="consignment-product-image-empty">
-            Add product photos from the camera, photo library, or Shopify Files.
-          </div>
-        )}
-
-        <div className="consignment-form-help">
-          Up to 12 photos. Crop or adjust photos in your phone's Photos app.
-        </div>
+      <div className="consignment-photo-wrap">
+        <label className="consignment-photo-btn">
+          {value ? <img src={value} alt="Item" /> : <><Camera size={20} /><span>Take Photo</span></>}
+          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handlePhotoFile(e, onChange)} />
+        </label>
+        <label className="consignment-photo-alt">
+          {value ? 'Retake or choose' : 'Choose from library'}
+          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhotoFile(e, onChange)} />
+        </label>
+        <button type="button" className="shopify-file-picker-trigger" onClick={() => setShowShopifyFiles(true)}><Image size={15} /><span>Choose from Shopify Files</span></button>
       </div>
-
-      {showShopifyFiles && (
-        <ShopifyFilePicker
-          onClose={() => setShowShopifyFiles(false)}
-          onSelect={addShopifyImage}
-        />
-      )}
+      {showShopifyFiles && <ShopifyFilePicker onClose={() => setShowShopifyFiles(false)} onSelect={(file) => { onChooseShopify(file); setShowShopifyFiles(false); }} />}
     </>
   );
 }
@@ -710,337 +587,10 @@ function EditConsignorScreen({ consignor, onBack, onSave }) {
 function ConsignmentItemFields({ form, setForm }) { const set=(key)=>(event)=>setForm((current)=>({...current,[key]:event.target.value})); function setCategory(category){setForm((current)=>({...current,category,type:''}));} return <div className="consignment-card consignment-detail-card"><div className="consignment-section-heading"><label className="consignment-label">Consignment item information</label><span className="consignment-row-sub">Manual metaobject record</span></div><div className="consignment-detail-grid"><div className="consignment-field"><label className="consignment-label">Category</label><select className="consignment-select" value={form.category} onChange={(event)=>setCategory(event.target.value)}>{CATEGORIES.map((category)=><option key={category} value={category}>{category}</option>)}</select></div><div className="consignment-field"><label className="consignment-label">Brand</label><input className="consignment-input" value={form.brand} onChange={set('brand')} placeholder="e.g. Gap"/></div><div className="consignment-field"><label className="consignment-label">Size</label><input className="consignment-input" value={form.size} onChange={set('size')} placeholder="Optional"/></div><div className="consignment-field"><label className="consignment-label">Condition</label><select className="consignment-select" value={form.condition} onChange={set('condition')}>{CONDITIONS.map((condition)=><option key={condition} value={condition}>{condition}</option>)}</select></div><div className="consignment-field wide"><label className="consignment-label">Internal notes</label><textarea className="consignment-textarea" rows={2} value={form.notes} onChange={set('notes')} placeholder="Notes about this consigned item"/></div></div></div>; }
 
 function ShopifyProductFields({ form, setForm }) {
-  const [categorySearch, setCategorySearch] = useState(form.shopifyCategoryName || '');
-  const [categoryResults, setCategoryResults] = useState([]);
-  const [searchingCategories, setSearchingCategories] = useState(false);
-
-  useEffect(() => {
-    const query = categorySearch.trim();
-    if (query.length < 2 || query === form.shopifyCategoryName) {
-      setCategoryResults([]);
-      return undefined;
-    }
-
-    const timer = setTimeout(() => {
-      setSearchingCategories(true);
-      searchShopifyCategories(query)
-        .then(setCategoryResults)
-        .catch(() => setCategoryResults([]))
-        .finally(() => setSearchingCategories(false));
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [categorySearch, form.shopifyCategoryName]);
-
-  const set = (key) => (event) =>
-    setForm((current) => ({
-      ...current,
-      [key]: event.target.value,
-    }));
-
-  return (
-    <div className="consignment-shopify-fields">
-      <div className="consignment-detail-grid">
-        <div className="consignment-field wide">
-          <label className="consignment-label">Shopify title</label>
-          <input
-            className="consignment-input"
-            value={form.shopifyTitle || ''}
-            onChange={set('shopifyTitle')}
-            placeholder="Auto-filled from item description"
-          />
-        </div>
-
-        <div className="consignment-field">
-          <label className="consignment-label">Shopify price</label>
-          <input
-            className="consignment-input"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={form.shopifyPrice ?? ''}
-            onChange={set('shopifyPrice')}
-            placeholder="Defaults to manual price"
-          />
-        </div>
-
-        <div className="consignment-field">
-          <label className="consignment-label">Vendor</label>
-          <input
-            className="consignment-input"
-            value={form.vendor}
-            onChange={set('vendor')}
-            placeholder="Defaults to brand/store"
-          />
-        </div>
-
-        <div className="consignment-field wide">
-          <label className="consignment-label">Tags</label>
-          <ShopifyTagPicker
-            value={form.tags}
-            onChange={(tags) =>
-              setForm((current) => ({
-                ...current,
-                tags,
-              }))
-            }
-          />
-        </div>
-
-        <div className="consignment-field wide">
-          <label className="consignment-label">Shopify product category</label>
-          <input
-            className="consignment-input"
-            value={categorySearch}
-            onChange={(event) => {
-              setCategorySearch(event.target.value);
-              if (event.target.value !== form.shopifyCategoryName) {
-                setForm((current) => ({
-                  ...current,
-                  shopifyCategoryId: '',
-                  shopifyCategoryName: '',
-                }));
-              }
-            }}
-            placeholder="Search Shopify categories"
-          />
-
-          {searchingCategories && (
-            <div className="consignment-row-sub" style={{ marginTop: 6 }}>
-              Searching Shopify…
-            </div>
-          )}
-
-          {categoryResults.length > 0 && (
-            <div className="consignment-category-results">
-              {categoryResults.map((category) => (
-                <button
-                  key={category.id}
-                  type="button"
-                  className="consignment-category-result"
-                  onClick={() => {
-                    setForm((current) => ({
-                      ...current,
-                      shopifyCategoryId: category.id,
-                      shopifyCategoryName: category.name,
-                    }));
-                    setCategorySearch(category.name);
-                    setCategoryResults([]);
-                  }}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {form.shopifyCategoryId && (
-            <div className="consignment-selected-category">
-              <span>{form.shopifyCategoryName}</span>
-              <button
-                type="button"
-                className="consignment-batch-remove"
-                aria-label="Remove Shopify category"
-                onClick={() => {
-                  setForm((current) => ({
-                    ...current,
-                    shopifyCategoryId: '',
-                    shopifyCategoryName: '',
-                  }));
-                  setCategorySearch('');
-                }}
-              >
-                <X size={13} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="consignment-field wide">
-          <label className="consignment-label">Product description</label>
-          <textarea
-            className="consignment-textarea"
-            rows={3}
-            value={form.productDescription}
-            onChange={set('productDescription')}
-            placeholder="Shown to customers on Shopify"
-          />
-        </div>
-
-        <details className="consignment-shopify-advanced">
-          <summary>SEO / advanced Shopify fields</summary>
-          <div className="consignment-shopify-advanced-fields">
-            <div className="consignment-field">
-              <label className="consignment-label">SEO title</label>
-              <input
-                className="consignment-input"
-                value={form.seoTitle}
-                onChange={set('seoTitle')}
-                placeholder="Defaults to item title"
-              />
-            </div>
-
-            <div className="consignment-field wide">
-              <label className="consignment-label">SEO description</label>
-              <textarea
-                className="consignment-textarea"
-                rows={2}
-                value={form.seoDescription}
-                onChange={set('seoDescription')}
-                placeholder="Optional search description"
-              />
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  );
-}
-
-function ManualIntakeCore({
-  form,
-  setForm,
-  onSave,
-  saveLabel = 'Save manual item',
-  saveDisabled = false,
-  helperText = 'Saves only the consignment metaobject record. No Shopify product is created.',
-}) {
-  const set = (key) => (event) => {
-    setForm((current) => ({
-      ...current,
-      [key]: event.target.value,
-    }));
-  };
-
-  const setCategory = (category) => {
-    setForm((current) => ({
-      ...current,
-      category,
-      type: '',
-    }));
-  };
-
-  return (
-    <>
-      <div className="consignment-intake-manual-grid">
-        <div className="consignment-form-field wide">
-          <label className="consignment-label">Item description *</label>
-          <input
-            className="consignment-input"
-            value={form.description}
-            onChange={set('description')}
-            placeholder="What is it?"
-          />
-        </div>
-
-        <div className="consignment-form-field">
-          <label className="consignment-label">Price *</label>
-          <input
-            className="consignment-input"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={form.price}
-            onChange={set('price')}
-            placeholder="0.00"
-          />
-        </div>
-
-        <div className="consignment-form-field">
-          <label className="consignment-label">Size</label>
-          <input
-            className="consignment-input"
-            value={form.size}
-            onChange={set('size')}
-            placeholder="Optional"
-          />
-        </div>
-
-        <div className="consignment-form-field">
-          <label className="consignment-label">Category</label>
-          <select
-            className="consignment-select"
-            value={form.category}
-            onChange={(event) => setCategory(event.target.value)}
-          >
-            {CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="consignment-form-field">
-          <label className="consignment-label">Condition</label>
-          <select
-            className="consignment-select"
-            value={form.condition}
-            onChange={set('condition')}
-          >
-            {CONDITIONS.map((condition) => (
-              <option key={condition} value={condition}>
-                {condition}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="consignment-form-field wide">
-          <label className="consignment-label">Brand</label>
-          <input
-            className="consignment-input"
-            value={form.brand}
-            onChange={set('brand')}
-            placeholder="e.g. Nike"
-          />
-        </div>
-
-        <div className="consignment-form-field wide">
-          <label className="consignment-label">Consignment term</label>
-          <select
-            className="consignment-select"
-            value={form.consignmentTerm}
-            onChange={set('consignmentTerm')}
-          >
-            <option value="">No term</option>
-            <option value="30">30 days</option>
-            <option value="60">60 days</option>
-            <option value="90">90 days</option>
-          </select>
-        </div>
-
-        <div className="consignment-form-field wide">
-          <label className="consignment-label">Internal notes</label>
-          <textarea
-            className="consignment-textarea"
-            rows={2}
-            value={form.notes}
-            onChange={set('notes')}
-            placeholder="Notes about this consigned item"
-          />
-        </div>
-      </div>
-
-      <div className="consignment-form-help">{helperText}</div>
-
-      <div
-        className="consignment-form-actions-inner"
-        style={{ marginBottom: 14 }}
-      >
-        <button
-          className="consignment-btn"
-          disabled={saveDisabled}
-          onClick={onSave}
-        >
-          <Check size={18} />
-          {saveLabel}
-        </button>
-      </div>
-    </>
-  );
+  const [categorySearch,setCategorySearch]=useState(form.shopifyCategoryName||''); const [categoryResults,setCategoryResults]=useState([]); const [searchingCategories,setSearchingCategories]=useState(false);
+  useEffect(()=>{const query=categorySearch.trim();if(query.length<2||query===form.shopifyCategoryName){setCategoryResults([]);return undefined;}const timer=setTimeout(()=>{setSearchingCategories(true);searchShopifyCategories(query).then(setCategoryResults).catch(()=>setCategoryResults([])).finally(()=>setSearchingCategories(false));},350);return()=>clearTimeout(timer);},[categorySearch,form.shopifyCategoryName]);
+  const set=(key)=>(event)=>setForm((current)=>({...current,[key]:event.target.value}));
+  return <div className="consignment-shopify-fields"><div className="consignment-detail-grid"><div className="consignment-field wide"><label className="consignment-label">Shopify title</label><input className="consignment-input" value={form.shopifyTitle||''} onChange={set('shopifyTitle')} placeholder="Auto-filled from item description"/></div><div className="consignment-field"><label className="consignment-label">Shopify price</label><input className="consignment-input" type="number" inputMode="decimal" min="0" step="0.01" value={form.shopifyPrice??''} onChange={set('shopifyPrice')} placeholder="Defaults to the manual item price"/></div><div className="consignment-field"><label className="consignment-label">Vendor</label><input className="consignment-input" value={form.vendor} onChange={set('vendor')} placeholder="Defaults to store name"/></div><div className="consignment-field"><label className="consignment-label">Tags</label><input className="consignment-input" value={form.tags} onChange={set('tags')} placeholder="summer, baby"/></div><div className="consignment-field wide"><label className="consignment-label">Shopify product category</label><input className="consignment-input" value={categorySearch} onChange={(event)=>{setCategorySearch(event.target.value);if(event.target.value!==form.shopifyCategoryName){setForm((current)=>({...current,shopifyCategoryId:'',shopifyCategoryName:''}));}}} placeholder="Search Shopify categories"/>{searchingCategories&&<div className="consignment-row-sub" style={{ marginTop:6 }}>Searching ShopifyÃ¢â‚¬Â¦</div>}{categoryResults.length>0&&<div className="consignment-category-results">{categoryResults.map((category)=><button key={category.id} type="button" className="consignment-category-result" onClick={()=>{setForm((current)=>({...current,shopifyCategoryId:category.id,shopifyCategoryName:category.name}));setCategorySearch(category.name);setCategoryResults([]);}}>{category.name}</button>)}</div>}{form.shopifyCategoryId&&<div className="consignment-selected-category"><span>{form.shopifyCategoryName}</span><button type="button" className="consignment-batch-remove" aria-label="Remove Shopify category" onClick={()=>{setForm((current)=>({...current,shopifyCategoryId:'',shopifyCategoryName:''}));setCategorySearch('');}}><X size={13}/></button></div>}</div><div className="consignment-field wide"><label className="consignment-label">Product description</label><textarea className="consignment-textarea" rows={3} value={form.productDescription} onChange={set('productDescription')} placeholder="Shown to customers on Shopify"/></div><div className="consignment-field"><label className="consignment-label">SEO title</label><input className="consignment-input" value={form.seoTitle} onChange={set('seoTitle')} placeholder="Defaults to item title"/></div><div className="consignment-field"><label className="consignment-label">SEO description</label><textarea className="consignment-textarea" rows={2} value={form.seoDescription} onChange={set('seoDescription')} placeholder="Optional search description"/></div></div></div>;
 }
 
 function ManualItemCore({
@@ -1216,268 +766,8 @@ function ManualItemCore({
   );
 }
 function productAdminUrl(productId){const numericId=String(productId||'').split('/').pop();return `shopify://admin/products/${numericId}`;}
-function ShopifyProductSection({
-  shopifyForm,
-  setShopifyForm,
-  linkedProductId = '',
-  linkedStatus = '',
-  disabled = false,
-  onSync = null,
-  syncing = false,
-  tier2Enabled = true,
-  sectionId = undefined,
-  autoFillFromManual = false,
-  onAutoFillChange = null,
-}) {
-  const canSync = Boolean(onSync) && tier2Enabled;
-
-  const currentImages = Array.isArray(shopifyForm.images) && shopifyForm.images.length
-    ? shopifyForm.images
-    : (shopifyForm.photo || shopifyForm.photoId)
-      ? [{
-        id: shopifyForm.photoId || null,
-        url: shopifyForm.photo || null,
-      }].filter((image) => image.url)
-      : [];
-
-  function setImages(images) {
-    const next = (Array.isArray(images) ? images : [])
-      .filter((image) => image?.url)
-      .slice(0, 12);
-
-    setShopifyForm((current) => ({
-      ...current,
-      images: next,
-      photo: next[0]?.url || null,
-      photoId: next[0]?.id || null,
-    }));
-  }
-
-  if (!tier2Enabled) {
-    return (
-      <section
-        id={sectionId}
-        className="consignment-form-section"
-      >
-        <div className="consignment-form-section-head consignment-shopify-summary consignment-shopify-locked">
-          <span>
-            <span
-              className="consignment-form-section-marker"
-              aria-hidden="true"
-            />
-            <ShoppingBag size={17} />
-            <h2>Shopify product</h2>
-          </span>
-
-          <span className="consignment-row-sub">
-            Requires Manual + Shopify Sync plan
-          </span>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <details
-      id={sectionId}
-      className="consignment-form-section"
-    >
-      <summary className="consignment-form-section-head consignment-shopify-summary">
-        <span>
-          <span
-            className="consignment-form-section-marker"
-            aria-hidden="true"
-          />
-          <ShoppingBag size={17} />
-          <h2>Shopify product</h2>
-        </span>
-
-        <span className="consignment-row-sub">
-          {linkedProductId ? 'Connected' : 'Separate optional workflow'}
-        </span>
-      </summary>
-
-      <div className="consignment-form-section-body">
-        <fieldset
-          disabled={disabled}
-          style={{
-            minWidth: 0,
-            margin: 0,
-            padding: 0,
-            border: 0,
-            opacity: disabled ? 0.45 : 1,
-          }}
-        >
-          {typeof onAutoFillChange === 'function' && (
-            <label className="consignment-shopify-autofill">
-              <span>
-                <strong>Use manual item details</strong>
-                <span>
-                  Keeps title, price, brand, category, size and condition synced
-                  while you enter the manual item.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={autoFillFromManual}
-                onChange={(event) => onAutoFillChange(event.target.checked)}
-              />
-            </label>
-          )}
-
-          <p className="consignment-shopify-help">
-            This section only controls the linked Shopify product. Manual item
-            saving never creates or updates a Shopify product.
-          </p>
-
-          <div className="consignment-shopify-photo-row">
-            <PhotoPicker
-              images={currentImages}
-              onChange={setImages}
-            />
-
-            <ShopifyProductFields
-              form={shopifyForm}
-              setForm={setShopifyForm}
-            />
-          </div>
-
-          <label className="consignment-product-choice">
-            <input
-              type="checkbox"
-              checked={shopifyForm.publishToPos !== false}
-              onChange={(event) =>
-                setShopifyForm((current) => ({
-                  ...current,
-                  publishToPos: event.target.checked,
-                }))
-              }
-            />
-            <span>
-              <strong>Create Shopify POS Product</strong>
-              <span>
-                Creates or updates an Active product with inventory of one and
-                publishes it to Point of Sale.
-              </span>
-            </span>
-          </label>
-
-          <label className="consignment-product-choice online">
-            <input
-              type="checkbox"
-              checked={shopifyForm.publishOnline === true}
-              onChange={(event) =>
-                setShopifyForm((current) => ({
-                  ...current,
-                  publishOnline: event.target.checked,
-                }))
-              }
-            />
-            <span>
-              <strong>Also publish to Online Store</strong>
-              <span>Publishes the same synced product to the Online Store.</span>
-            </span>
-          </label>
-
-          <p className="consignment-shopify-help" style={{ marginTop: 8 }}>
-            Want to tag this product in Facebook or Instagram posts? Install and
-            connect Meta's official Facebook &amp; Instagram sales channel so Shopify
-            can sync eligible products to your Meta catalog.{' '}
-            <a
-              href="https://apps.shopify.com/facebook"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Install Facebook &amp; Instagram by Meta
-            </a>
-          </p>
-
-          {linkedProductId && (
-            <p
-              style={{
-                margin: '12px 0 0',
-                color: 'var(--green-dark)',
-                fontSize: 12,
-              }}
-            >
-              <Check
-                size={14}
-                style={{ verticalAlign: 'middle', marginRight: 5 }}
-              />
-              Linked Shopify product · {linkedStatus || 'Connected'}
-            </p>
-          )}
-
-          {!linkedProductId ? (
-            <button
-              className="consignment-btn"
-              style={{ marginTop: 14 }}
-              disabled={
-                !canSync ||
-                disabled ||
-                syncing ||
-                shopifyForm.publishToPos === false
-              }
-              onClick={onSync}
-            >
-              {syncing ? (
-                <Loader2 className="consignment-spin" size={16} />
-              ) : (
-                <ShoppingBag size={16} />
-              )}
-              Create Shopify product
-            </button>
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-                marginTop: 14,
-              }}
-            >
-              <button
-                className="consignment-btn"
-                disabled={
-                  !canSync ||
-                  disabled ||
-                  syncing ||
-                  shopifyForm.publishToPos === false
-                }
-                onClick={onSync}
-              >
-                {syncing ? (
-                  <Loader2 className="consignment-spin" size={16} />
-                ) : (
-                  <Check size={16} />
-                )}
-                Update Shopify product
-              </button>
-
-              {disabled ? (
-                <span
-                  className="consignment-btn secondary"
-                  aria-disabled="true"
-                >
-                  <span aria-hidden="true">↗</span>
-                  Edit in Shopify
-                </span>
-              ) : (
-                <a
-                  className="consignment-btn secondary"
-                  href={productAdminUrl(linkedProductId)}
-                  target="_top"
-                >
-                  <span aria-hidden="true">↗</span>
-                  Edit in Shopify
-                </a>
-              )}
-            </div>
-          )}
-        </fieldset>
-      </div>
-    </details>
-  );
+function ShopifyProductSection(props) {
+  return <ShopifyProductPanel {...props} />;
 }
 
 function IntakeScreen({
@@ -1501,9 +791,15 @@ function IntakeScreen({
   };
 
   const emptyShopifyForm = {
+    sku: undefined,
+    weight: '',
+    weightUnit: 'KILOGRAMS',
+    shopifyHandle: '',
     photo: null,
     photoId: null,
-    images: [],
+    media: [],
+    productType: '',
+    collections: ['Consignment'],
     shopifyTitle: '',
     shopifyPrice: '',
     tags: '',
@@ -1515,12 +811,12 @@ function IntakeScreen({
     seoDescription: '',
     publishToPos: true,
     publishOnline: false,
+    publishMeta: false,
   };
 
   const [form, setForm] = useState(emptyForm);
   const [shopifyForm, setShopifyForm] = useState(emptyShopifyForm);
   const [syncing, setSyncing] = useState(false);
-  const [autoFillShopify, setAutoFillShopify] = useState(true);
 
   const canSave = Boolean(
     form.description.trim() && form.price !== '',
@@ -1545,23 +841,25 @@ function IntakeScreen({
     `${consignor.number}-${String(savedSequence + 1).padStart(3, '0')}`;
 
   useEffect(() => {
-    if (!autoFillShopify) return;
-
     const auto = buildShopifyAutoFill(form, consignor);
 
     setShopifyForm((current) => ({
       ...current,
       ...auto,
+      sku: current.sku ?? nextItemNumber,
+      seoTitle: current.seoTitle || auto.seoTitle,
+      seoDescription: current.seoDescription || auto.seoDescription,
       shopifyCategoryId: current.shopifyCategoryId,
       shopifyCategoryName: current.shopifyCategoryName,
       photo: current.photo,
       photoId: current.photoId,
-      images: current.images,
+      media: current.media || [],
+      productType: current.productType || auto.productType,
+      collections: current.collections,
       publishToPos: current.publishToPos,
       publishOnline: current.publishOnline,
     }));
   }, [
-    autoFillShopify,
     form.description,
     form.price,
     form.brand,
@@ -1570,6 +868,7 @@ function IntakeScreen({
     form.category,
     form.type,
     consignor.number,
+    nextItemNumber,
   ]);
 
   async function saveShopifyProduct() {
@@ -1596,41 +895,8 @@ function IntakeScreen({
       />
 
       <div className="consignment-body">
-        <div className="consignment-form-shell consignment-intake-compact">
-          <div className="consignment-intake-jump">
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById('intake-manual')?.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start',
-                })
-              }
-            >
-              Manual item
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                const section = document.getElementById('intake-shopify');
-                if (section) {
-                  section.open = true;
-                  section.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  });
-                }
-              }}
-            >
-              Shopify product
-            </button>
-          </div>
-
-          <section
-            id="intake-manual"
-            className="consignment-form-section"
-          >
+        <div className="consignment-form-shell">
+          <section className="consignment-form-section">
             <div className="consignment-form-section-head">
               <span
                 className="consignment-form-section-marker"
@@ -1660,7 +926,7 @@ function IntakeScreen({
             </div>
 
             <div className="consignment-form-section-body">
-              <ManualIntakeCore
+              <ManualItemCore
                 form={form}
                 setForm={setForm}
                 onSave={() => onSaveBatch([form])}
@@ -1677,15 +943,12 @@ function IntakeScreen({
             </div>
           </section>
 
-          <ShopifyProductSection
+          <ShopifyProductPanel
             shopifyForm={shopifyForm}
             setShopifyForm={setShopifyForm}
             tier2Enabled={tier2Enabled}
             syncing={syncing}
             onSync={canSave ? saveShopifyProduct : null}
-            sectionId="intake-shopify"
-            autoFillFromManual={autoFillShopify}
-            onAutoFillChange={setAutoFillShopify}
           />
 
           <SocialPostPanel
@@ -1701,8 +964,9 @@ function IntakeScreen({
               vendor: shopifyForm.vendor,
               productDescription: shopifyForm.productDescription,
               tags: shopifyForm.tags,
-              photo: shopifyForm.photo,
-              shopifyPhoto: shopifyForm.photo,
+              photo: shopifyForm.media?.[0]?.url || shopifyForm.photo,
+              shopifyPhoto: shopifyForm.media?.[0]?.url || shopifyForm.photo,
+              shopifyMedia: shopifyForm.media || [],
             }}
           />
         </div>
@@ -1734,15 +998,20 @@ function EditItemScreen({
   });
   const [shopifyForm, setShopifyForm] = useState({
     photo: item.shopifyPhoto || item.photo || null,
-    photoId: item.shopifyImages?.[0]?.id || item.photoId || null,
-    images: item.shopifyImages?.length
-      ? item.shopifyImages
+    photoId: item.photoId || null,
+    media: Array.isArray(item.shopifyMedia) && item.shopifyMedia.length
+      ? item.shopifyMedia
       : (item.shopifyPhoto || item.photo)
         ? [{
-          id: item.photoId || null,
-          url: item.shopifyPhoto || item.photo,
-        }]
+            id: item.photoId || null,
+            url: item.shopifyPhoto || item.photo,
+            alt: item.shopifyTitle || item.description || '',
+          }]
         : [],
+    productType: item.shopifyProductType || item.type || item.category || '',
+    collections: Array.isArray(item.shopifyCollections) && item.shopifyCollections.length
+      ? item.shopifyCollections.filter((entry) => String(entry?.title || entry || '').toLowerCase() === 'consignment')
+      : ['Consignment'],
     shopifyTitle: item.shopifyTitle || '',
     shopifyPrice: item.shopifyPrice ?? item.price ?? '',
     tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
@@ -1750,40 +1019,22 @@ function EditItemScreen({
     productDescription: item.productDescription || '',
     shopifyCategoryId: item.shopifyCategoryId || '',
     shopifyCategoryName: item.shopifyCategoryName || '',
+    sku: item.sku ?? item.itemNumber ?? '',
+    weight: item.weight ?? '',
+    weightUnit: item.weightUnit || 'KILOGRAMS',
+    shopifyHandle: item.shopifyProductHandle || item.shopifyHandle || '',
     seoTitle: item.seoTitle || '',
     seoDescription: item.seoDescription || '',
     publishToPos: true,
     publishOnline: item.publishOnline === true,
+    publishMeta: false,
   });
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const isSold = item.status === 'Sold' || Boolean(item.dateSold);
   const canSave = form.description.trim() && form.price !== '';
 
-  useEffect(() => {
-    if (item.shopifyProductId) return;
-    const auto = buildShopifyAutoFill(form);
-    setShopifyForm((current) => ({
-      ...current,
-      ...auto,
-      shopifyCategoryId: current.shopifyCategoryId,
-      shopifyCategoryName: current.shopifyCategoryName,
-      photo: current.photo,
-      photoId: current.photoId,
-      images: current.images,
-      publishToPos: current.publishToPos,
-      publishOnline: current.publishOnline,
-    }));
-  }, [
-    form.description,
-    form.price,
-    form.brand,
-    form.size,
-    form.condition,
-    form.category,
-    form.type,
-    item.shopifyProductId,
-  ]);
+
 
   return (
     <>
@@ -1864,7 +1115,16 @@ function EditItemScreen({
             }}
           />
 
-          <SocialPostPanel item={item} disabled={isSold} />
+          <SocialPostPanel
+            item={{
+              ...item,
+              shopifyPhoto: shopifyForm.media?.[0]?.url || shopifyForm.photo || item.shopifyPhoto || item.photo,
+              shopifyMedia: Array.isArray(shopifyForm.media) && shopifyForm.media.length
+                ? shopifyForm.media
+                : (item.shopifyMedia || []),
+            }}
+            disabled={isSold}
+          />
 
           {!confirmingDelete ? (
             <button
@@ -2017,8 +1277,8 @@ async function handleUpdateItemStatus(itemId,status,details={}){
   }
   async function handleDeleteItemFromEdit(itemId){await handleDeleteItem(itemId);setView('consignor');}
   const activeConsignor=consignors.find((c)=>c.id===activeId); const activeItem=items.find((i)=>i.id===activeItemId); const nextConsignorNumber=Math.max(0,...consignors.map((consignor)=>Number(consignor.number)||0))+1; const navigationView=['newConsignor','chooseConsignor','consignor','intake','editConsignor'].includes(view)?'home':view==='editItem'?'items':['createPayout','payoutReceipt'].includes(view)?'payouts':view;
-  function navigate(viewName){setError('');setView(viewName);} function openConsignor(id){setActiveId(id);setView('consignor');} function openItem(id){const item=items.find((entry)=>entry.id===id);setActiveItemId(id);if(item?.consignorId)setActiveId(item.consignorId);setView('editItem');} function startNewConsignor(nextView='consignor',backView='home'){setNewConsignorNext(nextView);setNewConsignorBack(backView);setView('newConsignor');} function startNewItem(){if(!consignors.length){startNewConsignor('intake','dashboard');return;}setView('chooseConsignor');}
+  function navigate(viewName){setError('');setView(viewName);} function openConsignor(id){setActiveId(id);setView('consignor');} function openItem(id){const item=items.find((entry)=>entry.id===id);setActiveItemId(id);if(item?.consignorId)setActiveId(item.consignorId);setView('editItem');} function startNewConsignor(nextView='consignor',backView='home'){setNewConsignorNext(nextView);setNewConsignorBack(backView);setView('newConsignor');} function startNewItem(){setView('chooseItemType');}
   return <div className="consignment">{ready&&<AppNavigation view={navigationView} onNavigate={navigate}/>} {toast&&<div className="consignment-toast" style={toastTone==='success'?{background:'#1C7A3E'}:undefined}><Check size={14}/> {toast}</div>} {error&&<div className="consignment-toast" style={{ background:'var(--danger)',top:12 }}><X size={14}/> {error}</div>} {!ready&&<div className="consignment-loading"><Loader2 className="consignment-spin" size={22}/></div>}
   {ready&&view==='dashboard'&&<DashboardScreen consignors={consignors} items={items} onOpenConsignor={openConsignor} onNavigate={navigate} onNewConsignor={()=>startNewConsignor('consignor','dashboard')} onNewItem={startNewItem} onImport={()=>startImport('consignors','dashboard')} onExport={()=>exportConsignors(consignors)}/>} {ready&&view==='home'&&<ConsignorsScreen consignors={consignors} items={items} query={query} setQuery={setQuery} tier2Enabled={tier2Enabled} onOpenConsignor={openConsignor} onOpenItem={openItem} onMarkSold={(itemId,details)=>handleUpdateItemStatus(itemId,'Sold',details)} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}} onNewConsignor={()=>startNewConsignor('consignor','home')} onNewItem={startNewItem} onImport={()=>startImport('consignors','home')} onExport={()=>exportConsignors(consignors)}/>} {ready&&view==='items'&&<ItemsScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled} onOpenItem={openItem} onOpenConsignor={openConsignor} onMarkSold={(itemId,details)=>handleUpdateItemStatus(itemId,'Sold',details)} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}} onNewItem={startNewItem}/>} {ready&&view==='sales'&&<SalesScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled} onOpenItem={openItem} onOpenConsignor={openConsignor} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}}/>} {ready&&view==='payouts'&&<PayoutsScreen items={items} consignors={consignors} tier2Enabled={tier2Enabled} onOpenItem={openItem} onOpenConsignor={openConsignor} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}}/>} {ready&&view==='reports'&&<ReportsScreen items={items} consignors={consignors} onOpenConsignor={openConsignor} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}}/>}
-  {ready&&view==='createPayout'&&activeConsignor&&<CreatePayoutScreen consignor={activeConsignor} items={items} onBack={()=>setView('payouts')} onRecordPayout={handleRecordPayout}/>} {ready&&view==='payoutReceipt'&&payoutReceipt&&<PayoutReceiptScreen receipt={payoutReceipt} onBack={()=>setView(payoutReceiptBackView)} onOpenConsignor={()=>{setActiveId(payoutReceipt.consignor.id);setView('consignor');}}/>} {ready&&view==='import'&&<ImportScreen kind={importKind} fixedConsignor={consignors.find((entry)=>entry.id===importConsignorId)||null} onBack={()=>setView(importBack)} onImport={handleImport}/>} {ready&&view==='newConsignor'&&<CreateConsignorScreen onBack={()=>setView(newConsignorBack)} onSave={handleNewConsignor} nextNumber={nextConsignorNumber}/>} {ready&&view==='chooseConsignor'&&<ChooseConsignorScreen consignors={consignors} onBack={()=>setView('dashboard')} onChoose={(consignorId)=>{setActiveId(consignorId);setView('intake');}} onCreate={()=>startNewConsignor('intake','chooseConsignor')}/>} {ready&&view==='consignor'&&activeConsignor&&<ConsignorDashboard consignor={activeConsignor} items={items} onBack={()=>setView('home')} onStartIntake={()=>setView('intake')} onOpenItem={openItem} onDeleteConsignor={handleDeleteConsignor} onEditConsignor={()=>setView('editConsignor')} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}}/>} {ready&&view==='editConsignor'&&activeConsignor&&<EditConsignorScreen consignor={activeConsignor} onBack={()=>setView('consignor')} onSave={handleUpdateConsignor}/>} {ready&&view==='intake'&&activeConsignor&&<IntakeScreen consignor={activeConsignor} items={items} onBack={()=>setView('consignor')} onSaveBatch={handleSaveBatch} onSaveAndSync={handleSaveAndSync} tier2Enabled={tier2Enabled}/>} {ready&&view==='editItem'&&activeItem&&<EditItemScreen item={activeItem} onBack={()=>setView('consignor')} onSave={handleUpdateItem} onDelete={handleDeleteItemFromEdit} onSyncProduct={handleSyncProduct} onUpdateStatus={handleUpdateItemStatus} onOpenPayoutReceipt={(payoutId)=>openPayoutReceipt(payoutId,'editItem')} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}} tier2Enabled={tier2Enabled}/>} {ready&&showBackToTop&&<button className="consignment-back-to-top" type="button" onClick={scrollToTop} aria-label="Back to top" title="Back to top"><ArrowUp size={20} aria-hidden="true"/></button>}</div>;
+  {ready&&view==='chooseItemType'&&<><Header eyebrow="Add item" title="Choose item type" onBack={()=>setView('dashboard')}/><div className="consignment-body"><div className="consignment-form-shell"><section className="consignment-form-section"><div className="consignment-form-section-body" style={{display:'grid',gap:12}}><button className="consignment-btn" type="button" onClick={()=>{if(!consignors.length){startNewConsignor('intake','chooseItemType');return;}setView('chooseConsignor');}}><Users size={16}/> Consignment Item</button><button className="consignment-btn" type="button" onClick={()=>setView('shopifyProduct')}><ShoppingBag size={16}/> Shopify Product</button><button className="consignment-btn secondary" type="button" onClick={()=>setView('existingProductMetaPost')}><PackageSearch size={16}/> Post Existing Shopify Product</button></div></section></div></div></>} {ready&&view==='shopifyProduct'&&<ShopifyProductScreen onBack={()=>setView('chooseItemType')} tier2Enabled={tier2Enabled} onCreated={()=>flash('Shopify product created','success')}/>} {ready&&view==='existingProductMetaPost'&&<ExistingProductMetaPostScreen onBack={()=>setView('chooseItemType')}/>} {ready&&view==='createPayout'&&activeConsignor&&<CreatePayoutScreen consignor={activeConsignor} items={items} onBack={()=>setView('payouts')} onRecordPayout={handleRecordPayout}/>} {ready&&view==='payoutReceipt'&&payoutReceipt&&<PayoutReceiptScreen receipt={payoutReceipt} onBack={()=>setView(payoutReceiptBackView)} onOpenConsignor={()=>{setActiveId(payoutReceipt.consignor.id);setView('consignor');}}/>} {ready&&view==='import'&&<ImportScreen kind={importKind} fixedConsignor={consignors.find((entry)=>entry.id===importConsignorId)||null} onBack={()=>setView(importBack)} onImport={handleImport}/>} {ready&&view==='newConsignor'&&<CreateConsignorScreen onBack={()=>setView(newConsignorBack)} onSave={handleNewConsignor} nextNumber={nextConsignorNumber}/>} {ready&&view==='chooseConsignor'&&<ChooseConsignorScreen consignors={consignors} onBack={()=>setView('dashboard')} onChoose={(consignorId)=>{setActiveId(consignorId);setView('intake');}} onCreate={()=>startNewConsignor('intake','chooseConsignor')}/>} {ready&&view==='consignor'&&activeConsignor&&<ConsignorDashboard consignor={activeConsignor} items={items} onBack={()=>setView('home')} onStartIntake={()=>setView('intake')} onOpenItem={openItem} onDeleteConsignor={handleDeleteConsignor} onEditConsignor={()=>setView('editConsignor')} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}}/>} {ready&&view==='editConsignor'&&activeConsignor&&<EditConsignorScreen consignor={activeConsignor} onBack={()=>setView('consignor')} onSave={handleUpdateConsignor}/>} {ready&&view==='intake'&&activeConsignor&&<IntakeScreen consignor={activeConsignor} items={items} onBack={()=>setView('consignor')} onSaveBatch={handleSaveBatch} onSaveAndSync={handleSaveAndSync} tier2Enabled={tier2Enabled}/>} {ready&&view==='editItem'&&activeItem&&<EditItemScreen item={activeItem} onBack={()=>setView('consignor')} onSave={handleUpdateItem} onDelete={handleDeleteItemFromEdit} onSyncProduct={handleSyncProduct} onUpdateStatus={handleUpdateItemStatus} onOpenPayoutReceipt={(payoutId)=>openPayoutReceipt(payoutId,'editItem')} onStartPayout={(consignorId)=>{setActiveId(consignorId);setView('createPayout');}} tier2Enabled={tier2Enabled}/>} {ready&&showBackToTop&&<button className="consignment-back-to-top" type="button" onClick={scrollToTop} aria-label="Back to top" title="Back to top"><ArrowUp size={20} aria-hidden="true"/></button>}</div>;
 }

@@ -43,6 +43,7 @@ export const action = async ({ request }) => {
         existingPosts: Array.isArray(body.existingPosts) ? body.existingPosts : [],
       });
 
+
       return Response.json({ posts });
     }
 

@@ -29,6 +29,16 @@ export async function searchShopifyCategories(search) {
   return payload.categories || [];
 }
 
+export async function searchShopifyProducts(search) {
+  const query = search ? `&productsQuery=${encodeURIComponent(search.trim())}` : '';
+  const response = await fetch(`${API_URL}?products=1${query}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `Could not load Shopify products (${response.status})`);
+  }
+  return payload.products || [];
+}
+
 export async function searchShopifyFiles(search) {
   const query = search ? `&filesQuery=${encodeURIComponent(search.trim())}` : '';
   const response = await fetch(`${API_URL}?files=1${query}`);
@@ -39,13 +49,28 @@ export async function searchShopifyFiles(search) {
   return payload.files || [];
 }
 
-export async function searchShopifyTags() {
-  const response = await fetch(`${API_URL}?productTags=1`);
+
+export async function getShopifyPublishingChannels() {
+  const response = await fetch(`${API_URL}?publishing=1`);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error || `Could not load Shopify tags (${response.status})`);
+    throw new Error(payload.error || `Could not load Shopify publishing channels (${response.status})`);
   }
-  return payload.tags || [];
+  return payload;
+}
+
+export async function getShopifyProductOrganization() {
+  const response = await fetch(`${API_URL}?organization=1`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      payload.error || `Could not load Shopify product organization (${response.status})`,
+    );
+  }
+  return {
+    collections: payload.collections || [],
+    tags: payload.tags || [],
+  };
 }
 
 export function createConsignor(consignor) {
@@ -95,53 +120,13 @@ async function uploadImage(dataUrl, alt) {
   return payload;
 }
 
-async function prepareItemPhotos(item) {
-  const hasImagesField = Array.isArray(item.images);
-  const sourceImages = hasImagesField
-    ? item.images
-    : (item.photo || item.photoId)
-      ? [{ id: item.photoId || null, url: item.photo || null }]
-      : [];
-
-  const preparedImages = [];
-
-  for (const image of sourceImages.slice(0, 12)) {
-    const existingId = image?.id || image?.photoId || null;
-    const source = image?.url || image?.photo || null;
-
-    if (existingId) {
-      preparedImages.push({
-        id: existingId,
-        url: source || null,
-      });
-      continue;
-    }
-
-    const uploaded = await uploadImage(source, item.description);
-    if (uploaded?.id) {
-      preparedImages.push({
-        id: uploaded.id,
-        url: uploaded.url || source || null,
-      });
-    }
-  }
-
-  const photoIds = [...new Set(
-    preparedImages
-      .map((image) => image.id)
-      .filter(Boolean),
-  )];
-
+async function prepareItemPhoto(item) {
+  const uploaded = await uploadImage(item.photo, item.description);
+  if (!uploaded) return item;
   return {
     ...item,
-    images: preparedImages,
-    photoIds,
-    photoId: hasImagesField
-      ? (photoIds[0] || null)
-      : (photoIds[0] || item.photoId || null),
-    photo: hasImagesField
-      ? (preparedImages[0]?.url || null)
-      : (preparedImages[0]?.url || item.photo || null),
+    photoId: uploaded.id,
+    photo: uploaded.url || item.photo,
   };
 }
 
@@ -183,8 +168,13 @@ export function deleteConsignmentItem(itemId) {
   return request('DELETE', { operation: 'deleteItem', itemId });
 }
 
+export async function createShopifyProduct(product) {
+  const preparedProduct = await prepareItemPhoto(product);
+  return request('POST', { operation: 'createShopifyProduct', product: preparedProduct });
+}
+
 export async function syncShopifyProduct(itemId, product) {
-  const preparedProduct = await prepareItemPhotos(product);
+  const preparedProduct = await prepareItemPhoto(product);
   return request('POST', { operation: 'syncProduct', itemId, product: preparedProduct });
 }
 

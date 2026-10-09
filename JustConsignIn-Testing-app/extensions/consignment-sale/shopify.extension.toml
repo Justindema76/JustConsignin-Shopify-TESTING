@@ -6,7 +6,7 @@ type = "ui_extension"
 name = "t:name"
 uid = "56ce102f-d6cb-3d16-a570-28e6182df8eaf3b1c146"
 handle = "consignment-sale"
-description = "A preact POS UI extension"
+description = "JustConsignIn POS"
 
 # module: file that contains your extension’s source code
 # target: location where your extension appears in POS

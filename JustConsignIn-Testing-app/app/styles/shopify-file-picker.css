@@ -128,7 +128,23 @@
   background: var(--green-soft);
 }
 
+.shopify-file-picker-card.is-selected {
+  border-color: var(--green);
+  background: var(--green-soft);
+  box-shadow: inset 0 0 0 2px var(--green);
+}
+
+.shopify-file-picker-card.is-added {
+  opacity: .5;
+  cursor: default;
+}
+
+.shopify-file-picker-card:disabled {
+  color: inherit;
+}
+
 .shopify-file-picker-image {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   display: block;
@@ -156,6 +172,36 @@
   white-space: nowrap;
 }
 
+.shopify-file-picker-selected-mark,
+.shopify-file-picker-added-mark {
+  position: absolute;
+  z-index: 2;
+}
+
+.shopify-file-picker-selected-mark {
+  top: 7px;
+  right: 7px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--green);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+
+.shopify-file-picker-added-mark {
+  right: 7px;
+  bottom: 7px;
+  padding: 4px 6px;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .shopify-file-picker-state {
   min-height: 150px;
   display: flex;
@@ -170,6 +216,33 @@
 
 .shopify-file-picker-state.error {
   color: var(--danger);
+}
+
+.shopify-file-picker-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.shopify-file-picker-selection-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.shopify-file-picker-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.shopify-file-picker-footer .consignment-btn {
+  width: auto;
+  min-width: 110px;
 }
 
 @media (max-width: 760px) {
@@ -197,6 +270,22 @@
   .shopify-file-picker-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 9px;
+  }
+
+  .shopify-file-picker-footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .shopify-file-picker-footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .shopify-file-picker-footer .consignment-btn {
+    width: 100%;
+    min-width: 0;
   }
 }
 

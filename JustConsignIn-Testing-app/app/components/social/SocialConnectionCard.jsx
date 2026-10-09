@@ -92,7 +92,7 @@ export default function SocialConnectionCard({
                 Open Buffer <ChevronRight size={15} aria-hidden="true" />
               </a>
 
-              <a className="consignment-btn" href={connectHref} target="_top">
+              <a className="consignment-btn" href={connectHref} target="_blank" rel="noreferrer">
                 Reconnect Buffer
               </a>
 
@@ -133,8 +133,16 @@ export default function SocialConnectionCard({
 
             {configured ? (
               <div className="social-connection-actions">
-                <a className="consignment-btn" href={connectHref} target="_top">
+                <a className="consignment-btn" href={connectHref} target="_blank" rel="noreferrer">
                   Connect Buffer
+                </a>
+                <a
+                  className="consignment-btn social-secondary-button"
+                  href="https://buffer.com/signup"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Create a Buffer account
                 </a>
               </div>
             ) : (
