@@ -610,3 +610,79 @@ html[data-consignment-theme='dark'] .consignment-item-page {
 .consignment-item-page .consignment-btn svg {
   flex: none;
 }
+
+/* Header barcode chip: same 32px height as the other header controls,
+   with a barcode and number large enough to read */
+.consignment-barcode-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.consignment-barcode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--control);
+  padding: 0 4px 0 10px;
+  border-radius: 8px;
+  background: var(--p-surface, var(--surface));
+  box-shadow: inset 0 -1px 0 0 var(--p-button-edge, #b5b5b5), inset 0 0 0 1px var(--line);
+  box-sizing: border-box;
+}
+
+.consignment-barcode-chip .consignment-item-barcode-graphic {
+  width: 120px;
+  height: 26px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background: #fff;
+}
+
+/* Show only the bars in the chip; the number sits beside it, larger */
+.consignment-barcode-chip .consignment-item-barcode-graphic svg {
+  width: 100%;
+  height: 34px;
+}
+
+.consignment-barcode-chip-value {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.consignment-barcode-chip-copy {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--green-dark);
+  cursor: pointer;
+}
+
+.consignment-barcode-chip-copy:hover {
+  background: var(--green-soft);
+}
+
+@media (max-width: 640px) {
+  .consignment-barcode-chip-row {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .consignment-barcode-chip-row .consignment-btn {
+    flex: 1;
+    width: auto;
+  }
+
+  .consignment-barcode-chip .consignment-item-barcode-graphic {
+    width: 96px;
+  }
+}

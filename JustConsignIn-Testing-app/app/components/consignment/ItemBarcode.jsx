@@ -65,10 +65,43 @@ function svgToPngBlob(svg, width = 900, height = 300) {
   });
 }
 
+// Print just the label: copy the preview into a hidden frame sized to the
+// 2.25 × 1.25 in label and open the browser's print dialog for that frame,
+// so the rest of the app never prints and the page stays put.
+const LABEL_PRINT_CSS = `
+@page{size:2.25in 1.25in;margin:0}
+html,body{margin:0;padding:0;background:#fff}
+.consignment-print-sheet{box-sizing:border-box;width:2.25in;height:1.25in;padding:.08in;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff}
+.consignment-print-heading{display:flex;justify-content:space-between;gap:6px;height:.22in;font-size:8pt;font-weight:bold;line-height:1.1}
+.consignment-print-heading strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.consignment-print-heading span{white-space:nowrap}
+.consignment-item-barcode-graphic{padding:0;border:0;background:#fff}
+.consignment-item-barcode-graphic svg{display:block;width:2.09in;height:.86in}`;
+
+function printLabelSheet(sheet) {
+  if (!sheet) return;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Label</title><style>${LABEL_PRINT_CSS}</style></head><body>${sheet.outerHTML}</body></html>`);
+  doc.close();
+  const cleanup = () => { if (frame.parentNode) frame.parentNode.removeChild(frame); };
+  frame.contentWindow.addEventListener("afterprint", cleanup);
+  window.setTimeout(cleanup, 60000);
+  window.setTimeout(() => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  }, 50);
+}
+
 // Pop-up preview of the printed label. Matches the PDF from
 // /app/print/:itemNumber.pdf: 2.25 × 1.25 in, description and price on top,
 // barcode below.
 function PrintLabelDialog({ barcode, description, price, currency, pdfUrl, onClose }) {
+  const sheetRef = useRef(null);
   useEffect(() => {
     function onKey(event) { if (event.key === "Escape") onClose(); }
     document.addEventListener("keydown", onKey);
@@ -90,21 +123,24 @@ function PrintLabelDialog({ barcode, description, price, currency, pdfUrl, onClo
       </header>
       <p className="consignment-print-note">This is what prints. Label size 2.25 × 1.25 in.</p>
       <div className="consignment-print-preview">
-        <div className="consignment-print-sheet" aria-label={`Label for ${barcode.readableValue}`}>
+        <div className="consignment-print-sheet" ref={sheetRef} aria-label={`Label for ${barcode.readableValue}`}>
           <div className="consignment-print-heading"><strong>{description}</strong><span>{priceText}</span></div>
           <BarcodeGraphic barcode={barcode} />
         </div>
       </div>
-      <p className="consignment-print-note">On a phone: download the PDF, open it in Files, then choose Share → Print.</p>
+      <p className="consignment-print-note">In the Shopify phone app, use Download PDF, open it in Files, then choose Share → Print.</p>
       <footer className="consignment-print-actions">
         <button type="button" className="consignment-btn secondary" onClick={onClose}>Close</button>
-        <a className="consignment-btn" href={pdfUrl} download={`label-${barcode.readableValue}.pdf`}><Download size={16} />Download PDF</a>
+        <a className="consignment-btn secondary" href={pdfUrl} download={`label-${barcode.readableValue}.pdf`}><Download size={16} />Download PDF</a>
+        <button type="button" className="consignment-btn" onClick={() => printLabelSheet(sheetRef.current)}><Printer size={16} />Print</button>
       </footer>
     </section>
   </div>;
 }
 
-export default function ItemBarcode({ value, description = "Consignment item", price = 0, currency = "CAD" }) {
+// `compact` renders a barcode chip + Print label for the item header;
+// copy and print behave the same in both layouts.
+export default function ItemBarcode({ value, description = "Consignment item", price = 0, currency = "CAD", compact = false }) {
   const barcodeRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("idle");
   const [printOpen, setPrintOpen] = useState(false);
@@ -146,6 +182,27 @@ export default function ItemBarcode({ value, description = "Consignment item", p
   }
 
   if (!barcode) return null;
+  if (compact) {
+    const copyLabel = copyStatus === "copied" ? "Copied" : copyStatus === "shared" ? "Share opened" : copyStatus === "error" ? "Copy unavailable" : "Copy barcode";
+    return <div className="consignment-barcode-chip-row" ref={barcodeRef}>
+      <div className="consignment-barcode-chip">
+        <BarcodeGraphic barcode={barcode} />
+        <span className="consignment-barcode-chip-value">{barcode.readableValue}</span>
+        <button type="button" className="consignment-barcode-chip-copy" onClick={copyBarcode} aria-label={copyLabel} title={copyLabel}>{copyStatus === "copied" ? <Check size={16} /> : <Copy size={16} />}</button>
+      </div>
+      <button type="button" className="consignment-btn secondary" onClick={printLabel}><Printer size={16} />Print label</button>
+    {printOpen && (
+      <PrintLabelDialog
+        barcode={barcode}
+        description={description}
+        price={price}
+        currency={currency}
+        pdfUrl={`/app/print/${encodeURIComponent(barcode.readableValue)}.pdf${location.search}`}
+        onClose={() => setPrintOpen(false)}
+      />
+    )}
+    </div>;
+  }
   return <section className="consignment-item-barcode-card" ref={barcodeRef}>
     <BarcodeGraphic barcode={barcode} />
     <div className="consignment-item-barcode-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

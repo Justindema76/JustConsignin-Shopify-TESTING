@@ -165,6 +165,15 @@ export default function EditItemScreen({
 
   const headerActions = (
     <div className="consignment-item-actions">
+      {tier2Enabled && (
+        <ItemBarcode
+          compact
+          value={item.itemNumber}
+          description={item.description || item.type || 'Consignment item'}
+          price={item.price}
+          currency={currency}
+        />
+      )}
       <div className="consignment-item-menu" ref={menuRef}>
         <button
           type="button"
@@ -279,15 +288,6 @@ export default function EditItemScreen({
           hidden={tab !== 'details'}
           className="consignment-item-panel"
         >
-          {tier2Enabled && (
-            <ItemBarcode
-              value={item.itemNumber}
-              description={item.description || item.type || 'Consignment item'}
-              price={item.price}
-              currency={currency}
-            />
-          )}
-
           {confirmingDelete && (
             <div className="consignment-card consignment-item-delete-confirm">
               <span>
