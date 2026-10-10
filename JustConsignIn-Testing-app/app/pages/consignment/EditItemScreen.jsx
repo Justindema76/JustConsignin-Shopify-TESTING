@@ -180,7 +180,7 @@ export default function EditItemScreen({
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((current) => !current)}
         >
-          <MoreHorizontal size={18} />
+          <MoreHorizontal size={20} />
         </button>
         {menuOpen && (
           <div className="consignment-item-menu-popover" role="menu">

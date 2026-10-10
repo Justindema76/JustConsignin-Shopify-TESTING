@@ -6,6 +6,30 @@
 
 .consignment-item-page {
   --control: 40px;
+  --item-width: 1120px;
+}
+
+/* Keep the page a readable width, centered, instead of stretching across
+   wide screens. The header no longer sticks: it is tall and would slide
+   under the app's tab bar when scrolling. */
+.consignment-item-page .consignment-header {
+  position: static;
+}
+
+.consignment-item-page .consignment-header-row {
+  max-width: var(--item-width);
+  margin: 0 auto;
+}
+
+.consignment-item-page .consignment-body {
+  width: 100%;
+  max-width: calc(var(--item-width) + 48px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.consignment-item-page h2 {
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* One control height across the page */
@@ -92,19 +116,20 @@
 }
 
 .consignment-barcode-chip .consignment-item-barcode-graphic {
-  width: 60px;
+  width: 104px;
   padding: 0;
   border: 0;
   background: transparent;
 }
 
 .consignment-barcode-chip .consignment-item-barcode-graphic svg {
-  height: 22px;
+  height: 30px;
 }
 
 .consignment-barcode-chip-value {
   font-family: ui-monospace, Menlo, monospace;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -183,7 +208,7 @@
 .consignment-item-tabs {
   display: flex;
   gap: 2px;
-  padding: 0 24px;
+  padding: 0 max(24px, calc((100% - var(--item-width)) / 2));
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
@@ -263,7 +288,15 @@
   margin: 0;
 }
 
-.consignment-item-facts > div,
+.consignment-item-facts > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
 .consignment-item-money dl > div {
   display: flex;
   align-items: baseline;
@@ -276,8 +309,6 @@
 
 .consignment-item-facts > div.wide {
   grid-column: 1 / -1;
-  display: grid;
-  gap: 4px;
   border-bottom: 0;
 }
 
@@ -290,13 +321,15 @@
 .consignment-item-money dd {
   margin: 0;
   font-weight: 600;
-  text-align: right;
   overflow-wrap: anywhere;
+}
+
+.consignment-item-money dd {
+  text-align: right;
 }
 
 .consignment-item-facts > div.wide dd {
   font-weight: 400;
-  text-align: left;
 }
 
 .consignment-item-money dl {
@@ -357,6 +390,10 @@
 @media (max-width: 640px) {
   .consignment-item-tabs {
     padding: 0 8px;
+  }
+
+  .consignment-barcode-chip .consignment-item-barcode-graphic {
+    width: 84px;
   }
 
   .consignment-item-tabs button {

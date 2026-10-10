@@ -987,7 +987,11 @@ details:not([open]) > summary.consignment-form-section-head::after {
 }
 
 .consignment-shopify-product-actions .consignment-shopify-product-linked {
-  margin: 0 auto 0 0;
+  margin: 0;
+}
+
+.consignment-shopify-product-category-field {
+  margin-top: 4px;
 }
 
 @media (max-width: 640px) {

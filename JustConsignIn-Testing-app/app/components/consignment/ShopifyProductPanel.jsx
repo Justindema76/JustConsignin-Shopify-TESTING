@@ -64,12 +64,7 @@ function normalizeMedia(form) {
   });
 }
 
-
-function ShopifyFilePicker({
-  onClose,
-  onConfirm,
-  existingIds = [],
-}) {
+function ShopifyFilePicker({ onClose, onConfirm, existingIds = [] }) {
   const [search, setSearch] = useState('');
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,24 +73,29 @@ function ShopifyFilePicker({
 
   useEffect(() => {
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      setPickerError('');
+    const timer = setTimeout(
+      async () => {
+        setLoading(true);
+        setPickerError('');
 
-      try {
-        const results = await searchShopifyFiles(search);
-        if (!cancelled) setFiles(results);
-      } catch (error) {
-        if (!cancelled) {
-          setFiles([]);
-          setPickerError(
-            error instanceof Error ? error.message : 'Could not load Shopify Files.',
-          );
+        try {
+          const results = await searchShopifyFiles(search);
+          if (!cancelled) setFiles(results);
+        } catch (error) {
+          if (!cancelled) {
+            setFiles([]);
+            setPickerError(
+              error instanceof Error
+                ? error.message
+                : 'Could not load Shopify Files.',
+            );
+          }
+        } finally {
+          if (!cancelled) setLoading(false);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, search.trim() ? 300 : 0);
+      },
+      search.trim() ? 300 : 0,
+    );
 
     return () => {
       cancelled = true;
@@ -179,7 +179,9 @@ function ShopifyFilePicker({
           )}
 
           {!loading && !pickerError && files.length === 0 && (
-            <div className="shopify-file-picker-state">No Shopify images found.</div>
+            <div className="shopify-file-picker-state">
+              No Shopify images found.
+            </div>
           )}
 
           {!loading && !pickerError && files.length > 0 && (
@@ -196,7 +198,9 @@ function ShopifyFilePicker({
                       'shopify-file-picker-card',
                       selected ? 'is-selected' : '',
                       alreadyAdded ? 'is-added' : '',
-                    ].filter(Boolean).join(' ')}
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     onClick={() => toggleFile(file)}
                     disabled={alreadyAdded}
                     aria-pressed={selected}
@@ -256,18 +260,17 @@ function ShopifyFilePicker({
   );
 }
 
-function ProductMedia({
-  form,
-  setForm,
-  disabled,
-}) {
+function ProductMedia({ form, setForm, disabled }) {
   const [showShopifyFiles, setShowShopifyFiles] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const previewUrls = useRef([]);
-  useEffect(() => () => {
-    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
-  }, []);
+  useEffect(
+    () => () => {
+      previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    },
+    [],
+  );
 
   const media = normalizeMedia(form);
 
@@ -297,12 +300,28 @@ function ProductMedia({
         previewUrls.current.push(url);
         return { id: null, url, clientKey: url, alt: file.name, pending: true };
       });
-      setForm((current) => ({ ...current, media: [...normalizeMedia(current), ...pending] }));
+      setForm((current) => ({
+        ...current,
+        media: [...normalizeMedia(current), ...pending],
+      }));
       for (let index = 0; index < files.length; index += 1) {
-        const uploaded = { ...await uploadImage(files[index], form.shopifyTitle || 'Consignment item'), clientKey: pending[index].url };
+        const uploaded = {
+          ...(await uploadImage(
+            files[index],
+            form.shopifyTitle || 'Consignment item',
+          )),
+          clientKey: pending[index].url,
+        };
         setForm((current) => {
-          const next = (current.media || []).map((entry) => entry.url === pending[index].url ? uploaded : entry);
-          return { ...current, media: next, photoId: next[0]?.id || null, photo: next[0]?.url || null };
+          const next = (current.media || []).map((entry) =>
+            entry.url === pending[index].url ? uploaded : entry,
+          );
+          return {
+            ...current,
+            media: next,
+            photoId: next[0]?.id || null,
+            photo: next[0]?.url || null,
+          };
         });
       }
     } catch (error) {
@@ -312,7 +331,12 @@ function ProductMedia({
     } finally {
       setForm((current) => {
         const next = (current.media || []).filter((entry) => !entry.pending);
-        return { ...current, media: next, photoId: next[0]?.id || null, photo: next[0]?.url || null };
+        return {
+          ...current,
+          media: next,
+          photoId: next[0]?.id || null,
+          photo: next[0]?.url || null,
+        };
       });
       setUploading(false);
     }
@@ -365,7 +389,10 @@ function ProductMedia({
             key={entry.id || entry.url || index}
           >
             {entry.url ? (
-              <img src={entry.url} alt={entry.alt || `Product image ${index + 1}`} />
+              <img
+                src={entry.url}
+                alt={entry.alt || `Product image ${index + 1}`}
+              />
             ) : (
               <span>Image {index + 1}</span>
             )}
@@ -468,12 +495,7 @@ function ProductMedia({
   );
 }
 
-function TagEditor({
-  value,
-  onChange,
-  disabled,
-  suggestions = [],
-}) {
+function TagEditor({ value, onChange, disabled, suggestions = [] }) {
   const tags = useMemo(() => parseTags(value), [value]);
   const [draft, setDraft] = useState('');
   const [showExisting, setShowExisting] = useState(false);
@@ -559,12 +581,7 @@ function TagEditor({
   );
 }
 
-function CollectionEditor({
-  value,
-  onChange,
-  disabled,
-  options = [],
-}) {
+function CollectionEditor({ value, onChange, disabled, options = [] }) {
   const collections = (Array.isArray(value) ? value : ['Consignment'])
     .map(normalizeCollection)
     .filter(Boolean);
@@ -692,9 +709,15 @@ export default function ShopifyProductPanel({
         if (!cancelled) setPublishingChannels(result);
       })
       .catch(() => {
-        if (!cancelled) setPublishingChannels({ metaInstalled: false, metaPublicationName: '' });
+        if (!cancelled)
+          setPublishingChannels({
+            metaInstalled: false,
+            metaPublicationName: '',
+          });
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -753,7 +776,10 @@ export default function ShopifyProductPanel({
       <section className="consignment-form-section">
         <div className="consignment-form-section-head consignment-shopify-summary consignment-shopify-locked">
           <span>
-            <span className="consignment-form-section-marker" aria-hidden="true" />
+            <span
+              className="consignment-form-section-marker"
+              aria-hidden="true"
+            />
             <ShoppingBag size={17} />
             <h2>Shopify product</h2>
           </span>
@@ -766,7 +792,12 @@ export default function ShopifyProductPanel({
   }
 
   const status = shopifyForm.shopifyStatus === 'DRAFT' ? 'DRAFT' : 'ACTIVE';
-  const slug = shopifyForm.shopifyHandle || String(shopifyForm.shopifyTitle || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const slug =
+    shopifyForm.shopifyHandle ||
+    String(shopifyForm.shopifyTitle || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
 
   const body = (
     <fieldset
@@ -809,15 +840,42 @@ export default function ShopifyProductPanel({
                 />
               </div>
               <div className="consignment-form-field">
-                <label className="consignment-shopify-product-field-label">SKU</label>
-                <input className="consignment-input" value={shopifyForm.sku ?? ''} onChange={(event) => setValue('sku', event.target.value)} />
+                <label className="consignment-shopify-product-field-label">
+                  SKU
+                </label>
+                <input
+                  className="consignment-input"
+                  value={shopifyForm.sku ?? ''}
+                  onChange={(event) => setValue('sku', event.target.value)}
+                />
               </div>
               <div className="consignment-form-field">
-                <label className="consignment-shopify-product-field-label">Weight</label>
+                <label className="consignment-shopify-product-field-label">
+                  Weight
+                </label>
                 <div className="consignment-shopify-product-weight">
-                  <input className="consignment-input" type="number" min="0" step="any" inputMode="decimal" aria-label="Weight" value={shopifyForm.weight ?? ''} onChange={(event) => setValue('weight', event.target.value)} />
-                  <select className="consignment-select" aria-label="Weight unit" value={shopifyForm.weightUnit || 'KILOGRAMS'} onChange={(event) => setValue('weightUnit', event.target.value)}>
-                    <option value="KILOGRAMS">kg</option><option value="GRAMS">g</option><option value="POUNDS">lb</option><option value="OUNCES">oz</option>
+                  <input
+                    className="consignment-input"
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    aria-label="Weight"
+                    value={shopifyForm.weight ?? ''}
+                    onChange={(event) => setValue('weight', event.target.value)}
+                  />
+                  <select
+                    className="consignment-select"
+                    aria-label="Weight unit"
+                    value={shopifyForm.weightUnit || 'KILOGRAMS'}
+                    onChange={(event) =>
+                      setValue('weightUnit', event.target.value)
+                    }
+                  >
+                    <option value="KILOGRAMS">kg</option>
+                    <option value="GRAMS">g</option>
+                    <option value="POUNDS">lb</option>
+                    <option value="OUNCES">oz</option>
                   </select>
                 </div>
               </div>
@@ -844,106 +902,140 @@ export default function ShopifyProductPanel({
               />
             </div>
 
-            <details className="consignment-shopify-fold">
-              <summary>
-                <span>
-                  Category
-                  {shopifyForm.shopifyCategoryName && <small> · {shopifyForm.shopifyCategoryName}</small>}
-                </span>
-                <ChevronDown size={16} aria-hidden="true" />
-              </summary>
-              <div className="consignment-form-field consignment-shopify-product-category-field">
-                <input
-                  className="consignment-input"
-                  aria-label="Shopify category"
-                  value={categorySearch}
-                  onChange={(event) => {
-                    setCategorySearch(event.target.value);
-                    if (
-                      event.target.value !== shopifyForm.shopifyCategoryName
-                    ) {
+            <div className="consignment-form-field consignment-shopify-product-category-field">
+              <label className="consignment-shopify-product-field-label">
+                Category
+              </label>
+              <input
+                className="consignment-input"
+                aria-label="Shopify category"
+                value={categorySearch}
+                onChange={(event) => {
+                  setCategorySearch(event.target.value);
+                  if (event.target.value !== shopifyForm.shopifyCategoryName) {
+                    setShopifyForm((current) => ({
+                      ...current,
+                      shopifyCategoryId: '',
+                      shopifyCategoryName: '',
+                    }));
+                  }
+                }}
+                placeholder="Search Shopify categories"
+              />
+
+              {searchingCategories && (
+                <div className="consignment-row-sub consignment-shopify-product-category-status">
+                  Searching Shopify…
+                </div>
+              )}
+
+              {categoryResults.length > 0 && (
+                <div className="consignment-category-results">
+                  {categoryResults.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      className="consignment-category-result"
+                      onClick={() => {
+                        setShopifyForm((current) => ({
+                          ...current,
+                          shopifyCategoryId: category.id,
+                          shopifyCategoryName: category.name,
+                        }));
+                        setCategorySearch(category.name);
+                        setCategoryResults([]);
+                      }}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {shopifyForm.shopifyCategoryId && (
+                <div className="consignment-selected-category">
+                  <span>{shopifyForm.shopifyCategoryName}</span>
+                  <button
+                    type="button"
+                    className="consignment-batch-remove"
+                    aria-label="Remove Shopify category"
+                    onClick={() => {
                       setShopifyForm((current) => ({
                         ...current,
                         shopifyCategoryId: '',
                         shopifyCategoryName: '',
                       }));
-                    }
-                  }}
-                  placeholder="Search Shopify categories"
-                />
-
-                {searchingCategories && (
-                  <div className="consignment-row-sub consignment-shopify-product-category-status">
-                    Searching Shopify…
-                  </div>
-                )}
-
-                {categoryResults.length > 0 && (
-                  <div className="consignment-category-results">
-                    {categoryResults.map((category) => (
-                      <button
-                        key={category.id}
-                        type="button"
-                        className="consignment-category-result"
-                        onClick={() => {
-                          setShopifyForm((current) => ({
-                            ...current,
-                            shopifyCategoryId: category.id,
-                            shopifyCategoryName: category.name,
-                          }));
-                          setCategorySearch(category.name);
-                          setCategoryResults([]);
-                        }}
-                      >
-                        {category.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {shopifyForm.shopifyCategoryId && (
-                  <div className="consignment-selected-category">
-                    <span>{shopifyForm.shopifyCategoryName}</span>
-                    <button
-                      type="button"
-                      className="consignment-batch-remove"
-                      aria-label="Remove Shopify category"
-                      onClick={() => {
-                        setShopifyForm((current) => ({
-                          ...current,
-                          shopifyCategoryId: '',
-                          shopifyCategoryName: '',
-                        }));
-                        setCategorySearch('');
-                      }}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </details>
+                      setCategorySearch('');
+                    }}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
 
             <details className="consignment-shopify-fold">
               <summary>
                 <span>
                   Search engine listing
-                  {(shopifyForm.seoTitle || shopifyForm.shopifyTitle) && <small> · {shopifyForm.seoTitle || shopifyForm.shopifyTitle}</small>}
+                  {(shopifyForm.seoTitle || shopifyForm.shopifyTitle) && (
+                    <small>
+                      {' '}
+                      · {shopifyForm.seoTitle || shopifyForm.shopifyTitle}
+                    </small>
+                  )}
                 </span>
                 <ChevronDown size={16} aria-hidden="true" />
               </summary>
               <div className="consignment-form-field">
-                <div className="consignment-seo-preview" aria-label="Search engine listing preview">
-                  <strong>{shopifyForm.seoTitle || shopifyForm.shopifyTitle || 'Product title'}</strong>
-                  <div>{organization.storefrontUrl}/products/{slug}</div>
-                  <p>{shopifyForm.seoDescription || shopifyForm.productDescription || 'Product description'}</p>
+                <div
+                  className="consignment-seo-preview"
+                  aria-label="Search engine listing preview"
+                >
+                  <strong>
+                    {shopifyForm.seoTitle ||
+                      shopifyForm.shopifyTitle ||
+                      'Product title'}
+                  </strong>
+                  <div>
+                    {organization.storefrontUrl}/products/{slug}
+                  </div>
+                  <p>
+                    {shopifyForm.seoDescription ||
+                      shopifyForm.productDescription ||
+                      'Product description'}
+                  </p>
                 </div>
-                <label className="consignment-shopify-product-field-label">Page title</label>
-                <input className="consignment-input" value={shopifyForm.seoTitle || ''} onChange={(event) => setValue('seoTitle', event.target.value)} />
-                <label className="consignment-shopify-product-field-label">Meta description</label>
-                <textarea className="consignment-textarea" rows={3} value={shopifyForm.seoDescription || ''} onChange={(event) => setValue('seoDescription', event.target.value)} />
-                <label className="consignment-shopify-product-field-label">URL handle</label>
-                <input className="consignment-input" value={shopifyForm.shopifyHandle || ''} onChange={(event) => setValue('shopifyHandle', event.target.value)} placeholder="product-url-handle" />
+                <label className="consignment-shopify-product-field-label">
+                  Page title
+                </label>
+                <input
+                  className="consignment-input"
+                  value={shopifyForm.seoTitle || ''}
+                  onChange={(event) => setValue('seoTitle', event.target.value)}
+                />
+                <label className="consignment-shopify-product-field-label">
+                  Meta description
+                </label>
+                <textarea
+                  className="consignment-textarea"
+                  rows={3}
+                  value={shopifyForm.seoDescription || ''}
+                  onChange={(event) =>
+                    setValue('seoDescription', event.target.value)
+                  }
+                />
+                <label className="consignment-shopify-product-field-label">
+                  URL handle
+                </label>
+                <input
+                  className="consignment-input"
+                  value={shopifyForm.shopifyHandle || ''}
+                  onChange={(event) =>
+                    setValue('shopifyHandle', event.target.value)
+                  }
+                  placeholder="product-url-handle"
+                />
               </div>
             </details>
           </div>
@@ -952,19 +1044,27 @@ export default function ShopifyProductPanel({
         <aside className="consignment-shopify-product-sidebar">
           <div className="consignment-shopify-product-side-card">
             <div className="consignment-form-field">
-              <label className="consignment-shopify-product-field-label" htmlFor="shopify-product-status">
+              <label
+                className="consignment-shopify-product-field-label"
+                htmlFor="shopify-product-status"
+              >
                 Status
               </label>
               <select
                 id="shopify-product-status"
                 className="consignment-select"
                 value={status}
-                onChange={(event) => setValue('shopifyStatus', event.target.value)}
+                onChange={(event) =>
+                  setValue('shopifyStatus', event.target.value)
+                }
               >
                 <option value="ACTIVE">Active</option>
                 <option value="DRAFT">Draft</option>
               </select>
-              <p className="consignment-shopify-help" style={{ margin: '6px 0 0' }}>
+              <p
+                className="consignment-shopify-help"
+                style={{ margin: '6px 0 0' }}
+              >
                 {status === 'DRAFT'
                   ? 'Draft: hidden from customers on every channel, including POS, until you set it back to Active.'
                   : 'Active: customers can buy it on the channels below.'}
@@ -1008,17 +1108,28 @@ export default function ShopifyProductPanel({
                 <input
                   type="checkbox"
                   checked={shopifyForm.publishMeta === true}
-                  onChange={(event) => setValue('publishMeta', event.target.checked)}
+                  onChange={(event) =>
+                    setValue('publishMeta', event.target.checked)
+                  }
                 />
                 <span>
                   <strong>Facebook &amp; Instagram</strong>
-                  <small>Publish this product to the connected Meta sales channel.</small>
+                  <small>
+                    Publish this product to the connected Meta sales channel.
+                  </small>
                 </span>
               </label>
             ) : (
-              <p className="consignment-shopify-help" style={{ margin: '10px 0 0' }}>
+              <p
+                className="consignment-shopify-help"
+                style={{ margin: '10px 0 0' }}
+              >
                 Want to tag this product in Facebook or Instagram posts?{' '}
-                <a href="https://apps.shopify.com/facebook" target="_blank" rel="noreferrer">
+                <a
+                  href="https://apps.shopify.com/facebook"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Install Facebook &amp; Instagram by Meta
                 </a>
               </p>
@@ -1087,7 +1198,12 @@ export default function ShopifyProductPanel({
         {linkedProductId && (
           <span className="consignment-shopify-product-linked">
             <Check size={14} />
-            Linked to Shopify · {linkedStatus === 'DRAFT' ? 'Draft' : linkedStatus === 'ACTIVE' ? 'Active' : linkedStatus || 'Connected'}
+            Linked to Shopify ·{' '}
+            {linkedStatus === 'DRAFT'
+              ? 'Draft'
+              : linkedStatus === 'ACTIVE'
+                ? 'Active'
+                : linkedStatus || 'Connected'}
           </span>
         )}
         <button
@@ -1097,11 +1213,9 @@ export default function ShopifyProductPanel({
             disabled ||
             syncing ||
             shopifyForm.media?.some((entry) => entry.pending) ||
-            (
-              shopifyForm.publishToPos === false &&
+            (shopifyForm.publishToPos === false &&
               shopifyForm.publishOnline !== true &&
-              shopifyForm.publishMeta !== true
-            )
+              shopifyForm.publishMeta !== true)
           }
           onClick={onSync}
         >
@@ -1119,20 +1233,31 @@ export default function ShopifyProductPanel({
   );
 
   if (embedded) {
-    return <div className="consignment-shopify-product-body consignment-shopify-embedded">{body}</div>;
+    return (
+      <div className="consignment-shopify-product-body consignment-shopify-embedded">
+        {body}
+      </div>
+    );
   }
 
   return (
     <details className="consignment-form-section" open>
       <summary className="consignment-form-section-head consignment-shopify-summary">
         <span>
-          <span className="consignment-form-section-marker" aria-hidden="true" />
+          <span
+            className="consignment-form-section-marker"
+            aria-hidden="true"
+          />
           <ShoppingBag size={17} />
           <h2>Shopify product</h2>
         </span>
 
         <span className="consignment-row-sub">
-          {linkedProductId ? 'Connected' : direct ? 'Create product' : 'Create linked product'}
+          {linkedProductId
+            ? 'Connected'
+            : direct
+              ? 'Create product'
+              : 'Create linked product'}
         </span>
       </summary>
 
