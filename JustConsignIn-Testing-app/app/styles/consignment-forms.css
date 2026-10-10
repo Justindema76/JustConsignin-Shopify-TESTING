@@ -896,3 +896,110 @@ details:not([open]) > summary.consignment-form-section-head::after {
     width: 100%;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Shopify product panel: compact layout (Price/SKU/Weight row, folded
+   Category and Search engine listing, one action row).
+   -------------------------------------------------------------------------- */
+.consignment-shopify-product-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 12px;
+}
+
+.consignment-shopify-product-weight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 8px;
+}
+
+.consignment-shopify-fold {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+.consignment-shopify-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.consignment-shopify-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.consignment-shopify-fold > summary small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.consignment-shopify-fold > summary svg {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.consignment-shopify-fold[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.consignment-shopify-fold > .consignment-form-field {
+  margin: 0;
+  padding: 0 14px 14px;
+}
+
+.consignment-seo-preview {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.consignment-seo-preview strong {
+  display: block;
+  color: var(--green-dark);
+  font-size: 14px;
+}
+
+.consignment-seo-preview div {
+  color: var(--muted);
+}
+
+.consignment-seo-preview p {
+  margin: 4px 0 0;
+}
+
+.consignment-shopify-product-actions {
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.consignment-shopify-product-actions .consignment-shopify-product-linked {
+  margin: 0 auto 0 0;
+}
+
+@media (max-width: 640px) {
+  .consignment-shopify-product-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .consignment-shopify-product-row > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .consignment-shopify-product-actions .consignment-shopify-product-linked {
+    margin: 0;
+  }
+}

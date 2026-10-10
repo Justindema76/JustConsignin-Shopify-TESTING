@@ -1072,7 +1072,9 @@ async function syncPosProduct(admin, item, consignor, merchantName, { consignmen
       ].join(''),
     productType: item.productType || item.type || item.category,
     vendor: item.vendor || merchantName || (consignment ? 'Consignment' : ''),
-    status: 'ACTIVE',
+    // Merchants can save a product as Draft from the item page; anything
+    // else (new items, imports) stays Active as before.
+    status: item.shopifyStatus === 'DRAFT' ? 'DRAFT' : 'ACTIVE',
     tags: customTags,
     category: item.shopifyCategoryId || undefined,
     seo: { title: item.seoTitle || '', description: item.seoDescription || '' },
@@ -1885,6 +1887,7 @@ export async function action({ request }) {
         publishOnline: productInput.publishOnline === true,
         publishMeta: productInput.publishMeta === true,
         publishToPos: productInput.publishToPos !== false,
+        shopifyStatus: productInput.shopifyStatus === 'DRAFT' ? 'DRAFT' : 'ACTIVE',
       };
       const sellPrice = Number(productSource.shopifyPrice ?? productSource.price);
       if (!Number.isFinite(sellPrice) || sellPrice <= 0) {

@@ -4,7 +4,9 @@ import { useOutletContext } from 'react-router';
 import '../../styles/consignment-global.css';
 import '../../styles/consignment-header.css';
 
-export default function Header({ eyebrow, title, onBack = null, action = null }) {
+// `leading` (e.g. a product photo) sits before the title; `meta` (e.g.
+// price and status badges) sits under it. Both are optional.
+export default function Header({ eyebrow, title, onBack = null, action = null, leading = null, meta = null }) {
   const { resolvedTheme = 'light', setTheme } = useOutletContext() || {};
   const isDark = resolvedTheme === 'dark';
 
@@ -17,9 +19,11 @@ export default function Header({ eyebrow, title, onBack = null, action = null })
               <ArrowLeft size={18} />
             </button>
           )}
-          <div>
+          {leading}
+          <div style={{ minWidth: 0 }}>
             {eyebrow && <p className="consignment-eyebrow">{eyebrow}</p>}
             <h1 className="consignment-title">{title}</h1>
+            {meta && <div className="consignment-header-meta">{meta}</div>}
           </div>
         </div>
         {action && <div className="consignment-header-action">{action}</div>}

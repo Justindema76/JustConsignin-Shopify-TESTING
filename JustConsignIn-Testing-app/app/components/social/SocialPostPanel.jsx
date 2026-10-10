@@ -161,6 +161,36 @@ function moneyValue(value) {
   return Number.isFinite(number) ? `$${number.toFixed(2)}` : '';
 }
 
+function captionHashtags(item) {
+  const rawTags = Array.isArray(item.tags) ? item.tags.join(',') : String(item.tags || '');
+  return rawTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => `#${tag.replace(/[^a-zA-Z0-9]/g, '')}`)
+    .filter((tag) => tag.length > 1)
+    .join(' ');
+}
+
+// Starting caption: title, a few quick facts, price and hashtags. The full
+// product description is one tap away ("Use full product description").
+function shortCaption(item) {
+  const title = String(item.shopifyTitle || item.description || '').trim();
+  const facts = [
+    String(item.brand || item.vendor || '').trim(),
+    item.size ? `Size ${String(item.size).trim()}` : '',
+    String(item.condition || '').trim(),
+  ].filter(Boolean).join(' · ');
+  const price = moneyValue(item.shopifyPrice ?? item.price);
+
+  return [
+    title,
+    facts,
+    price,
+    captionHashtags(item) || '#consignment #shoplocal',
+  ].filter(Boolean).join('\n\n').trim();
+}
+
 function defaultCaption(item) {
   const title = String(item.shopifyTitle || item.description || '').trim();
   const productDescription = String(item.productDescription || '').trim();
@@ -168,14 +198,7 @@ function defaultCaption(item) {
   const size = String(item.size || '').trim();
   const condition = String(item.condition || '').trim();
   const price = moneyValue(item.shopifyPrice ?? item.price);
-  const rawTags = Array.isArray(item.tags) ? item.tags.join(',') : String(item.tags || '');
-  const hashtags = rawTags
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .map((tag) => `#${tag.replace(/[^a-zA-Z0-9]/g, '')}`)
-    .filter((tag) => tag.length > 1)
-    .join(' ');
+  const hashtags = captionHashtags(item);
 
   const details = productDescription
     ? [productDescription]
@@ -193,12 +216,13 @@ function defaultCaption(item) {
   ].filter(Boolean).join('\n\n').trim();
 }
 
-export default function SocialPostPanel({ item, disabled = false }) {
+export default function SocialPostPanel({ item, disabled = false, embedded = false }) {
   const [loading, setLoading] = useState(true);
   const [connection, setConnection] = useState(null);
   const [configured, setConfigured] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [caption, setCaption] = useState(() => defaultCaption(item));
+  const [caption, setCaption] = useState(() => shortCaption(item));
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [captionTouched, setCaptionTouched] = useState(false);
   const [mediaTouched, setMediaTouched] = useState(false);
   const [media, setMedia] = useState(() => productMedia(item));
@@ -279,7 +303,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
 
   useEffect(() => {
     if (!captionTouched) {
-      setCaption(defaultCaption(item));
+      setCaption(shortCaption(item));
     }
   }, [
     item.id,
@@ -553,6 +577,340 @@ export default function SocialPostPanel({ item, disabled = false }) {
     }
   }
 
+  const previewChannel = channels.find((channel) => String(channel.id) === selectedIds[0]);
+  const actionsDisabled = disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0;
+
+  const content = (
+    <>
+      {loading ? (
+        <div className="social-post-state">
+          <Loader2 className="consignment-spin" size={18} />
+          Checking social connection…
+        </div>
+      ) : !connection ? (
+        <div className="social-post-connect">
+          <div>
+            <strong>Connect this store to social media</strong>
+            <p>
+              Each merchant uses their own Buffer account. Once connected, this item can create, preview, schedule, and publish social posts.
+            </p>
+          </div>
+          <a className="consignment-btn" href={socialSettingsHref}>
+            {configured ? 'Connect Buffer' : 'Social Media setup'}
+          </a>
+        </div>
+      ) : (
+        <>
+          <div className="social-composer-grid">
+            <div className="social-composer-editor">
+              <div className="social-post-channels">
+                <span className="consignment-label">Post to</span>
+                <div className="social-post-channel-grid">
+                  {channels.map((channel) => {
+                    const id = String(channel.id);
+                    const service = String(channel.service || '').toLowerCase();
+                    const checked = selectedIds.includes(id);
+                    return (
+                      <label key={id} className={`social-post-channel ${checked ? 'selected' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleChannel(id)}
+                          disabled={disabled}
+                        />
+                        <ChannelIcon service={service} />
+                        <span>
+                          <strong>{channel.displayName || channel.name}</strong>
+                          <small>{service}</small>
+                        </span>
+                        <select
+                          className="social-post-type-select"
+                          value={postTypes[id] || 'post'}
+                          onChange={(event) => setPostTypes((current) => ({ ...current, [id]: event.target.value }))}
+                          onClick={(event) => event.stopPropagation()}
+                          disabled={disabled}
+                          aria-label={`Post type for ${channel.displayName || channel.name}`}
+                        >
+                          {postTypeOptions(service).map((type) => (
+                            <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                          ))}
+                        </select>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="social-caption-head">
+                <label className="consignment-label" htmlFor={`social-caption-${item.id}`}>
+                  Caption
+                </label>
+                <button
+                  type="button"
+                  className="social-link-button"
+                  disabled={disabled}
+                  onClick={() => {
+                    setCaptionTouched(true);
+                    setCaption(defaultCaption(item));
+                  }}
+                >
+                  Use full product description
+                </button>
+              </div>
+              <textarea
+                id={`social-caption-${item.id}`}
+                className="consignment-textarea"
+                rows={5}
+                value={caption}
+                onChange={(event) => {
+                  setCaptionTouched(true);
+                  setCaption(event.target.value);
+                }}
+                disabled={disabled}
+              />
+
+              <span className="consignment-label">Photos &amp; video</span>
+              <div className="social-media-toolbar">
+                <label className="consignment-btn secondary social-upload-button">
+                  <ImagePlus size={16} /> Add images
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    disabled={disabled || uploading}
+                    onChange={(event) => {
+                      uploadFiles(event.target.files, 'image');
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+                <label className="consignment-btn secondary social-upload-button">
+                  <Video size={16} /> Add video
+                  <input
+                    type="file"
+                    accept="video/*"
+                    hidden
+                    disabled={disabled || uploading}
+                    onChange={(event) => {
+                      uploadFiles(event.target.files, 'video');
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="consignment-btn secondary social-upload-button"
+                  disabled={disabled || uploading}
+                  onClick={() => setShowShopifyFiles(true)}
+                >
+                  <ImagePlus size={16} /> Shopify Files
+                </button>
+                {uploading && <span className="social-uploading"><Loader2 className="consignment-spin" size={15} /> Uploading…</span>}
+              </div>
+
+              <div className="social-media-grid">
+                {media.map((entry, index) => (
+                  <div className="social-media-card" key={`${entry.id || entry.url}-${index}`}>
+                    <div className="social-media-thumb">
+                      {entry.type === 'video' ? (
+                        <video src={entry.url} muted playsInline />
+                      ) : (
+                        <img src={entry.previewUrl || entry.url} alt="" />
+                      )}
+                      <span>{index + 1}</span>
+                    </div>
+                    <div className="social-media-actions">
+                      <button type="button" onClick={() => moveMedia(index, -1)} disabled={index === 0 || disabled} aria-label="Move left">
+                        <ChevronLeft size={15} />
+                      </button>
+                      <button type="button" onClick={() => moveMedia(index, 1)} disabled={index === media.length - 1 || disabled} aria-label="Move right">
+                        <ChevronRight size={15} />
+                      </button>
+                      <button type="button" className="danger" onClick={() => removeMedia(index)} disabled={disabled} aria-label="Remove media">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {media.length === 0 && channels.some((channel) => ['instagram', 'tiktok'].includes(String(channel.service).toLowerCase())) && (
+                <p className="consignment-form-help">
+                  Instagram and TikTok need an image or video. Add media above or select Facebook only.
+                </p>
+              )}
+            </div>
+
+            <div className="social-live-preview">
+              <span className="consignment-label">Preview</span>
+              <div className={`social-preview-card ${selectedIds.length ? (postTypes[selectedIds[0]] || 'post') : 'post'}`}>
+                <div className="social-preview-profile">
+                  {previewChannel ? (
+                    <>
+                      <ChannelIcon service={String(previewChannel.service || '').toLowerCase()} />
+                      <strong>{previewChannel.displayName || previewChannel.name}</strong>
+                    </>
+                  ) : (
+                    <strong>Social preview</strong>
+                  )}
+                </div>
+                <div className="social-preview-media">
+                  {media[0] ? (
+                    media[0].type === 'video'
+                      ? <video src={media[0].url} controls muted playsInline />
+                      : <img src={media[0].previewUrl || media[0].url} alt="" />
+                  ) : (
+                    <div className="social-post-no-image">Add media</div>
+                  )}
+                  {media.length > 1 && <span className="social-preview-count">1 / {media.length}</span>}
+                </div>
+                <div className={`social-preview-caption ${previewExpanded ? 'expanded' : ''}`}>{caption || 'No caption'}</div>
+                {caption && (
+                  <button
+                    type="button"
+                    className="social-link-button social-preview-more"
+                    onClick={() => setPreviewExpanded((current) => !current)}
+                  >
+                    {previewExpanded ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {error && <div className="social-post-message error">{error}</div>}
+          {message && (
+            <div className="social-post-message success">
+              <Check size={16} aria-hidden="true" /> {message}
+            </div>
+          )}
+
+          <div className="social-post-actions social-post-actions-primary">
+            <span className="social-post-hint">
+              Posts through your Buffer account ·{' '}
+              <a href="https://publish.buffer.com/" target="_blank" rel="noreferrer">Open Buffer</a>
+            </span>
+
+            <button
+              type="button"
+              className="consignment-btn secondary"
+              onClick={() => setScheduleOpen((current) => !current)}
+              disabled={disabled || Boolean(savingAction)}
+              aria-expanded={scheduleOpen}
+            >
+              <CalendarClock size={16} />
+              {scheduleOpen ? 'Hide schedule' : 'Schedule'}
+            </button>
+
+            <button
+              type="button"
+              className="consignment-btn secondary"
+              onClick={() => submitPosts('draft')}
+              disabled={actionsDisabled}
+            >
+              {savingAction === 'draft' ? <Loader2 className="consignment-spin" size={16} /> : <Tag size={16} />}
+              Save draft
+            </button>
+
+            <button
+              type="button"
+              className="consignment-btn social-post-now"
+              onClick={() => submitPosts('now')}
+              disabled={actionsDisabled}
+            >
+              {savingAction === 'now' ? <Loader2 className="consignment-spin" size={16} /> : <Send size={16} />}
+              Post now
+            </button>
+          </div>
+
+          {scheduleOpen && (
+            <div className="social-schedule-panel">
+              <div className="social-schedule-presets">
+                <button
+                  type="button"
+                  className="consignment-btn secondary"
+                  onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 30 * 60 * 1000)))}
+                >
+                  +30 min
+                </button>
+                <button
+                  type="button"
+                  className="consignment-btn secondary"
+                  onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)))}
+                >
+                  +1 hour
+                </button>
+                <button
+                  type="button"
+                  className="consignment-btn secondary"
+                  onClick={() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(9, 0, 0, 0);
+                    setScheduleAt(toLocalDateTimeInput(tomorrow));
+                  }}
+                >
+                  Tomorrow 9 AM
+                </button>
+              </div>
+
+              <div className="social-schedule-row">
+                <CalendarClock size={17} />
+                <input
+                  type="datetime-local"
+                  className="consignment-input"
+                  aria-label="Schedule date and time"
+                  value={scheduleAt}
+                  onChange={(event) => setScheduleAt(event.target.value)}
+                  disabled={disabled || Boolean(savingAction)}
+                />
+                <button
+                  type="button"
+                  className="consignment-btn"
+                  onClick={() => submitPosts('schedule')}
+                  disabled={actionsDisabled || !scheduleAt}
+                >
+                  {savingAction === 'schedule' ? <Loader2 className="consignment-spin" size={16} /> : <CalendarClock size={16} />}
+                  Schedule post
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {showShopifyFiles && (
+        <ShopifySocialFilePicker
+          onClose={() => setShowShopifyFiles(false)}
+          existingIds={media.map((entry) => entry.id).filter(Boolean)}
+          onConfirm={(files) => {
+            const available = Math.max(0, MAX_MEDIA_ITEMS - media.length);
+            const additions = files.slice(0, available).map((file) => ({
+              id: file.id,
+              type: 'image',
+              url: file.url,
+              previewUrl: file.url,
+              name: file.alt || 'Shopify image',
+            }));
+            setMediaTouched(true);
+            setMedia((current) => [...current, ...additions]);
+            setShowShopifyFiles(false);
+            if (files.length > available) setError(`You can attach up to ${MAX_MEDIA_ITEMS} media items.`);
+          }}
+        />
+      )}
+
+      {!loading && error && !connection && (
+        <div className="social-post-message error">{error}</div>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="social-post-panel social-post-embedded social-post-body">{content}</div>;
+  }
+
   return (
     <details className="consignment-form-section social-post-panel" open>
       <summary className="consignment-form-section-head social-post-summary">
@@ -567,311 +925,7 @@ export default function SocialPostPanel({ item, disabled = false }) {
       </summary>
 
       <div className="consignment-form-section-body social-post-body">
-        {loading ? (
-          <div className="social-post-state">
-            <Loader2 className="consignment-spin" size={18} />
-            Checking social connection…
-          </div>
-        ) : !connection ? (
-          <div className="social-post-connect">
-            <div>
-              <strong>Connect this store to social media</strong>
-              <p>
-                Each merchant uses their own Buffer account. Once connected, this item can create, preview, schedule, and publish social posts.
-              </p>
-            </div>
-            <a className="consignment-btn" href={socialSettingsHref}>
-              {configured ? 'Connect Buffer' : 'Social Media setup'}
-            </a>
-          </div>
-        ) : (
-          <>
-            <div className="social-composer-grid">
-              <div className="social-composer-editor">
-                <label className="consignment-label" htmlFor={`social-caption-${item.id}`}>
-                  Caption
-                </label>
-                <textarea
-                  id={`social-caption-${item.id}`}
-                  className="consignment-textarea"
-                  rows={8}
-                  value={caption}
-                  onChange={(event) => {
-                    setCaptionTouched(true);
-                    setCaption(event.target.value);
-                  }}
-                  disabled={disabled}
-                />
-
-                <div className="social-media-toolbar">
-                  <label className="consignment-btn secondary social-upload-button">
-                    <ImagePlus size={16} /> Add images
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      hidden
-                      disabled={disabled || uploading}
-                      onChange={(event) => {
-                        uploadFiles(event.target.files, 'image');
-                        event.target.value = '';
-                      }}
-                    />
-                  </label>
-                  <label className="consignment-btn secondary social-upload-button">
-                    <Video size={16} /> Add video
-                    <input
-                      type="file"
-                      accept="video/*"
-                      hidden
-                      disabled={disabled || uploading}
-                      onChange={(event) => {
-                        uploadFiles(event.target.files, 'video');
-                        event.target.value = '';
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="consignment-btn secondary social-upload-button"
-                    disabled={disabled || uploading}
-                    onClick={() => setShowShopifyFiles(true)}
-                  >
-                    <ImagePlus size={16} /> Shopify Files
-                  </button>
-                  {uploading && <span className="social-uploading"><Loader2 className="consignment-spin" size={15} /> Uploading…</span>}
-                </div>
-
-                <div className="social-media-grid">
-                  {media.map((entry, index) => (
-                    <div className="social-media-card" key={`${entry.id || entry.url}-${index}`}>
-                      <div className="social-media-thumb">
-                        {entry.type === 'video' ? (
-                          <video src={entry.url} muted playsInline />
-                        ) : (
-                          <img src={entry.previewUrl || entry.url} alt="" />
-                        )}
-                        <span>{index + 1}</span>
-                      </div>
-                      <div className="social-media-meta">
-                        <strong>{entry.name || (entry.type === 'video' ? 'Video' : 'Image')}</strong>
-                        <small>{entry.type}</small>
-                      </div>
-                      <div className="social-media-actions">
-                        <button type="button" onClick={() => moveMedia(index, -1)} disabled={index === 0 || disabled} aria-label="Move left">
-                          <ChevronLeft size={15} />
-                        </button>
-                        <button type="button" onClick={() => moveMedia(index, 1)} disabled={index === media.length - 1 || disabled} aria-label="Move right">
-                          <ChevronRight size={15} />
-                        </button>
-                        <button type="button" className="danger" onClick={() => removeMedia(index)} disabled={disabled} aria-label="Remove media">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="social-live-preview">
-                <span className="consignment-label">Preview</span>
-                <div className={`social-preview-card ${selectedIds.length ? (postTypes[selectedIds[0]] || 'post') : 'post'}`}>
-                  <div className="social-preview-profile">
-                    {channels.find((channel) => String(channel.id) === selectedIds[0]) ? (
-                      <>
-                        <ChannelIcon service={String(channels.find((channel) => String(channel.id) === selectedIds[0])?.service || '').toLowerCase()} />
-                        <strong>{channels.find((channel) => String(channel.id) === selectedIds[0])?.displayName || channels.find((channel) => String(channel.id) === selectedIds[0])?.name}</strong>
-                      </>
-                    ) : (
-                      <strong>Social preview</strong>
-                    )}
-                  </div>
-                  <div className="social-preview-media">
-                    {media[0] ? (
-                      media[0].type === 'video'
-                        ? <video src={media[0].url} controls muted playsInline />
-                        : <img src={media[0].previewUrl || media[0].url} alt="" />
-                    ) : (
-                      <div className="social-post-no-image">Add media</div>
-                    )}
-                    {media.length > 1 && <span className="social-preview-count">1 / {media.length}</span>}
-                  </div>
-                  <div className="social-preview-caption">{caption || 'No caption'}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="social-post-channels">
-              <span className="consignment-label">Publish to</span>
-              <div className="social-post-channel-grid">
-                {channels.map((channel) => {
-                  const id = String(channel.id);
-                  const service = String(channel.service || '').toLowerCase();
-                  const checked = selectedIds.includes(id);
-                  return (
-                    <label key={id} className={`social-post-channel ${checked ? 'selected' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleChannel(id)}
-                        disabled={disabled}
-                      />
-                      <ChannelIcon service={service} />
-                      <span>
-                        <strong>{channel.displayName || channel.name}</strong>
-                        <small>{service}</small>
-                      </span>
-                      <select
-                        className="social-post-type-select"
-                        value={postTypes[id] || 'post'}
-                        onChange={(event) => setPostTypes((current) => ({ ...current, [id]: event.target.value }))}
-                        onClick={(event) => event.stopPropagation()}
-                        disabled={disabled}
-                        aria-label={`Post type for ${channel.displayName || channel.name}`}
-                      >
-                        {postTypeOptions(service).map((type) => (
-                          <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {media.length === 0 && channels.some((channel) => ['instagram', 'tiktok'].includes(String(channel.service).toLowerCase())) && (
-              <p className="consignment-form-help">
-                Instagram and TikTok need an image or video. Add media above or select Facebook only.
-              </p>
-            )}
-
-            {error && <div className="social-post-message error">{error}</div>}
-            {message && (
-              <div className="social-post-message success">
-                <Check size={16} aria-hidden="true" /> {message}
-              </div>
-            )}
-
-            <div className="social-post-actions social-post-actions-primary">
-              <button
-                type="button"
-                className="consignment-btn social-post-now"
-                onClick={() => submitPosts('now')}
-                disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0}
-              >
-                {savingAction === 'now' ? <Loader2 className="consignment-spin" size={16} /> : <Send size={16} />}
-                Post Now
-              </button>
-
-              <button
-                type="button"
-                className="consignment-btn secondary"
-                onClick={() => submitPosts('draft')}
-                disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0}
-              >
-                {savingAction === 'draft' ? <Loader2 className="consignment-spin" size={16} /> : <Tag size={16} />}
-                Save Draft
-              </button>
-
-              <button
-                type="button"
-                className="consignment-btn secondary"
-                onClick={() => setScheduleOpen((current) => !current)}
-                disabled={disabled || Boolean(savingAction)}
-              >
-                <CalendarClock size={16} />
-                {scheduleOpen ? 'Hide Schedule' : 'Schedule'}
-              </button>
-
-              <a
-                className="consignment-btn secondary"
-                href="https://publish.buffer.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Buffer <ChevronRight size={14} aria-hidden="true" />
-              </a>
-            </div>
-
-            {scheduleOpen && (
-              <div className="social-schedule-panel">
-                <div className="social-schedule-presets">
-                  <button
-                    type="button"
-                    className="consignment-btn secondary"
-                    onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 30 * 60 * 1000)))}
-                  >
-                    +30 min
-                  </button>
-                  <button
-                    type="button"
-                    className="consignment-btn secondary"
-                    onClick={() => setScheduleAt(toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)))}
-                  >
-                    +1 hour
-                  </button>
-                  <button
-                    type="button"
-                    className="consignment-btn secondary"
-                    onClick={() => {
-                      const tomorrow = new Date();
-                      tomorrow.setDate(tomorrow.getDate() + 1);
-                      tomorrow.setHours(9, 0, 0, 0);
-                      setScheduleAt(toLocalDateTimeInput(tomorrow));
-                    }}
-                  >
-                    Tomorrow 9 AM
-                  </button>
-                </div>
-
-                <div className="social-schedule-row">
-                  <CalendarClock size={17} />
-                  <input
-                    type="datetime-local"
-                    className="consignment-input"
-                    value={scheduleAt}
-                    onChange={(event) => setScheduleAt(event.target.value)}
-                    disabled={disabled || Boolean(savingAction)}
-                  />
-                  <button
-                    type="button"
-                    className="consignment-btn"
-                    onClick={() => submitPosts('schedule')}
-                    disabled={disabled || uploading || Boolean(savingAction) || !caption.trim() || selectedIds.length === 0 || !scheduleAt}
-                  >
-                    {savingAction === 'schedule' ? <Loader2 className="consignment-spin" size={16} /> : <CalendarClock size={16} />}
-                    Schedule Post
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {showShopifyFiles && (
-          <ShopifySocialFilePicker
-            onClose={() => setShowShopifyFiles(false)}
-            existingIds={media.map((entry) => entry.id).filter(Boolean)}
-            onConfirm={(files) => {
-              const available = Math.max(0, MAX_MEDIA_ITEMS - media.length);
-              const additions = files.slice(0, available).map((file) => ({
-                id: file.id,
-                type: 'image',
-                url: file.url,
-                previewUrl: file.url,
-                name: file.alt || 'Shopify image',
-              }));
-              setMediaTouched(true);
-              setMedia((current) => [...current, ...additions]);
-              setShowShopifyFiles(false);
-              if (files.length > available) setError(`You can attach up to ${MAX_MEDIA_ITEMS} media items.`);
-            }}
-          />
-        )}
-
-        {!loading && error && !connection && (
-          <div className="social-post-message error">{error}</div>
-        )}
+        {content}
       </div>
     </details>
   );

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { uploadImage } from './productMedia.client';
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ImagePlus,
@@ -664,6 +665,7 @@ export default function ShopifyProductPanel({
   syncing = false,
   tier2Enabled = true,
   direct = false,
+  embedded = false,
 }) {
   const [categorySearch, setCategorySearch] = useState(
     shopifyForm.shopifyCategoryName || '',
@@ -763,6 +765,363 @@ export default function ShopifyProductPanel({
     );
   }
 
+  const status = shopifyForm.shopifyStatus === 'DRAFT' ? 'DRAFT' : 'ACTIVE';
+  const slug = shopifyForm.shopifyHandle || String(shopifyForm.shopifyTitle || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  const body = (
+    <fieldset
+      disabled={disabled}
+      className="consignment-shopify-product-fieldset"
+    >
+      <div className="consignment-shopify-product-layout">
+        <div className="consignment-shopify-product-main">
+          <div className="consignment-shopify-product-card">
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Title
+              </label>
+              <input
+                className="consignment-input"
+                value={shopifyForm.shopifyTitle || ''}
+                onChange={(event) =>
+                  setValue('shopifyTitle', event.target.value)
+                }
+                placeholder="Auto-filled from item description"
+              />
+            </div>
+
+            <div className="consignment-shopify-product-row">
+              <div className="consignment-form-field">
+                <label className="consignment-shopify-product-field-label">
+                  Price
+                </label>
+                <input
+                  className="consignment-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={shopifyForm.shopifyPrice ?? ''}
+                  onChange={(event) =>
+                    setValue('shopifyPrice', event.target.value)
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="consignment-form-field">
+                <label className="consignment-shopify-product-field-label">SKU</label>
+                <input className="consignment-input" value={shopifyForm.sku ?? ''} onChange={(event) => setValue('sku', event.target.value)} />
+              </div>
+              <div className="consignment-form-field">
+                <label className="consignment-shopify-product-field-label">Weight</label>
+                <div className="consignment-shopify-product-weight">
+                  <input className="consignment-input" type="number" min="0" step="any" inputMode="decimal" aria-label="Weight" value={shopifyForm.weight ?? ''} onChange={(event) => setValue('weight', event.target.value)} />
+                  <select className="consignment-select" aria-label="Weight unit" value={shopifyForm.weightUnit || 'KILOGRAMS'} onChange={(event) => setValue('weightUnit', event.target.value)}>
+                    <option value="KILOGRAMS">kg</option><option value="GRAMS">g</option><option value="POUNDS">lb</option><option value="OUNCES">oz</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <ProductMedia
+              form={shopifyForm}
+              setForm={setShopifyForm}
+              disabled={disabled}
+            />
+
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Description
+              </label>
+              <textarea
+                className="consignment-textarea consignment-shopify-product-description"
+                rows={5}
+                value={shopifyForm.productDescription || ''}
+                onChange={(event) =>
+                  setValue('productDescription', event.target.value)
+                }
+                placeholder="Shown to customers on Shopify"
+              />
+            </div>
+
+            <details className="consignment-shopify-fold">
+              <summary>
+                <span>
+                  Category
+                  {shopifyForm.shopifyCategoryName && <small> · {shopifyForm.shopifyCategoryName}</small>}
+                </span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div className="consignment-form-field consignment-shopify-product-category-field">
+                <input
+                  className="consignment-input"
+                  aria-label="Shopify category"
+                  value={categorySearch}
+                  onChange={(event) => {
+                    setCategorySearch(event.target.value);
+                    if (
+                      event.target.value !== shopifyForm.shopifyCategoryName
+                    ) {
+                      setShopifyForm((current) => ({
+                        ...current,
+                        shopifyCategoryId: '',
+                        shopifyCategoryName: '',
+                      }));
+                    }
+                  }}
+                  placeholder="Search Shopify categories"
+                />
+
+                {searchingCategories && (
+                  <div className="consignment-row-sub consignment-shopify-product-category-status">
+                    Searching Shopify…
+                  </div>
+                )}
+
+                {categoryResults.length > 0 && (
+                  <div className="consignment-category-results">
+                    {categoryResults.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        className="consignment-category-result"
+                        onClick={() => {
+                          setShopifyForm((current) => ({
+                            ...current,
+                            shopifyCategoryId: category.id,
+                            shopifyCategoryName: category.name,
+                          }));
+                          setCategorySearch(category.name);
+                          setCategoryResults([]);
+                        }}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {shopifyForm.shopifyCategoryId && (
+                  <div className="consignment-selected-category">
+                    <span>{shopifyForm.shopifyCategoryName}</span>
+                    <button
+                      type="button"
+                      className="consignment-batch-remove"
+                      aria-label="Remove Shopify category"
+                      onClick={() => {
+                        setShopifyForm((current) => ({
+                          ...current,
+                          shopifyCategoryId: '',
+                          shopifyCategoryName: '',
+                        }));
+                        setCategorySearch('');
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </details>
+
+            <details className="consignment-shopify-fold">
+              <summary>
+                <span>
+                  Search engine listing
+                  {(shopifyForm.seoTitle || shopifyForm.shopifyTitle) && <small> · {shopifyForm.seoTitle || shopifyForm.shopifyTitle}</small>}
+                </span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div className="consignment-form-field">
+                <div className="consignment-seo-preview" aria-label="Search engine listing preview">
+                  <strong>{shopifyForm.seoTitle || shopifyForm.shopifyTitle || 'Product title'}</strong>
+                  <div>{organization.storefrontUrl}/products/{slug}</div>
+                  <p>{shopifyForm.seoDescription || shopifyForm.productDescription || 'Product description'}</p>
+                </div>
+                <label className="consignment-shopify-product-field-label">Page title</label>
+                <input className="consignment-input" value={shopifyForm.seoTitle || ''} onChange={(event) => setValue('seoTitle', event.target.value)} />
+                <label className="consignment-shopify-product-field-label">Meta description</label>
+                <textarea className="consignment-textarea" rows={3} value={shopifyForm.seoDescription || ''} onChange={(event) => setValue('seoDescription', event.target.value)} />
+                <label className="consignment-shopify-product-field-label">URL handle</label>
+                <input className="consignment-input" value={shopifyForm.shopifyHandle || ''} onChange={(event) => setValue('shopifyHandle', event.target.value)} placeholder="product-url-handle" />
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <aside className="consignment-shopify-product-sidebar">
+          <div className="consignment-shopify-product-side-card">
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label" htmlFor="shopify-product-status">
+                Status
+              </label>
+              <select
+                id="shopify-product-status"
+                className="consignment-select"
+                value={status}
+                onChange={(event) => setValue('shopifyStatus', event.target.value)}
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="DRAFT">Draft</option>
+              </select>
+              <p className="consignment-shopify-help" style={{ margin: '6px 0 0' }}>
+                {status === 'DRAFT'
+                  ? 'Draft: hidden from customers on every channel, including POS, until you set it back to Active.'
+                  : 'Active: customers can buy it on the channels below.'}
+              </p>
+            </div>
+
+            <div className="consignment-shopify-product-side-heading">
+              Publishing
+            </div>
+
+            <label className="consignment-shopify-product-publish-option">
+              <input
+                type="checkbox"
+                checked={shopifyForm.publishToPos !== false}
+                onChange={(event) =>
+                  setValue('publishToPos', event.target.checked)
+                }
+              />
+              <span>
+                <strong>Point of Sale</strong>
+                <small>Publish this product to Shopify POS.</small>
+              </span>
+            </label>
+
+            <label className="consignment-shopify-product-publish-option">
+              <input
+                type="checkbox"
+                checked={shopifyForm.publishOnline === true}
+                onChange={(event) =>
+                  setValue('publishOnline', event.target.checked)
+                }
+              />
+              <span>
+                <strong>Online Store</strong>
+                <small>Also publish this product online.</small>
+              </span>
+            </label>
+
+            {publishingChannels.metaInstalled ? (
+              <label className="consignment-shopify-product-publish-option">
+                <input
+                  type="checkbox"
+                  checked={shopifyForm.publishMeta === true}
+                  onChange={(event) => setValue('publishMeta', event.target.checked)}
+                />
+                <span>
+                  <strong>Facebook &amp; Instagram</strong>
+                  <small>Publish this product to the connected Meta sales channel.</small>
+                </span>
+              </label>
+            ) : (
+              <p className="consignment-shopify-help" style={{ margin: '10px 0 0' }}>
+                Want to tag this product in Facebook or Instagram posts?{' '}
+                <a href="https://apps.shopify.com/facebook" target="_blank" rel="noreferrer">
+                  Install Facebook &amp; Instagram by Meta
+                </a>
+              </p>
+            )}
+          </div>
+
+          <div className="consignment-shopify-product-side-card">
+            <div className="consignment-shopify-product-side-heading">
+              Product organization
+            </div>
+
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Type
+              </label>
+              <input
+                className="consignment-input"
+                value={shopifyForm.productType || ''}
+                onChange={(event) =>
+                  setValue('productType', event.target.value)
+                }
+                placeholder="Product type"
+              />
+            </div>
+
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Vendor
+              </label>
+              <input
+                className="consignment-input"
+                value={shopifyForm.vendor || ''}
+                onChange={(event) => setValue('vendor', event.target.value)}
+                placeholder="Defaults to store name"
+              />
+            </div>
+
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Collections
+              </label>
+              <CollectionEditor
+                value={shopifyForm.collections}
+                disabled={disabled}
+                options={organization.collections}
+                onChange={(value) => setValue('collections', value)}
+              />
+            </div>
+
+            <div className="consignment-form-field">
+              <label className="consignment-shopify-product-field-label">
+                Tags
+              </label>
+              <TagEditor
+                value={shopifyForm.tags}
+                disabled={disabled}
+                suggestions={organization.tags}
+                onChange={(value) => setValue('tags', value)}
+              />
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div className="consignment-shopify-product-actions">
+        {linkedProductId && (
+          <span className="consignment-shopify-product-linked">
+            <Check size={14} />
+            Linked to Shopify · {linkedStatus === 'DRAFT' ? 'Draft' : linkedStatus === 'ACTIVE' ? 'Active' : linkedStatus || 'Connected'}
+          </span>
+        )}
+        <button
+          className="consignment-btn"
+          disabled={
+            !canSync ||
+            disabled ||
+            syncing ||
+            shopifyForm.media?.some((entry) => entry.pending) ||
+            (
+              shopifyForm.publishToPos === false &&
+              shopifyForm.publishOnline !== true &&
+              shopifyForm.publishMeta !== true
+            )
+          }
+          onClick={onSync}
+        >
+          {syncing ? (
+            <Loader2 className="consignment-spin" size={16} />
+          ) : linkedProductId ? (
+            <Check size={16} />
+          ) : (
+            <ShoppingBag size={16} />
+          )}
+          {linkedProductId ? 'Save to Shopify' : 'Create Shopify product'}
+        </button>
+      </div>
+    </fieldset>
+  );
+
+  if (embedded) {
+    return <div className="consignment-shopify-product-body consignment-shopify-embedded">{body}</div>;
+  }
+
   return (
     <details className="consignment-form-section" open>
       <summary className="consignment-form-section-head consignment-shopify-summary">
@@ -778,337 +1137,7 @@ export default function ShopifyProductPanel({
       </summary>
 
       <div className="consignment-form-section-body consignment-shopify-product-body">
-        <fieldset
-          disabled={disabled}
-          className="consignment-shopify-product-fieldset"
-        >
-          <div className="consignment-shopify-product-layout">
-            <div className="consignment-shopify-product-main">
-              <div className="consignment-shopify-product-card">
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Title
-                  </label>
-                  <input
-                    className="consignment-input"
-                    value={shopifyForm.shopifyTitle || ''}
-                    onChange={(event) =>
-                      setValue('shopifyTitle', event.target.value)
-                    }
-                    placeholder="Auto-filled from item description"
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Price
-                  </label>
-                  <input
-                    className="consignment-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={shopifyForm.shopifyPrice ?? ''}
-                    onChange={(event) =>
-                      setValue('shopifyPrice', event.target.value)
-                    }
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Description
-                  </label>
-                  <textarea
-                    className="consignment-textarea consignment-shopify-product-description"
-                    rows={6}
-                    value={shopifyForm.productDescription || ''}
-                    onChange={(event) =>
-                      setValue('productDescription', event.target.value)
-                    }
-                    placeholder="Shown to customers on Shopify"
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">SKU</label>
-                  <input className="consignment-input" value={shopifyForm.sku ?? ''} onChange={(event) => setValue('sku', event.target.value)} />
-                </div>
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">Weight</label>
-                  <input className="consignment-input" type="number" min="0" step="any" inputMode="decimal" value={shopifyForm.weight ?? ''} onChange={(event) => setValue('weight', event.target.value)} />
-                  <select className="consignment-select" aria-label="Weight unit" value={shopifyForm.weightUnit || 'KILOGRAMS'} onChange={(event) => setValue('weightUnit', event.target.value)}>
-                    <option value="KILOGRAMS">kg</option><option value="GRAMS">g</option><option value="POUNDS">lb</option><option value="OUNCES">oz</option>
-                  </select>
-                </div>
-                <div className="consignment-form-field">
-                  <h3>Search engine listing</h3>
-                  <div aria-label="Search engine listing preview">
-                    <strong>{shopifyForm.seoTitle || shopifyForm.shopifyTitle || 'Product title'}</strong>
-                    <div>{organization.storefrontUrl}/products/{shopifyForm.shopifyHandle || String(shopifyForm.shopifyTitle || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}</div>
-                    <p>{shopifyForm.seoDescription || shopifyForm.productDescription || 'Product description'}</p>
-                  </div>
-                  <label className="consignment-shopify-product-field-label">Page title</label>
-                  <input className="consignment-input" value={shopifyForm.seoTitle || ''} onChange={(event) => setValue('seoTitle', event.target.value)} />
-                  <label className="consignment-shopify-product-field-label">Meta description</label>
-                  <textarea className="consignment-textarea" rows={3} value={shopifyForm.seoDescription || ''} onChange={(event) => setValue('seoDescription', event.target.value)} />
-                  <label className="consignment-shopify-product-field-label">URL handle</label>
-                  <input className="consignment-input" value={shopifyForm.shopifyHandle || ''} onChange={(event) => setValue('shopifyHandle', event.target.value)} placeholder="product-url-handle" />
-                </div>
-
-                <ProductMedia
-                  form={shopifyForm}
-                  setForm={setShopifyForm}
-                  disabled={disabled}
-                />
-
-                <div className="consignment-form-field consignment-shopify-product-category-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Category
-                  </label>
-
-                  <input
-                    className="consignment-input"
-                    value={categorySearch}
-                    onChange={(event) => {
-                      setCategorySearch(event.target.value);
-                      if (
-                        event.target.value !== shopifyForm.shopifyCategoryName
-                      ) {
-                        setShopifyForm((current) => ({
-                          ...current,
-                          shopifyCategoryId: '',
-                          shopifyCategoryName: '',
-                        }));
-                      }
-                    }}
-                    placeholder="Search Shopify categories"
-                  />
-
-                  {searchingCategories && (
-                    <div className="consignment-row-sub consignment-shopify-product-category-status">
-                      Searching Shopify…
-                    </div>
-                  )}
-
-                  {categoryResults.length > 0 && (
-                    <div className="consignment-category-results">
-                      {categoryResults.map((category) => (
-                        <button
-                          key={category.id}
-                          type="button"
-                          className="consignment-category-result"
-                          onClick={() => {
-                            setShopifyForm((current) => ({
-                              ...current,
-                              shopifyCategoryId: category.id,
-                              shopifyCategoryName: category.name,
-                            }));
-                            setCategorySearch(category.name);
-                            setCategoryResults([]);
-                          }}
-                        >
-                          {category.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {shopifyForm.shopifyCategoryId && (
-                    <div className="consignment-selected-category">
-                      <span>{shopifyForm.shopifyCategoryName}</span>
-                      <button
-                        type="button"
-                        className="consignment-batch-remove"
-                        aria-label="Remove Shopify category"
-                        onClick={() => {
-                          setShopifyForm((current) => ({
-                            ...current,
-                            shopifyCategoryId: '',
-                            shopifyCategoryName: '',
-                          }));
-                          setCategorySearch('');
-                        }}
-                      >
-                        <X size={13} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-
-              </div>
-            </div>
-
-            <aside className="consignment-shopify-product-sidebar">
-              <div className="consignment-shopify-product-side-card">
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Status
-                  </label>
-                  <select className="consignment-select" value="ACTIVE" disabled>
-                    <option value="ACTIVE">Active</option>
-                  </select>
-                </div>
-
-                <div className="consignment-shopify-product-side-heading">
-                  Publishing
-                </div>
-
-                <label className="consignment-shopify-product-publish-option">
-                  <input
-                    type="checkbox"
-                    checked={shopifyForm.publishToPos !== false}
-                    onChange={(event) =>
-                      setValue('publishToPos', event.target.checked)
-                    }
-                  />
-                  <span>
-                    <strong>Point of Sale</strong>
-                    <small>Publish this product to Shopify POS.</small>
-                  </span>
-                </label>
-
-                <label className="consignment-shopify-product-publish-option">
-                  <input
-                    type="checkbox"
-                    checked={shopifyForm.publishOnline === true}
-                    onChange={(event) =>
-                      setValue('publishOnline', event.target.checked)
-                    }
-                  />
-                  <span>
-                    <strong>Online Store</strong>
-                    <small>Also publish this product online.</small>
-                  </span>
-                </label>
-
-                {publishingChannels.metaInstalled ? (
-                  <label className="consignment-shopify-product-publish-option">
-                    <input
-                      type="checkbox"
-                      checked={shopifyForm.publishMeta === true}
-                      onChange={(event) => setValue('publishMeta', event.target.checked)}
-                    />
-                    <span>
-                      <strong>Facebook &amp; Instagram</strong>
-                      <small>Publish this product to the connected Meta sales channel.</small>
-                    </span>
-                  </label>
-                ) : (
-                  <p className="consignment-shopify-help" style={{ margin: '10px 0 0' }}>
-                    Want to tag this product in Facebook or Instagram posts?{' '}
-                    <a href="https://apps.shopify.com/facebook" target="_blank" rel="noreferrer">
-                      Install Facebook &amp; Instagram by Meta
-                    </a>
-                  </p>
-                )}
-              </div>
-
-              <div className="consignment-shopify-product-side-card">
-                <div className="consignment-shopify-product-side-heading">
-                  Product organization
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Type
-                  </label>
-                  <input
-                    className="consignment-input"
-                    value={shopifyForm.productType || ''}
-                    onChange={(event) =>
-                      setValue('productType', event.target.value)
-                    }
-                    placeholder="Product type"
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Vendor
-                  </label>
-                  <input
-                    className="consignment-input"
-                    value={shopifyForm.vendor || ''}
-                    onChange={(event) => setValue('vendor', event.target.value)}
-                    placeholder="Defaults to store name"
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Collections
-                  </label>
-                  <CollectionEditor
-                    value={shopifyForm.collections}
-                    disabled={disabled}
-                    options={organization.collections}
-                    onChange={(value) => setValue('collections', value)}
-                  />
-                </div>
-
-                <div className="consignment-form-field">
-                  <label className="consignment-shopify-product-field-label">
-                    Tags
-                  </label>
-                  <TagEditor
-                    value={shopifyForm.tags}
-                    disabled={disabled}
-                    suggestions={organization.tags}
-                    onChange={(value) => setValue('tags', value)}
-                  />
-                </div>
-              </div>
-            </aside>
-          </div>
-
-          {linkedProductId && (
-            <div className="consignment-shopify-product-linked">
-              <Check size={14} />
-              Linked Shopify product · {linkedStatus || 'Connected'}
-            </div>
-          )}
-
-          <div className="consignment-shopify-product-actions">
-            <button
-              className="consignment-btn"
-              disabled={
-                !canSync ||
-                disabled ||
-                syncing ||
-                shopifyForm.media?.some((entry) => entry.pending) ||
-                (
-                  shopifyForm.publishToPos === false &&
-                  shopifyForm.publishOnline !== true &&
-                  shopifyForm.publishMeta !== true
-                )
-              }
-              onClick={onSync}
-            >
-              {syncing ? (
-                <Loader2 className="consignment-spin" size={16} />
-              ) : linkedProductId ? (
-                <Check size={16} />
-              ) : (
-                <ShoppingBag size={16} />
-              )}
-              {linkedProductId ? 'Update Shopify product' : 'Create Shopify product'}
-            </button>
-
-            {linkedProductId && (
-              <a
-                className="consignment-btn secondary"
-                href={`shopify://admin/products/${String(linkedProductId).split('/').pop()}`}
-                target="_top"
-              >
-                Edit in Shopify
-              </a>
-            )}
-          </div>
-        </fieldset>
+        {body}
       </div>
     </details>
   );

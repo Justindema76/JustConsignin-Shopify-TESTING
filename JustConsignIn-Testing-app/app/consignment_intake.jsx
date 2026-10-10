@@ -649,6 +649,10 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {ready && view === 'editItem' && activeItem && (
         <EditItemScreen
           item={activeItem}
+          consignor={
+            consignors.find((entry) => entry.id === activeItem.consignorId) ||
+            null
+          }
           onBack={() => setView('consignor')}
           onSave={handleUpdateItem}
           onDelete={handleDeleteItemFromEdit}

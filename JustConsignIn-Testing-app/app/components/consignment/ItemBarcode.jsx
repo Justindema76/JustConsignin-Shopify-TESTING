@@ -65,7 +65,9 @@ function svgToPngBlob(svg, width = 900, height = 300) {
   });
 }
 
-export default function ItemBarcode({ value, description = "Consignment item" }) {
+// `compact` renders a small barcode chip + Print label for page headers;
+// copy and print behave the same in both layouts.
+export default function ItemBarcode({ value, description = "Consignment item", compact = false }) {
   const barcodeRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("idle");
   const navigate = useNavigate();
@@ -107,6 +109,17 @@ export default function ItemBarcode({ value, description = "Consignment item" })
   }
 
   if (!barcode) return null;
+  if (compact) {
+    const copyLabel = copyStatus === "copied" ? "Copied" : copyStatus === "shared" ? "Share opened" : copyStatus === "error" ? "Copy unavailable" : "Copy barcode";
+    return <div className="consignment-barcode-chip-row" ref={barcodeRef}>
+      <div className="consignment-barcode-chip">
+        <BarcodeGraphic barcode={barcode} />
+        <span className="consignment-barcode-chip-value">{barcode.readableValue}</span>
+        <button type="button" className="consignment-barcode-chip-copy" onClick={copyBarcode} aria-label={copyLabel} title={copyLabel}>{copyStatus === "copied" ? <Check size={16} /> : <Copy size={16} />}</button>
+      </div>
+      <button type="button" className="consignment-btn secondary" onClick={printLabel}><Printer size={16} />Print label</button>
+    </div>;
+  }
   return <section className="consignment-item-barcode-card" ref={barcodeRef}>
     <BarcodeGraphic barcode={barcode} />
     <div className="consignment-item-barcode-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
