@@ -52,6 +52,7 @@ function LockedTab({ title }) {
 export default function EditItemScreen({
   item,
   consignor = null,
+  currency = 'CAD',
   onBack,
   onSave,
   onDelete,
@@ -164,13 +165,6 @@ export default function EditItemScreen({
 
   const headerActions = (
     <div className="consignment-item-actions">
-      {tier2Enabled && (
-        <ItemBarcode
-          compact
-          value={item.itemNumber}
-          description={item.description || item.type || 'Consignment item'}
-        />
-      )}
       <div className="consignment-item-menu" ref={menuRef}>
         <button
           type="button"
@@ -180,7 +174,7 @@ export default function EditItemScreen({
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((current) => !current)}
         >
-          <MoreHorizontal size={20} />
+          <MoreHorizontal size={20} strokeWidth={3} />
         </button>
         {menuOpen && (
           <div className="consignment-item-menu-popover" role="menu">
@@ -285,6 +279,15 @@ export default function EditItemScreen({
           hidden={tab !== 'details'}
           className="consignment-item-panel"
         >
+          {tier2Enabled && (
+            <ItemBarcode
+              value={item.itemNumber}
+              description={item.description || item.type || 'Consignment item'}
+              price={item.price}
+              currency={currency}
+            />
+          )}
+
           {confirmingDelete && (
             <div className="consignment-card consignment-item-delete-confirm">
               <span>

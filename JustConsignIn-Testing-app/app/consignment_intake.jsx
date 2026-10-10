@@ -63,6 +63,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
   const [ready, setReady] = useState(false);
   const [consignors, setConsignors] = useState([]);
   const [items, setItems] = useState([]);
+  const [shopCurrency, setShopCurrency] = useState('CAD');
   const [view, setView] = useState('dashboard');
   const [activeId, setActiveId] = useState(null);
   const [activeItemId, setActiveItemId] = useState(null);
@@ -83,6 +84,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
   }
   async function refreshData() {
     const data = await getConsignmentData();
+    setShopCurrency(data.shop?.currencyCode || 'CAD');
     setConsignors(data.consignors);
     setItems(data.items);
     return data;
@@ -653,6 +655,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
             consignors.find((entry) => entry.id === activeItem.consignorId) ||
             null
           }
+          currency={shopCurrency}
           onBack={() => setView('consignor')}
           onSave={handleUpdateItem}
           onDelete={handleDeleteItemFromEdit}

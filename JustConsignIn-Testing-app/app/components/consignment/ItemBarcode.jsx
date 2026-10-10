@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 
-import { useRef, useState } from "react";
-import { Check, Copy, Printer } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, Download, Printer, X } from "lucide-react";
+import { useLocation } from "react-router";
 
 const CODE_128_PATTERNS = ["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
 
@@ -65,12 +65,49 @@ function svgToPngBlob(svg, width = 900, height = 300) {
   });
 }
 
-// `compact` renders a small barcode chip + Print label for page headers;
-// copy and print behave the same in both layouts.
-export default function ItemBarcode({ value, description = "Consignment item", compact = false }) {
+// Pop-up preview of the printed label. Matches the PDF from
+// /app/print/:itemNumber.pdf: 2.25 × 1.25 in, description and price on top,
+// barcode below.
+function PrintLabelDialog({ barcode, description, price, currency, pdfUrl, onClose }) {
+  useEffect(() => {
+    function onKey(event) { if (event.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  let priceText;
+  try {
+    priceText = new Intl.NumberFormat("en-CA", { style: "currency", currency: currency || "CAD" }).format(Number(price || 0));
+  } catch {
+    priceText = `$${Number(price || 0).toFixed(2)}`;
+  }
+
+  return <div className="consignment-print-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="consignment-print-dialog" role="dialog" aria-modal="true" aria-labelledby="print-label-title">
+      <header className="consignment-print-head">
+        <strong id="print-label-title">Print label</strong>
+        <button type="button" className="consignment-print-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+      </header>
+      <p className="consignment-print-note">This is what prints. Label size 2.25 × 1.25 in.</p>
+      <div className="consignment-print-preview">
+        <div className="consignment-print-sheet" aria-label={`Label for ${barcode.readableValue}`}>
+          <div className="consignment-print-heading"><strong>{description}</strong><span>{priceText}</span></div>
+          <BarcodeGraphic barcode={barcode} />
+        </div>
+      </div>
+      <p className="consignment-print-note">On a phone: download the PDF, open it in Files, then choose Share → Print.</p>
+      <footer className="consignment-print-actions">
+        <button type="button" className="consignment-btn secondary" onClick={onClose}>Close</button>
+        <a className="consignment-btn" href={pdfUrl} download={`label-${barcode.readableValue}.pdf`}><Download size={16} />Download PDF</a>
+      </footer>
+    </section>
+  </div>;
+}
+
+export default function ItemBarcode({ value, description = "Consignment item", price = 0, currency = "CAD" }) {
   const barcodeRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("idle");
-  const navigate = useNavigate();
+  const [printOpen, setPrintOpen] = useState(false);
   const location = useLocation();
   let barcode;
   try { barcode = buildBarcode(value); } catch { barcode = null; }
@@ -105,26 +142,25 @@ export default function ItemBarcode({ value, description = "Consignment item", c
   }
 
   function printLabel() {
-    navigate(`/app/print/${encodeURIComponent(barcode.readableValue)}${location.search}`);
+    setPrintOpen(true);
   }
 
   if (!barcode) return null;
-  if (compact) {
-    const copyLabel = copyStatus === "copied" ? "Copied" : copyStatus === "shared" ? "Share opened" : copyStatus === "error" ? "Copy unavailable" : "Copy barcode";
-    return <div className="consignment-barcode-chip-row" ref={barcodeRef}>
-      <div className="consignment-barcode-chip">
-        <BarcodeGraphic barcode={barcode} />
-        <span className="consignment-barcode-chip-value">{barcode.readableValue}</span>
-        <button type="button" className="consignment-barcode-chip-copy" onClick={copyBarcode} aria-label={copyLabel} title={copyLabel}>{copyStatus === "copied" ? <Check size={16} /> : <Copy size={16} />}</button>
-      </div>
-      <button type="button" className="consignment-btn secondary" onClick={printLabel}><Printer size={16} />Print label</button>
-    </div>;
-  }
   return <section className="consignment-item-barcode-card" ref={barcodeRef}>
     <BarcodeGraphic barcode={barcode} />
     <div className="consignment-item-barcode-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
       <button type="button" className="consignment-btn secondary consignment-item-barcode-button" onClick={copyBarcode}>{copyStatus === "copied" ? <Check size={17} /> : <Copy size={17} />}{copyStatus === "copied" ? "Copied" : copyStatus === "shared" ? "Share opened" : copyStatus === "error" ? "Copy unavailable" : "Copy barcode"}</button>
       <button type="button" className="consignment-btn consignment-item-barcode-button" onClick={printLabel}><Printer size={17} />Print label</button>
     </div>
+    {printOpen && (
+      <PrintLabelDialog
+        barcode={barcode}
+        description={description}
+        price={price}
+        currency={currency}
+        pdfUrl={`/app/print/${encodeURIComponent(barcode.readableValue)}.pdf${location.search}`}
+        onClose={() => setPrintOpen(false)}
+      />
+    )}
   </section>;
 }
