@@ -5,8 +5,8 @@
    ============================================================================ */
 
 .consignment-item-page {
-  --control: 40px;
-  --item-width: 1120px;
+  --control: 32px;
+  --item-width: 1000px;
 }
 
 /* Keep the page a readable width, centered, instead of stretching across
@@ -423,5 +423,262 @@
 
   .consignment-item-facts {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   MATCH SHOPIFY ADMIN (Polaris)
+   Same look as Shopify's own product page: 13px text, 32px controls with
+   8px corners, plain labels, white 12px-radius cards, sentence-case badges.
+   Phones keep fields at 16px so iOS doesn't zoom in on tap.
+   ============================================================================ */
+.consignment-item-page {
+  --p-text: #303030;
+  --p-text-secondary: #616161;
+  --p-border: #e3e3e3;
+  --p-input-border: #8a8a8a;
+  --p-card-shadow: 0 1px 0 0 rgba(26, 26, 26, 0.07), 0 0 0 1px rgba(26, 26, 26, 0.04);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--p-text);
+}
+
+.consignment-item-page h1,
+.consignment-item-page h2,
+.consignment-item-page h3,
+.consignment-item-page h4,
+.consignment-item-page input,
+.consignment-item-page select,
+.consignment-item-page textarea,
+.consignment-item-page button {
+  font-family: inherit;
+}
+
+/* Page title like Shopify's: 20px bold */
+.consignment-item-page .consignment-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Cards */
+.consignment-item-page .consignment-card,
+.consignment-item-page .consignment-shopify-product-card,
+.consignment-item-page .consignment-shopify-product-side-card,
+.consignment-item-page .consignment-item-locked {
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--p-card-shadow);
+}
+
+.consignment-item-page .consignment-shopify-product-card,
+.consignment-item-page .consignment-shopify-product-side-card,
+.consignment-item-page .consignment-item-card {
+  padding: 16px;
+}
+
+/* Section headings inside cards: 13px semibold */
+.consignment-item-page .consignment-item-card h2,
+.consignment-item-page .consignment-shopify-product-side-heading {
+  margin: 0 0 8px;
+  color: var(--p-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* Labels: plain 13px, like Shopify's "Title", "Description" */
+.consignment-item-page .consignment-label,
+.consignment-item-page .consignment-shopify-product-field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--p-text);
+  font-size: 13px;
+  font-weight: 450;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Fields */
+.consignment-item-page .consignment-input,
+.consignment-item-page .consignment-select,
+.consignment-item-page .consignment-textarea {
+  border: 1px solid var(--p-input-border);
+  border-radius: 8px;
+  background: #fdfdfd;
+  color: var(--p-text);
+  font-size: 13px;
+}
+
+.consignment-item-page .consignment-input,
+.consignment-item-page .consignment-select {
+  height: var(--control);
+  padding: 0 12px;
+}
+
+.consignment-item-page .consignment-textarea {
+  padding: 6px 12px;
+  line-height: 20px;
+}
+
+.consignment-item-page .consignment-input:focus,
+.consignment-item-page .consignment-select:focus,
+.consignment-item-page .consignment-textarea:focus {
+  border-color: #005bd3;
+  box-shadow: 0 0 0 1px #005bd3;
+}
+
+/* Buttons: 32px, 8px corners, 13px semibold */
+.consignment-item-page .consignment-btn {
+  height: var(--control);
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.12);
+}
+
+.consignment-item-page .consignment-btn.secondary {
+  border: 0;
+  background: #fff;
+  color: var(--p-text);
+  box-shadow: inset 0 -1px 0 0 #b5b5b5, inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.consignment-item-page .consignment-btn.secondary:hover {
+  background: #fafafa;
+}
+
+/* Header controls share the 32px height */
+.consignment-item-page .consignment-theme-toggle,
+.consignment-item-page .consignment-back {
+  width: var(--control);
+  height: var(--control);
+  min-width: var(--control);
+  flex-basis: var(--control);
+  border-radius: 8px;
+}
+
+.consignment-item-page .consignment-barcode-chip {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: inset 0 -1px 0 0 #b5b5b5, inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.consignment-item-page .consignment-barcode-chip .consignment-item-barcode-graphic {
+  width: 88px;
+}
+
+.consignment-item-page .consignment-barcode-chip .consignment-item-barcode-graphic svg {
+  height: 24px;
+}
+
+.consignment-item-page .consignment-barcode-chip-value {
+  font-size: 13px;
+}
+
+.consignment-item-page .consignment-barcode-chip-copy {
+  width: 26px;
+  height: 26px;
+}
+
+/* Badges like Shopify's "Active": sentence case, 12px, rounded */
+.consignment-item-page .consignment-header-meta .consignment-badge,
+.consignment-item-page .consignment-header-meta .consignment-product-badge,
+.consignment-item-page .consignment-item-money .consignment-badge {
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.consignment-item-page .consignment-item-price {
+  font-size: 16px;
+}
+
+/* Tabs */
+.consignment-item-page .consignment-item-tabs button {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* Everything else at 13px; small notes at 12px */
+.consignment-item-page .consignment-item-consignor,
+.consignment-item-page .consignment-item-facts > div,
+.consignment-item-page .consignment-item-money dl > div,
+.consignment-item-page .consignment-item-menu-popover button,
+.consignment-item-page .consignment-shopify-product-publish-option strong,
+.consignment-item-page .social-post-channel strong,
+.consignment-item-page .consignment-shopify-fold > summary {
+  font-size: 13px;
+}
+
+.consignment-item-page .consignment-item-facts dt,
+.consignment-item-page .consignment-item-money dt,
+.consignment-item-page .consignment-item-consignor {
+  color: var(--p-text-secondary);
+}
+
+.consignment-item-page .consignment-item-facts dd,
+.consignment-item-page .consignment-item-money dd {
+  font-weight: 550;
+}
+
+.consignment-item-page .consignment-item-facts > div,
+.consignment-item-page .consignment-item-money dl > div {
+  padding: 8px 0;
+  border-color: var(--p-border);
+}
+
+.consignment-item-page .consignment-form-help,
+.consignment-item-page .consignment-shopify-help,
+.consignment-item-page .consignment-shopify-product-publish-option small,
+.consignment-item-page .consignment-shopify-product-linked,
+.consignment-item-page .social-post-channel small,
+.consignment-item-page .social-post-hint,
+.consignment-item-page .social-link-button,
+.consignment-item-page .consignment-shopify-fold > summary small,
+.consignment-item-page .consignment-shopify-product-media-add-actions button,
+.consignment-item-page .consignment-shopify-product-media-add,
+.consignment-item-page .consignment-shopify-product-chip,
+.consignment-item-page .consignment-shopify-product-inline-link,
+.consignment-item-page .consignment-selected-category,
+.consignment-item-page .consignment-category-result {
+  font-size: 12px;
+}
+
+.consignment-item-page .consignment-form-help,
+.consignment-item-page .consignment-shopify-help,
+.consignment-item-page .consignment-shopify-product-publish-option small {
+  color: var(--p-text-secondary);
+}
+
+/* Folded "Search engine listing" row */
+.consignment-item-page .consignment-shopify-fold {
+  border-color: var(--p-border);
+  border-radius: 8px;
+}
+
+/* Checkboxes like Polaris */
+.consignment-item-page input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #303030;
+}
+
+@media (max-width: 640px) {
+  .consignment-item-page .consignment-input,
+  .consignment-item-page .consignment-select,
+  .consignment-item-page .consignment-textarea,
+  .consignment-item-page input,
+  .consignment-item-page select,
+  .consignment-item-page textarea {
+    font-size: 16px;
+  }
+
+  .consignment-item-page .consignment-title {
+    font-size: 18px;
   }
 }

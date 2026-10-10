@@ -1038,6 +1038,41 @@ export default function ShopifyProductPanel({
                 />
               </div>
             </details>
+            <div className="consignment-shopify-product-actions">
+              {linkedProductId && (
+                <span className="consignment-shopify-product-linked">
+                  <Check size={14} />
+                  Linked to Shopify ·{' '}
+                  {linkedStatus === 'DRAFT'
+                    ? 'Draft'
+                    : linkedStatus === 'ACTIVE'
+                      ? 'Active'
+                      : linkedStatus || 'Connected'}
+                </span>
+              )}
+              <button
+                className="consignment-btn"
+                disabled={
+                  !canSync ||
+                  disabled ||
+                  syncing ||
+                  shopifyForm.media?.some((entry) => entry.pending) ||
+                  (shopifyForm.publishToPos === false &&
+                    shopifyForm.publishOnline !== true &&
+                    shopifyForm.publishMeta !== true)
+                }
+                onClick={onSync}
+              >
+                {syncing ? (
+                  <Loader2 className="consignment-spin" size={16} />
+                ) : linkedProductId ? (
+                  <Check size={16} />
+                ) : (
+                  <ShoppingBag size={16} />
+                )}
+                {linkedProductId ? 'Save to Shopify' : 'Create Shopify product'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1192,42 +1227,6 @@ export default function ShopifyProductPanel({
             </div>
           </div>
         </aside>
-      </div>
-
-      <div className="consignment-shopify-product-actions">
-        {linkedProductId && (
-          <span className="consignment-shopify-product-linked">
-            <Check size={14} />
-            Linked to Shopify ·{' '}
-            {linkedStatus === 'DRAFT'
-              ? 'Draft'
-              : linkedStatus === 'ACTIVE'
-                ? 'Active'
-                : linkedStatus || 'Connected'}
-          </span>
-        )}
-        <button
-          className="consignment-btn"
-          disabled={
-            !canSync ||
-            disabled ||
-            syncing ||
-            shopifyForm.media?.some((entry) => entry.pending) ||
-            (shopifyForm.publishToPos === false &&
-              shopifyForm.publishOnline !== true &&
-              shopifyForm.publishMeta !== true)
-          }
-          onClick={onSync}
-        >
-          {syncing ? (
-            <Loader2 className="consignment-spin" size={16} />
-          ) : linkedProductId ? (
-            <Check size={16} />
-          ) : (
-            <ShoppingBag size={16} />
-          )}
-          {linkedProductId ? 'Save to Shopify' : 'Create Shopify product'}
-        </button>
       </div>
     </fieldset>
   );
