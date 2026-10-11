@@ -322,7 +322,9 @@ export default function PayoutReceiptScreen({
               Print receipt
             </button>
             {emailHref ? (
-              <a className="consignment-btn" href={emailHref}>
+              // Open the email app outside the Shopify admin frame; loading a
+              // mailto: link inside the frame shows "This content is blocked".
+              <a className="consignment-btn" href={emailHref} target="_blank" rel="noreferrer">
                 <Mail size={17} />
                 Email receipt
               </a>
