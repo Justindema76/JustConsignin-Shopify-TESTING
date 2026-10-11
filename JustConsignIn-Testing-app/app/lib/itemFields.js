@@ -25,7 +25,7 @@ export const CATEGORIES = [
 
 export const CONDITIONS = ['New with tags', 'Like new', 'Good', 'Fair'];
 
-export function buildShopifyAutoFill(item = {}, consignor = null) {
+export function buildShopifyAutoFill(item = {}) {
   const description = String(item.description || '').trim();
   const brand = String(item.brand || '').trim();
   const size = String(item.size || '').trim();
@@ -37,18 +37,10 @@ export function buildShopifyAutoFill(item = {}, consignor = null) {
     shopifyTitle: description,
     shopifyPrice: item.price ?? '',
     vendor: brand,
-    tags: [
-      ...new Set(
-        [
-          'Consignment',
-          consignor?.number ? `Consignor ${consignor.number}` : '',
-          category,
-          type,
-          brand,
-          condition,
-        ].filter(Boolean),
-      ),
-    ].join(', '),
+    // Only the tag the Consignment collection needs. Brand, type, condition
+    // and consignor already live in their own fields, and a tag per value
+    // floods the store's tag list.
+    tags: 'Consignment',
     productDescription: [
       description,
       brand ? `Brand: ${brand}` : '',

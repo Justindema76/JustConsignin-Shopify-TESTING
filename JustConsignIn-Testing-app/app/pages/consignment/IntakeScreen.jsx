@@ -71,7 +71,7 @@ export default function IntakeScreen({
   const nextItemNumber = `${consignor.number}-${String(savedSequence + 1).padStart(3, '0')}`;
 
   useEffect(() => {
-    const auto = buildShopifyAutoFill(form, consignor);
+    const auto = buildShopifyAutoFill(form);
 
     setShopifyForm((current) => ({
       ...current,
