@@ -126,6 +126,7 @@ export default function EditItemScreen({
   const menuRef = useRef(null);
 
   const isSold = item.status === 'Sold' || Boolean(item.dateSold);
+  const allowManualSale = !tier2Enabled || !item.shopifyProductId;
   const canSave = form.description.trim() && form.price !== '';
   const title =
     item.shopifyTitle || item.description || `Item ${item.itemNumber}`;
@@ -310,12 +311,13 @@ export default function EditItemScreen({
             </div>
           )}
 
-          {/* Growth stores sell through Shopify, so an unsold item has no
-              manual sale box; Starter stores record sales here. */}
-          {(isSold || !tier2Enabled) && (
+          {/* Items linked to a Shopify product sell through Shopify, so they
+              have no manual sale box. Manual items (every Starter item, and
+              Growth items not linked to Shopify) record sales here. */}
+          {(isSold || allowManualSale) && (
             <ManualSaleStatus
               item={item}
-              allowManualSale={!tier2Enabled}
+              allowManualSale={allowManualSale}
               onMarkSold={(itemId, details) =>
                 onUpdateStatus(itemId, 'Sold', details)
               }
