@@ -63,6 +63,7 @@ export default function EditItemScreen({
   tier2Enabled = false,
 }) {
   const [form, setForm] = useState({
+    itemNumber: item.itemNumber || '',
     category: item.category || 'Other',
     type: '',
     description: item.description || '',
@@ -140,6 +141,16 @@ export default function EditItemScreen({
   );
   const price = Number(item.price ?? 0);
   const consignorShare = (price * commissionPct) / 100;
+
+  // After the item number changes, the Shopify listing tab must show the
+  // new SKU so a later "Save to Shopify" doesn't put the old one back.
+  useEffect(() => {
+    setShopifyForm((current) =>
+      current.sku === (item.sku ?? item.itemNumber)
+        ? current
+        : { ...current, sku: item.sku ?? item.itemNumber ?? '' },
+    );
+  }, [item.itemNumber, item.sku]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -357,6 +368,7 @@ export default function EditItemScreen({
                       onSave={() => onSave(item.id, form)}
                       saveDisabled={!canSave || isSold}
                       saveLabel="Save manual changes"
+                      showItemNumber
                       helperText="Updates only the consignment item. Shopify product details are on the Shopify listing tab."
                     />
                   </fieldset>

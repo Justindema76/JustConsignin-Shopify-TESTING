@@ -151,6 +151,7 @@ export function updateConsignmentItem(itemId, item) {
     operation: 'updateItem',
     itemId,
     item: {
+      itemNumber: item.itemNumber,
       category: item.category,
       type: '',
       description: item.description,

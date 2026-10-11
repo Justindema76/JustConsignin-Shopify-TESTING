@@ -85,6 +85,37 @@ const DATA_QUERY = `#graphql
   }
 `;
 
+// Changing an item number renames the item record (POS scanning, labels
+// and lookups find items by handle = item number) and updates the SKU.
+const ITEM_RENAME_MUTATION = `#graphql
+  mutation RenameConsignmentItem($id: ID!, $handle: String!) {
+    metaobjectUpdate(id: $id, metaobject: { handle: $handle }) {
+      metaobject { id handle }
+      userErrors { field message code }
+    }
+  }
+`;
+
+const PRODUCT_FIRST_VARIANT_QUERY = `#graphql
+  query ProductFirstVariant($id: ID!) {
+    product(id: $id) {
+      variants(first: 1) { nodes { id } }
+    }
+  }
+`;
+
+const VARIANT_SKU_MUTATION = `#graphql
+  mutation UpdateVariantSku($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+      userErrors { field message }
+    }
+  }
+`;
+
+// Letters, numbers and inner dashes: scans as a barcode and stays the same
+// when lower-cased into the record handle.
+const ITEM_NUMBER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,28}[A-Za-z0-9])?$/;
+
 const UPSERT_MUTATION = `#graphql
   mutation UpsertMetaobject(
     $handle: MetaobjectHandleInput!
@@ -1740,11 +1771,44 @@ export async function action({ request }) {
         return Response.json({ error: 'Item not found' }, { status: 404 });
       }
       const input = body.item;
+      const requestedNumber = String(input.itemNumber ?? existing.itemNumber).trim();
+      const renumbering = requestedNumber !== existing.itemNumber;
+      let handle = existing.handle;
+
+      if (renumbering) {
+        if (!ITEM_NUMBER_PATTERN.test(requestedNumber)) {
+          return Response.json(
+            { error: 'Item numbers can use letters, numbers and dashes only (up to 30 characters).' },
+            { status: 400 },
+          );
+        }
+        const newHandle = requestedNumber.toLowerCase();
+        const taken = current.items.some(
+          (entry) =>
+            entry.id !== existing.id &&
+            (String(entry.itemNumber || '').toLowerCase() === newHandle || entry.handle === newHandle),
+        );
+        if (taken) {
+          return Response.json(
+            { error: `Item number ${requestedNumber} is already used by another item.` },
+            { status: 400 },
+          );
+        }
+        const renamed = await adminGraphql(admin, ITEM_RENAME_MUTATION, {
+          id: existing.id,
+          handle: newHandle,
+        });
+        assertNoErrors(renamed.metaobjectUpdate, 'Could not change the item number');
+        handle = renamed.metaobjectUpdate.metaobject.handle;
+      }
+
       const saved = await upsert(
         admin,
         'consignment_item',
-        existing.handle,
+        handle,
         itemFields(existing, {
+          itemNumber: requestedNumber,
+          ...(renumbering ? { sku: requestedNumber } : {}),
           dateReceived: input.dateReceived || existing.dateReceived || today(),
           consignmentTerm: input.consignmentTerm || '',
           expiryDate: calculateExpiryDate(
@@ -1762,6 +1826,24 @@ export async function action({ request }) {
           type: '',
         }),
       );
+
+      if (renumbering && existing.shopifyProductId) {
+        const productData = await adminGraphql(admin, PRODUCT_FIRST_VARIANT_QUERY, {
+          id: existing.shopifyProductId,
+        });
+        const variantId = productData.product?.variants?.nodes?.[0]?.id;
+        if (variantId) {
+          const skuData = await adminGraphql(admin, VARIANT_SKU_MUTATION, {
+            productId: existing.shopifyProductId,
+            variants: [{ id: variantId, inventoryItem: { sku: requestedNumber } }],
+          });
+          assertNoErrors(
+            skuData.productVariantsBulkUpdate,
+            'The item number changed, but the Shopify SKU could not be updated',
+          );
+        }
+      }
+
       return Response.json(mapItem(saved));
     }
 

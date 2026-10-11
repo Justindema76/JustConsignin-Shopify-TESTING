@@ -10,6 +10,7 @@ export function ManualItemCore({
   saveLabel = 'Save manual item',
   saveDisabled = false,
   helperText = 'Saves only the consignment metaobject record. No Shopify product is created.',
+  showItemNumber = false,
 }) {
   const set = (key) => (event) => {
     setForm((current) => ({
@@ -26,8 +27,31 @@ export function ManualItemCore({
     }));
   };
 
+  const itemNumberValid =
+    !showItemNumber ||
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,28}[A-Za-z0-9])?$/.test(String(form.itemNumber || '').trim());
+
   return (
     <>
+      {showItemNumber && (
+        <div className="consignment-form-field">
+          <label className="consignment-label" htmlFor="item-number-input">Item number</label>
+          <input
+            id="item-number-input"
+            className="consignment-input"
+            value={form.itemNumber || ''}
+            onChange={set('itemNumber')}
+            autoCapitalize="characters"
+            spellCheck={false}
+          />
+          <div className="consignment-form-help">
+            {itemNumberValid
+              ? 'Changing it also changes the barcode and the SKU on Shopify. Reprint the label after saving.'
+              : 'Use letters, numbers and dashes only (up to 30 characters).'}
+          </div>
+        </div>
+      )}
+
       <div className="consignment-form-grid consignment-form-grid-2">
         <div className="consignment-form-field">
           <label className="consignment-label">Item description *</label>
@@ -147,7 +171,7 @@ export function ManualItemCore({
       >
         <button
           className="consignment-btn"
-          disabled={saveDisabled}
+          disabled={saveDisabled || !itemNumberValid}
           onClick={onSave}
         >
           <Check size={18} />
