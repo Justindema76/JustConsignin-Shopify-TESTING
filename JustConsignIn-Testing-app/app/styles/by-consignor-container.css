@@ -1,5 +1,5 @@
 .consignment-by-consignor-container .consignment-item-group-summary {
-  grid-template-columns: 30px 38px minmax(0, 1fr) repeat(4, minmax(72px, 92px));
+  grid-template-columns: 30px 38px minmax(0, 1fr) repeat(5, minmax(72px, 92px));
 }
 .consignment-by-consignor-container .consignment-item-group-chevron.open {
   transform: rotate(90deg);

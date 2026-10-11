@@ -620,6 +620,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
         <ConsignorDashboard
           consignor={activeConsignor}
           items={items}
+          onOpenPayoutReceipt={(payoutId) => openPayoutReceipt(payoutId, 'consignor')}
           onBack={() => setView('home')}
           onStartIntake={() => setView('intake')}
           onOpenItem={openItem}

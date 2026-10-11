@@ -4,7 +4,7 @@ import { FileUp, Download, Plus, Grid3X3, Users } from 'lucide-react';
 import { Header } from '../../components/consignment/SharedPieces';
 import AllConsignorView from '../../components/consignment/AllConsignorView';
 import ConsignmentFilterBar from '../../components/consignment/ConsignmentFilterBar';
-import { money, productLabel } from '../../lib/consignmentHelpers';
+import { money, paidToDate, productLabel } from '../../lib/consignmentHelpers';
 
 const STATUS_OPTIONS = ['Current', 'Available', 'Unpaid', 'Archived', 'All'];
 
@@ -128,6 +128,9 @@ export default function ConsignorsScreen({ consignors, items, query, setQuery, o
         .consignment-consignor-card-due { margin-top:auto; font-size:12px; color:var(--muted); }
         .consignment-consignor-card-due small,.consignment-consignor-card-due strong { display:block; }
         .consignment-consignor-card-due strong { margin-top:3px; color:var(--ink); font-size:20px; }
+        .consignment-consignor-card-money { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
+        .consignment-consignor-card-money .consignment-consignor-card-due { margin-top:0; }
+        .consignment-consignor-card-paid { text-align:right; }
         .consignment-consignor-card-open { width:100%; height:42px; border:1px solid var(--green); border-radius:9px; background:var(--surface-subtle); color:var(--green-dark); font-size:13px; font-weight:700; cursor:pointer; }
         .consignment-consignor-card-open:hover { background:var(--green-soft); }
         @media (max-width:950px) { .consignment-consignor-card-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
@@ -154,13 +157,13 @@ export default function ConsignorsScreen({ consignors, items, query, setQuery, o
           views={{ value: viewMode, onChange: setViewMode, ariaLabel: 'Choose consignor view', options: [{ value: 'grouped', label: 'By consignor', icon: Users }, { value: 'grid', label: 'Grid', icon: Grid3X3 }] }}
         />
         {groupedEntries.length === 0 && <section className="consignment-card"><div className="consignment-empty-small">No consignors match these filters.</div></section>}
-        {viewMode === 'grouped' && <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => <AllConsignorView key={consignorId} consignor={consignorById[consignorId]} items={consignorItems} onOpenConsignor={onOpenConsignor} onOpenItem={onOpenItem} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />)}</div>}
+        {viewMode === 'grouped' && <div className="consignment-item-groups">{groupedEntries.map(([consignorId, consignorItems]) => <AllConsignorView key={consignorId} consignor={consignorById[consignorId]} items={consignorItems} allItems={items.filter((item) => item.consignorId === consignorId)} onOpenConsignor={onOpenConsignor} onOpenItem={onOpenItem} onMarkSold={onMarkSold} onStartPayout={onStartPayout} />)}</div>}
         {viewMode === 'grid' && groupedEntries.length > 0 && (
           <div className="consignment-consignor-card-grid">
             {groupedEntries.map(([consignorId, consignorItems]) => {
               const consignor = consignorById[consignorId];
               const initials = consignor ? `${consignor.firstName?.[0] || ''}${consignor.lastName?.[0] || ''}` : '—';
-              const availableCount = consignorItems.filter((item) => item.status === 'Available' || item.status === 'Active').length;
+              const availableCount = consignorItems.filter((item) => item.status === 'Available' || item.status === 'Active' || item.status === 'Draft').length;
               const unpaidCount = consignorItems.filter(
                 (item) =>
                   (item.status === 'Sold' || item.dateSold) &&
@@ -171,7 +174,7 @@ export default function ConsignorsScreen({ consignors, items, query, setQuery, o
               return (
                 <article className="consignment-consignor-card" key={consignorId}>
                   <div className="consignment-consignor-card-top"><span className="consignment-avatar">{initials}</span><span className="consignment-consignor-card-name"><strong>{consignor ? `${consignor.firstName} ${consignor.lastName}` : 'Unassigned'}</strong><small>#{consignor?.number || '—'}</small></span></div>
-                  <div className="consignment-consignor-card-stats"><span><strong>{availableCount}</strong><small>Active</small></span><span><strong>{unpaidCount}</strong><small>Unpaid</small></span></div>                  <div className="consignment-consignor-card-due"><small>Amount due</small><strong>{money(due)}</strong></div>
+                  <div className="consignment-consignor-card-stats"><span><strong>{availableCount}</strong><small>Active</small></span><span><strong>{unpaidCount}</strong><small>Unpaid</small></span></div>                  <div className="consignment-consignor-card-money"><div className="consignment-consignor-card-due"><small>Amount due</small><strong>{money(due)}</strong></div><div className="consignment-consignor-card-due consignment-consignor-card-paid"><small>Paid to date</small><strong>{money(paidToDate(items.filter((item) => item.consignorId === consignorId)))}</strong></div></div>
                   <button type="button" className="consignment-consignor-card-open" onClick={() => onOpenConsignor(consignorId)}>View consignor</button>
                 </article>
               );

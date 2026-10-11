@@ -1393,7 +1393,7 @@ details[open] > .consignment-shopify-summary::after {
 }
 .consignment-consignor-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -1757,4 +1757,39 @@ details[open] > .consignment-shopify-summary::after {
   .consignment-print-sheet .consignment-item-barcode-graphic svg {
     height: 100px;
   }
+}
+
+/* Consignor page: payout history */
+.consignment-consignor-payouts {
+  display: grid;
+  gap: 0;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+.consignment-consignor-payouts h3 {
+  margin: 0 0 6px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+}
+
+.consignment-consignor-payout-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.consignment-consignor-payout-row span strong,
+.consignment-consignor-payout-row span small {
+  display: block;
+}
+
+.consignment-consignor-payout-row small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
 }

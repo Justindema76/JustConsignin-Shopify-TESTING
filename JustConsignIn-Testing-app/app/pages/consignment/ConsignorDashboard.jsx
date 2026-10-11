@@ -5,9 +5,9 @@ import Header from '../../components/consignment/Header';
 import AllListView from '../../components/consignment/AllListView';
 import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
 import ConsignmentFilterBar from '../../components/consignment/ConsignmentFilterBar';
-import { isSold, money } from '../../lib/consignmentHelpers';
+import { isSold, money, paidToDate, recordedPayoutGroups } from '../../lib/consignmentHelpers';
 
-export default function ConsignorDashboard({ consignor, items, onBack, onStartIntake, onOpenItem, onDeleteConsignor, onEditConsignor, onStartPayout }) {
+export default function ConsignorDashboard({ consignor, items, onBack, onStartIntake, onOpenItem, onDeleteConsignor, onEditConsignor, onStartPayout, onOpenPayoutReceipt }) {
   const [viewMode, setViewMode] = useState('grid');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Available');
@@ -19,6 +19,13 @@ export default function ConsignorDashboard({ consignor, items, onBack, onStartIn
   const unpaidItems = soldItems.filter((item) => !item.paidOut);
   const paidItems = soldItems.filter((item) => item.paidOut);
   const totalSales = soldItems.reduce((sum, item) => sum + Number(item.salePrice ?? item.price ?? 0), 0);
+  const paidTotal = paidToDate(consignorItems);
+  const payouts = recordedPayoutGroups(consignorItems)
+    .map((group) => ({
+      ...group,
+      total: group.payoutTotal || group.items.reduce((sum, item) => sum + Number(item.payoutAmount || 0), 0),
+    }))
+    .sort((a, b) => String(b.payoutDate || '').localeCompare(String(a.payoutDate || '')));
   const amountDue = unpaidItems.reduce(
     (sum, item) => sum + (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? consignor.commissionPct ?? 0)) / 100,
     0,
@@ -110,7 +117,32 @@ export default function ConsignorDashboard({ consignor, items, onBack, onStartIn
         <div className="consignment-consignor-stats">
           <div className="consignment-consignor-stat"><span>Amount due</span><strong>{money(amountDue)}</strong></div>
           <div className="consignment-consignor-stat"><span>Total sales</span><strong>{money(totalSales)}</strong></div>
+          <div className="consignment-consignor-stat"><span>Paid to date</span><strong>{money(paidTotal)}</strong></div>
         </div>
+
+        {payouts.length > 0 && (
+          <section className="consignment-card consignment-consignor-payouts" aria-label="Payout history">
+            <h3>Payout history</h3>
+            {payouts.map((payout) => (
+              <div className="consignment-consignor-payout-row" key={payout.payoutId}>
+                <span>
+                  <strong>{payout.payoutDate || 'Payout'}</strong>
+                  <small>
+                    {payout.items.length} item{payout.items.length === 1 ? '' : 's'}
+                    {payout.payoutMethod ? ` · ${payout.payoutMethod}` : ''}
+                    {payout.payoutReference ? ` · ${payout.payoutReference}` : ''}
+                  </small>
+                </span>
+                <strong>{money(payout.total)}</strong>
+                {onOpenPayoutReceipt && (
+                  <button type="button" className="consignment-link-button" onClick={() => onOpenPayoutReceipt(payout.payoutId)}>
+                    View receipt
+                  </button>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
 
         <div className="consignment-consignor-items-head">
           <h3>Items on file</h3>

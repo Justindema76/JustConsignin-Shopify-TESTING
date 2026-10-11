@@ -7,6 +7,7 @@ import {
   productLabel,
   statusClass,
   statusLabel,
+  paidToDate,
 } from '../../lib/consignmentHelpers';
 
 import '../../styles/by-consignor-container.css';
@@ -194,6 +195,7 @@ export function ItemRowAction({
 export default function AllConsignorView({
   consignor,
   items = [],
+  allItems = null,
   itemLabel,
   onOpenConsignor,
   onOpenItem,
@@ -282,6 +284,12 @@ const unpaidCount =
     {
       label: 'Due',
       value: money(due),
+    },
+    {
+      // Running total paid to this consignor, counted across all their
+      // items so filters (e.g. "Current") don't hide past payouts.
+      label: 'Paid',
+      value: money(paidToDate(allItems || items)),
     },
   ];
 

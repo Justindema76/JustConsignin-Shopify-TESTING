@@ -229,3 +229,25 @@ export function recordedPayoutGroups(items) {
 
   return [...groups.values()];
 }
+
+// Total paid out to a consignor across all recorded payouts, using the same
+// amount the Payouts history shows (payout total, including adjustments).
+// Older paid items without a payout record count their consignor share.
+export function paidToDate(items) {
+  const recorded = recordedPayoutGroups(items).reduce(
+    (sum, group) =>
+      sum +
+      (group.payoutTotal ||
+        group.items.reduce((total, item) => total + Number(item.payoutAmount || 0), 0)),
+    0,
+  );
+  const legacy = items
+    .filter((item) => item.paidOut && !item.payoutId)
+    .reduce((sum, item) => {
+      const recordedAmount = Number(item.payoutAmount || 0);
+      const share =
+        (Number(item.salePrice ?? item.price ?? 0) * Number(item.commissionPct ?? 0)) / 100;
+      return sum + (recordedAmount || share);
+    }, 0);
+  return recorded + legacy;
+}
