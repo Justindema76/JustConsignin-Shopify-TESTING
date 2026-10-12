@@ -1050,6 +1050,15 @@ export default function ShopifyProductPanel({
                       : linkedStatus || 'Connected'}
                 </span>
               )}
+              {linkedProductId && (
+                <a
+                  className="consignment-btn secondary"
+                  href={`shopify://admin/products/${String(linkedProductId).split('/').pop()}`}
+                  target="_top"
+                >
+                  Edit in Shopify
+                </a>
+              )}
               <button
                 className="consignment-btn"
                 disabled={
