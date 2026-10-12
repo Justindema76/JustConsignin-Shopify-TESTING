@@ -1,7 +1,7 @@
 import { authenticate } from '../shopify.server';
 import { ensureMetaobjectsInstalled } from '../metaobjects.server';
 import { requireTier2 } from '../billing.server';
-import { resolveEnabledIds, toLocation } from '../locations.server';
+import { consignmentLocations, resolveEnabledIds } from '../locations.server';
 import { toCountryCode } from '../lib/addressFormats';
 
 const DATA_QUERY = `#graphql
@@ -18,7 +18,7 @@ const DATA_QUERY = `#graphql
         name
         isActive
         fulfillmentService { id serviceName }
-        address { formatted city provinceCode countryCode }
+        address { formatted city province provinceCode countryCode }
       }
     }
     consignors: metaobjects(type: "consignor", first: 250) {
@@ -1196,7 +1196,7 @@ async function loadData(admin) {
   }
 
   const { shop } = payload.data;
-  const locations = (payload.data.locations?.nodes || []).map(toLocation);
+  const locations = consignmentLocations(payload.data.locations?.nodes);
   const { enabledIds } = resolveEnabledIds(locations, shop.locationsSetting?.value);
   const defaultLocationId = singleLocationId(enabledIds);
 
@@ -1207,7 +1207,9 @@ async function loadData(admin) {
       countryCode: shop.shopAddress?.countryCodeV2 || '',
       province: shop.shopAddress?.province || '',
     },
-    locations: locations.map(({ id, name, isActive }) => ({ id, name, isActive })),
+    locations: locations.map(({ id, name, isActive, countryCode, province }) => ({
+      id, name, isActive, countryCode, province,
+    })),
     enabledLocationIds: enabledIds,
     // Consignors saved before a location was picked belong to the store's
     // only location, when it has just one.

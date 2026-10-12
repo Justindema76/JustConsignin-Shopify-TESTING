@@ -22,7 +22,7 @@ const LOCATIONS_QUERY = `#graphql
         name
         isActive
         fulfillmentService { id serviceName }
-        address { formatted city provinceCode countryCode }
+        address { formatted city province provinceCode countryCode }
       }
     }
   }
@@ -67,6 +67,7 @@ export function toLocation(node) {
     // Postal/ZIP assumptions are needed here.
     addressLines: (node.address?.formatted || []).filter(Boolean),
     countryCode: node.address?.countryCode || null,
+    province: node.address?.province || null,
   };
 }
 
@@ -78,7 +79,7 @@ export async function getConsignmentLocations(admin) {
     key: METAFIELD_KEY,
   });
 
-  const locations = (data.locations?.nodes || []).map(toLocation);
+  const locations = consignmentLocations(data.locations?.nodes);
 
   return {
     shopId: data.shop.id,
@@ -87,10 +88,21 @@ export async function getConsignmentLocations(admin) {
   };
 }
 
+// Locations a consignor can belong to. Fulfillment services (3PL warehouses
+// and app-created locations) are not stores, so they're left out.
+export function consignmentLocations(nodes) {
+  return (nodes || [])
+    .map(toLocation)
+    .filter((location) => !location.isFulfillmentService);
+}
+
 // Returns { enabledIds, isDefault } from the saved metafield value.
 export function resolveEnabledIds(locations, savedValue) {
   const savedIds = parseSavedIds(savedValue);
-  if (savedIds) return { enabledIds: savedIds, isDefault: false };
+  if (savedIds) {
+    const known = new Set(locations.map((location) => location.id));
+    return { enabledIds: savedIds.filter((id) => known.has(id)), isDefault: false };
+  }
 
   // Default: a store with exactly one active retail location gets it enabled
   // automatically, so single-store merchants see no change. Multi-store

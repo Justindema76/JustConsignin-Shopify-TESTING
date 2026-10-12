@@ -70,6 +70,20 @@ export default function ConsignorFormScreen({
     return enabledIds.includes(last) ? last : '';
   }
 
+  // Country and province start from the consignor's store (Hamilton → Canada,
+  // Ontario), falling back to the store address in Shopify settings.
+  function homeAddress(locationId) {
+    const location = locations.find((entry) => entry.id === locationId);
+    if (location?.countryCode) {
+      return { country: location.countryCode, province: location.province || '' };
+    }
+    return { country: storeSetup.countryCode || '', province: storeSetup.province || '' };
+  }
+
+  const startLocation = initialLocation();
+  const startHome = homeAddress(startLocation);
+  const [addressTouched, setAddressTouched] = useState(false);
+
   /* --------------------------------------------------------------------------
      FORM STATE
      -------------------------------------------------------------------------- */
@@ -81,10 +95,10 @@ export default function ConsignorFormScreen({
     email: consignor?.email || '',
     address: consignor?.address || '',
     city: consignor?.city || '',
-    country: consignor?.country || storeSetup.countryCode || '',
-    province: editing ? consignor.province || '' : storeSetup.province || '',
+    country: consignor?.country || startHome.country,
+    province: editing ? consignor.province || '' : startHome.province,
     postalCode: consignor?.postalCode || '',
-    locationId: initialLocation(),
+    locationId: startLocation,
     commissionPct: consignor?.commissionPct ?? 50,
     unsoldPreference: consignor?.unsoldPreference || 'Please return',
     notes: consignor?.notes || '',
@@ -99,11 +113,29 @@ export default function ConsignorFormScreen({
 
   const setCountry = (event) => {
     const country = event.target.value;
+    const home = homeAddress(form.locationId);
+    setAddressTouched(true);
     setForm((current) => ({
       ...current,
       country,
       // A province from another country's list doesn't carry over.
-      province: country === storeSetup.countryCode ? storeSetup.province || '' : '',
+      province: country === home.country ? home.province : '',
+    }));
+  };
+
+  const setProvince = (event) => {
+    setAddressTouched(true);
+    set('province')(event);
+  };
+
+  // Picking a store on a new consignor moves the country/province defaults
+  // with it, until someone changes them by hand.
+  const setLocation = (event) => {
+    const locationId = event.target.value;
+    setForm((current) => ({
+      ...current,
+      locationId,
+      ...(!editing && !addressTouched ? homeAddress(locationId) : {}),
     }));
   };
 
@@ -281,7 +313,7 @@ export default function ConsignorFormScreen({
                     <select
                       className="consignment-select"
                       value={form.province}
-                      onChange={set('province')}
+                      onChange={setProvince}
                       autoComplete="address-level1"
                     >
                       <option value="">Choose</option>
@@ -295,7 +327,7 @@ export default function ConsignorFormScreen({
                     <input
                       className="consignment-input"
                       value={form.province}
-                      onChange={set('province')}
+                      onChange={setProvince}
                       autoComplete="address-level1"
                     />
                   )}
@@ -338,7 +370,7 @@ export default function ConsignorFormScreen({
                   <select
                     className="consignment-select"
                     value={form.locationId}
-                    onChange={set('locationId')}
+                    onChange={setLocation}
                   >
                     <option value="">Choose a store</option>
                     {locationOptions.map((location) => (

@@ -152,11 +152,6 @@ function LocationsSection({ locationData, locationError }) {
                         >
                           {location.isActive ? 'Active' : 'Inactive'}
                         </span>
-                        {location.isFulfillmentService && (
-                          <span className="consignment-badge draft">
-                            Fulfillment service
-                          </span>
-                        )}
                       </div>
                       {location.addressLines.length > 0 && (
                         <p className="consignment-form-help" style={{ marginTop: 4 }}>
