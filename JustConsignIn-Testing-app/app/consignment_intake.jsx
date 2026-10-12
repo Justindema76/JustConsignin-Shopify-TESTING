@@ -677,6 +677,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
           onDelete={handleDeleteItemFromEdit}
           onSyncProduct={handleSyncProduct}
           onUpdateStatus={handleUpdateItemStatus}
+          storeSetup={storeSetup}
           onOpenPayoutReceipt={(payoutId) =>
             openPayoutReceipt(payoutId, 'editItem')
           }

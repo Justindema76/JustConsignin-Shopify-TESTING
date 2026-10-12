@@ -156,6 +156,7 @@ const DELETE_MUTATION = `#graphql
 
 const PRODUCT_LOCATION_QUERY = `#graphql
   query ProductLocation {
+    primaryLocation: location { id isActive }
     locations(first: 50) {
       nodes {
         id
@@ -615,6 +616,7 @@ function mapItem(node) {
     payoutTotal: Number(savedDetails.payoutTotal || 0),
     payoutAdjustment: Number(savedDetails.payoutAdjustment || 0),
     saleSource: savedDetails.saleSource || '',
+    locationId: savedDetails.locationId || '',
     salePrice: field.sale_price == null ? null : Number(field.sale_price),
     dateSold: field.date_sold || null,
     orderName: field.order_name || null,
@@ -647,6 +649,7 @@ function parseItemDetails(rawValue) {
     payoutTotal: 0,
     payoutAdjustment: 0,
     saleSource: '',
+    locationId: '',
     importKey: '',
   };
   if (!rawValue) return fallback;
@@ -694,8 +697,23 @@ function itemDetails(value) {
     payoutTotal: Number(value.payoutTotal || 0),
     payoutAdjustment: Number(value.payoutAdjustment || 0),
     saleSource: value.saleSource || '',
+    locationId: value.locationId || '',
     importKey: value.importKey || '',
   });
+}
+
+// Where an item's stock goes in Shopify:
+// 1. the item's own store, if it has one and it's still active;
+// 2. an item already in Shopify without one keeps the old pick, so a re-sync
+//    never adds stock at a second location;
+// 3. otherwise the consignor's store, then the Shopify default location.
+function stockLocation(setup, item, consignor) {
+  const active = (id) => setup.locations.find((entry) => entry.id === id && entry.isActive);
+  if (item.locationId && active(item.locationId)) return active(item.locationId);
+  if (item.shopifyProductId) return setup.location;
+  if (consignor?.locationId && active(consignor.locationId)) return active(consignor.locationId);
+  if (setup.primaryLocation?.isActive) return setup.primaryLocation;
+  return setup.location;
 }
 
 function field(key, value) {
@@ -915,7 +933,14 @@ async function getProductSetup(admin) {
     const name = String(entry.name || '').toLowerCase();
     return name.includes('facebook') || name.includes('instagram') || name.includes('meta');
   });
-  return { location, posPublication, onlineStorePublication, metaPublication };
+  return {
+    location,
+    locations: data.locations.nodes,
+    primaryLocation: data.primaryLocation,
+    posPublication,
+    onlineStorePublication,
+    metaPublication,
+  };
 
 }
 
@@ -1046,12 +1071,9 @@ async function activateForPos(admin, productId) {
 }
 
 async function syncPosProduct(admin, item, consignor, merchantName, { consignment = true } = {}) {
-  const {
-    location,
-    posPublication,
-    onlineStorePublication,
-    metaPublication,
-  } = await getProductSetup(admin);
+  const setup = await getProductSetup(admin);
+  const { posPublication, onlineStorePublication, metaPublication } = setup;
+  const location = stockLocation(setup, item, consignor);
   if (!location) {
     throw new Error(
       'No active Shopify location was found. Check Settings → Locations.',
@@ -1185,7 +1207,7 @@ async function syncPosProduct(admin, item, consignor, merchantName, { consignmen
     );
   }
   await publishResource(admin, data.productSet.product.id, publications, 'product');
-  return data.productSet.product;
+  return { ...data.productSet.product, locationId: location.id };
 }
 
 async function loadData(admin) {
@@ -1609,6 +1631,7 @@ export async function action({ request }) {
             const value = {
               itemNumber,
               consignorId: consignor.id,
+              locationId: consignor.locationId || '',
               dateReceived: text(row.date_received || row.dateReceived) || today(),
               consignmentTerm: text(row.consignment_term || row.consignmentTerm) || '',
               expiryDate: calculateExpiryDate(
@@ -1682,6 +1705,7 @@ export async function action({ request }) {
                 itemHandle,
                 itemFields(value, {
                   shopifyProductId: product.id,
+                  locationId: product.locationId,
                   status: 'Available',
                 }),
               );
@@ -1807,7 +1831,7 @@ export async function action({ request }) {
           field('commission_pct', consignor.commissionPct),
           field('status', 'Draft'),
           field('brand', input.brand),
-          field('notes', itemDetails({ ...input, type: '' })),
+          field('notes', itemDetails({ ...input, type: '', locationId: consignor.locationId })),
         ]);
         savedItems.push(mapItem(saved));
       }
@@ -2036,6 +2060,7 @@ export async function action({ request }) {
         itemFields(existing, {
           photoId: productSource.photoId,
           shopifyProductId: product.id,
+          locationId: product.locationId,
           status: 'Available',
           tags: productSource.tags,
           vendor: productSource.vendor,

@@ -61,7 +61,15 @@ export default function EditItemScreen({
   onOpenPayoutReceipt,
   onStartPayout,
   tier2Enabled = false,
+  storeSetup = {},
 }) {
+  // The item's store; items added before stores existed use the consignor's.
+  const enabledLocationIds = storeSetup.enabledLocationIds || [];
+  const storeId = item.locationId || consignor?.locationId || '';
+  const showStore = enabledLocationIds.length > 1
+    || Boolean(storeId && !enabledLocationIds.includes(storeId));
+  const storeName = (storeSetup.locations || [])
+    .find((location) => location.id === storeId)?.name || 'Not set';
   const [form, setForm] = useState({
     itemNumber: item.itemNumber || '',
     category: item.category || 'Other',
@@ -383,6 +391,12 @@ export default function EditItemScreen({
                         : '—'}
                     </dd>
                   </div>
+                  {showStore && (
+                    <div>
+                      <dt>Store</dt>
+                      <dd>{storeName}</dd>
+                    </div>
+                  )}
                   <div>
                     <dt>Consignor gets</dt>
                     <dd>{commissionPct}%</dd>
