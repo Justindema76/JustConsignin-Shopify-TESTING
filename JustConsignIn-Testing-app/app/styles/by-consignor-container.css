@@ -33,6 +33,17 @@
   font-size: 11px;
   margin-top: 2px;
 }
+.consignment-grouped-item-open > span:last-child > .consignment-item-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-weight: 600;
+}
+.consignment-item-location svg {
+  flex: none;
+  color: var(--muted);
+}
 .consignment-item-quick-action {
   display: flex;
   justify-content: center;

@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { MapPin } from 'lucide-react';
 import {
   money,
   itemBadge,
@@ -93,6 +94,13 @@ export default function AllListView({
                     {item.size ? ` · ${item.size}` : ''}
                     {item.brand ? ` · ${item.brand}` : ''}
                   </span>
+
+                  {item.locationName && (
+                    <span className="consignment-item-location">
+                      <MapPin size={11} aria-hidden="true" />
+                      {item.locationName}
+                    </span>
+                  )}
 
                   <span className="consignment-all-item-mobile-consignor">
                     {consignor

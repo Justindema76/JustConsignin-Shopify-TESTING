@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
 
 import {
   money,
@@ -475,6 +475,13 @@ const unpaidCount =
                           ? ` · ${item.brand}`
                           : ''}
                       </span>
+
+                      {item.locationName && (
+                        <span className="consignment-item-location">
+                          <MapPin size={11} aria-hidden="true" />
+                          {item.locationName}
+                        </span>
+                      )}
 
                     </span>
 

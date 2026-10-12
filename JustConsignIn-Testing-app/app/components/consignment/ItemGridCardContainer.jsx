@@ -226,6 +226,16 @@ export default function ItemGridCardContainer({
             </strong>
           </div>
 
+          {item.locationName && (
+            <div className="consignment-readable-card-date-row">
+              <small>Location</small>
+
+              <strong>
+                {item.locationName}
+              </strong>
+            </div>
+          )}
+
           {isSold && (
             <div className="consignment-readable-card-date-row">
               <small>Sale date</small>

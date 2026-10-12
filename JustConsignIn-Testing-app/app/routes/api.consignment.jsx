@@ -3,6 +3,29 @@ import { ensureMetaobjectsInstalled } from '../metaobjects.server';
 import { requireTier2 } from '../billing.server';
 import { consignmentLocations, resolveEnabledIds } from '../locations.server';
 import { toCountryCode } from '../lib/addressFormats';
+import { isSold } from '../lib/consignmentHelpers';
+
+const STOCK_LOCATIONS_QUERY = `#graphql
+  query ItemStockLocations($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Product {
+        id
+        variants(first: 1) {
+          nodes {
+            inventoryItem {
+              inventoryLevels(first: 10) {
+                nodes {
+                  location { id }
+                  quantities(names: ["on_hand"]) { quantity }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 const DATA_QUERY = `#graphql
   query ConsignmentData {
@@ -703,14 +726,11 @@ function itemDetails(value) {
 }
 
 // Where an item's stock goes in Shopify:
-// 1. the item's own store, if it has one and it's still active;
-// 2. an item already in Shopify without one keeps the old pick, so a re-sync
-//    never adds stock at a second location;
-// 3. otherwise the consignor's store, then the Shopify default location.
+// the item's own store, then the consignor's, then the Shopify default
+// location. Only used when the product is first created.
 function stockLocation(setup, item, consignor) {
   const active = (id) => setup.locations.find((entry) => entry.id === id && entry.isActive);
   if (item.locationId && active(item.locationId)) return active(item.locationId);
-  if (item.shopifyProductId) return setup.location;
   if (consignor?.locationId && active(consignor.locationId)) return active(consignor.locationId);
   if (setup.primaryLocation?.isActive) return setup.primaryLocation;
   return setup.location;
@@ -1166,11 +1186,15 @@ async function syncPosProduct(admin, item, consignor, merchantName, { consignmen
         tracked: true,
         requiresShipping: true,
       },
-      inventoryQuantities: [{
-        locationId: location.id,
-        name: 'available',
-        quantity: 1,
-      }],
+      // Stock is set once, when the product is created. After that Shopify
+      // owns it: re-syncing never adds stock back or moves it.
+      ...(item.shopifyProductId ? {} : {
+        inventoryQuantities: [{
+          locationId: location.id,
+          name: 'available',
+          quantity: 1,
+        }],
+      }),
     }],
   };
 
@@ -1207,7 +1231,10 @@ async function syncPosProduct(admin, item, consignor, merchantName, { consignmen
     );
   }
   await publishResource(admin, data.productSet.product.id, publications, 'product');
-  return { ...data.productSet.product, locationId: location.id };
+  return {
+    ...data.productSet.product,
+    locationId: item.shopifyProductId ? item.locationId || location.id : location.id,
+  };
 }
 
 async function loadData(admin) {
@@ -1221,6 +1248,12 @@ async function loadData(admin) {
   const locations = consignmentLocations(payload.data.locations?.nodes);
   const { enabledIds } = resolveEnabledIds(locations, shop.locationsSetting?.value);
   const defaultLocationId = singleLocationId(enabledIds);
+  // Consignors saved before a location was picked belong to the store's
+  // only location, when it has just one.
+  const consignors = payload.data.consignors.nodes
+    .map(mapConsignor)
+    .map((entry) => ({ ...entry, locationId: entry.locationId || defaultLocationId }));
+  const items = payload.data.items.nodes.map(mapItem);
 
   return {
     shop: {
@@ -1233,13 +1266,59 @@ async function loadData(admin) {
       id, name, isActive, countryCode, province,
     })),
     enabledLocationIds: enabledIds,
-    // Consignors saved before a location was picked belong to the store's
-    // only location, when it has just one.
-    consignors: payload.data.consignors.nodes
-      .map(mapConsignor)
-      .map((entry) => ({ ...entry, locationId: entry.locationId || defaultLocationId })),
-    items: payload.data.items.nodes.map(mapItem),
+    consignors,
+    items: await withItemLocations(admin, items, consignors, locations, enabledIds),
   };
+}
+
+// Each item's store. Items in Shopify follow their stock, so moving stock in
+// Shopify moves the item; other items use their saved store, then their
+// consignor's. Names are only filled in when there's more than one store to
+// tell apart, which keeps single-store screens unchanged.
+async function withItemLocations(admin, items, consignors, locations, enabledIds) {
+  const consignorLocation = new Map(consignors.map((entry) => [entry.id, entry.locationId]));
+  const multiStore = enabledIds.length > 1;
+  const stocked = multiStore ? await stockedLocations(admin, items) : new Map();
+  const nameById = new Map(locations.map((location) => [location.id, location.name]));
+
+  return items.map((item) => {
+    const locationId = stocked.get(item.shopifyProductId)
+      || item.locationId
+      || consignorLocation.get(item.consignorId)
+      || '';
+    const show = multiStore || (locationId && !enabledIds.includes(locationId));
+    return {
+      ...item,
+      locationId,
+      locationName: show ? nameById.get(locationId) || '' : '',
+    };
+  });
+}
+
+// Product id → the location holding its stock, for items not yet sold.
+async function stockedLocations(admin, items) {
+  const ids = [...new Set(
+    items
+      .filter((item) => item.shopifyProductId && !isSold(item))
+      .map((item) => item.shopifyProductId),
+  )];
+  const result = new Map();
+  for (let start = 0; start < ids.length; start += 50) {
+    try {
+      const data = await adminGraphql(admin, STOCK_LOCATIONS_QUERY, {
+        ids: ids.slice(start, start + 50),
+      });
+      for (const product of data.nodes || []) {
+        const levels = product?.variants?.nodes?.[0]?.inventoryItem?.inventoryLevels?.nodes || [];
+        const holding = levels.find((level) => (level.quantities?.[0]?.quantity || 0) > 0);
+        if (product?.id && holding) result.set(product.id, holding.location.id);
+      }
+    } catch (error) {
+      // Stock lookup is a nicety; fall back to saved stores if it fails.
+      console.error('Could not read item stock locations', error);
+    }
+  }
+  return result;
 }
 
 function singleLocationId(enabledIds) {
