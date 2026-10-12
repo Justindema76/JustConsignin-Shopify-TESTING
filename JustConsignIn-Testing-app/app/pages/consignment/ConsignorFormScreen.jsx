@@ -2,6 +2,11 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import Header from '../../components/consignment/Header';
+import {
+  addressLabels,
+  countryOptions,
+  regionsFor,
+} from '../../lib/addressFormats';
 import '../../styles/consignment-forms.css';
 
 /* ============================================================================
@@ -20,13 +25,50 @@ import '../../styles/consignment-forms.css';
    - consignment-forms.css
    ============================================================================ */
 
+const COUNTRIES = countryOptions();
+const LAST_LOCATION_KEY = 'justconsignin:last-consignor-location';
+
+function readLastLocation() {
+  try {
+    return window.localStorage.getItem(LAST_LOCATION_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function rememberLocation(id) {
+  try {
+    window.localStorage.setItem(LAST_LOCATION_KEY, id);
+  } catch {
+    // Browser storage can be blocked; the pick just isn't remembered.
+  }
+}
+
 export default function ConsignorFormScreen({
   consignor = null,
   nextNumber,
   onBack,
   onSave,
+  storeSetup = {},
 }) {
   const editing = Boolean(consignor);
+  const locations = storeSetup.locations || [];
+  const enabledIds = storeSetup.enabledLocationIds || [];
+
+  // Stores the consignor can be assigned to. A consignor already set to a
+  // store that was later switched off keeps it.
+  const locationOptions = locations.filter(
+    (location) =>
+      enabledIds.includes(location.id) || location.id === consignor?.locationId,
+  );
+  const showLocation = locationOptions.length > 1;
+
+  function initialLocation() {
+    if (consignor?.locationId) return consignor.locationId;
+    if (enabledIds.length === 1) return enabledIds[0];
+    const last = readLastLocation();
+    return enabledIds.includes(last) ? last : '';
+  }
 
   /* --------------------------------------------------------------------------
      FORM STATE
@@ -39,8 +81,10 @@ export default function ConsignorFormScreen({
     email: consignor?.email || '',
     address: consignor?.address || '',
     city: consignor?.city || '',
-    province: consignor?.province || 'Ontario',
+    country: consignor?.country || storeSetup.countryCode || '',
+    province: editing ? consignor.province || '' : storeSetup.province || '',
     postalCode: consignor?.postalCode || '',
+    locationId: initialLocation(),
     commissionPct: consignor?.commissionPct ?? 50,
     unsoldPreference: consignor?.unsoldPreference || 'Please return',
     notes: consignor?.notes || '',
@@ -53,7 +97,32 @@ export default function ConsignorFormScreen({
     }));
   };
 
-  const valid = form.firstName.trim() && form.lastName.trim();
+  const setCountry = (event) => {
+    const country = event.target.value;
+    setForm((current) => ({
+      ...current,
+      country,
+      // A province from another country's list doesn't carry over.
+      province: country === storeSetup.countryCode ? storeSetup.province || '' : '',
+    }));
+  };
+
+  const labels = addressLabels(form.country);
+  const regions = regionsFor(form.country);
+  // Keep a saved value that isn't in the list (e.g. "ON") selectable.
+  const regionOptions = regions && form.province && !regions.includes(form.province)
+    ? [form.province, ...regions]
+    : regions;
+
+  const valid = form.firstName.trim()
+    && form.lastName.trim()
+    && (!showLocation || form.locationId);
+
+  const save = () => {
+    if (showLocation) rememberLocation(form.locationId);
+    if (editing) onSave(consignor.id, form);
+    else onSave(form);
+  };
 
   return (
     <>
@@ -109,7 +178,6 @@ export default function ConsignorFormScreen({
                     className="consignment-input"
                     value={form.firstName}
                     onChange={set('firstName')}
-                    placeholder="Sarah"
                   />
                 </div>
 
@@ -120,7 +188,6 @@ export default function ConsignorFormScreen({
                     className="consignment-input"
                     value={form.lastName}
                     onChange={set('lastName')}
-                    placeholder="Lee"
                   />
                 </div>
               </div>
@@ -153,7 +220,6 @@ export default function ConsignorFormScreen({
                     inputMode="tel"
                     value={form.phone}
                     onChange={set('phone')}
-                    placeholder="(416) 555-0134"
                   />
                 </div>
 
@@ -164,9 +230,26 @@ export default function ConsignorFormScreen({
                     type="email"
                     value={form.email}
                     onChange={set('email')}
-                    placeholder="sarah@email.com"
                   />
                 </div>
+              </div>
+
+              {/* COUNTRY */}
+              <div className="consignment-form-field">
+                <label className="consignment-label">Country</label>
+                <select
+                  className="consignment-select"
+                  value={form.country}
+                  onChange={setCountry}
+                  autoComplete="country"
+                >
+                  <option value="">Choose a country</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* STREET ADDRESS */}
@@ -176,7 +259,6 @@ export default function ConsignorFormScreen({
                   className="consignment-input"
                   value={form.address}
                   onChange={set('address')}
-                  placeholder="123 Main Street"
                   autoComplete="street-address"
                 />
               </div>
@@ -189,29 +271,42 @@ export default function ConsignorFormScreen({
                     className="consignment-input"
                     value={form.city}
                     onChange={set('city')}
-                    placeholder="Hamilton"
                     autoComplete="address-level2"
                   />
                 </div>
 
                 <div className="consignment-form-field">
-                  <label className="consignment-label">Province</label>
-                  <input
-                    className="consignment-input"
-                    value={form.province}
-                    onChange={set('province')}
-                    placeholder="Ontario"
-                    autoComplete="address-level1"
-                  />
+                  <label className="consignment-label">{labels.region}</label>
+                  {regionOptions ? (
+                    <select
+                      className="consignment-select"
+                      value={form.province}
+                      onChange={set('province')}
+                      autoComplete="address-level1"
+                    >
+                      <option value="">Choose</option>
+                      {regionOptions.map((region) => (
+                        <option key={region} value={region}>
+                          {region}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="consignment-input"
+                      value={form.province}
+                      onChange={set('province')}
+                      autoComplete="address-level1"
+                    />
+                  )}
                 </div>
 
                 <div className="consignment-form-field">
-                  <label className="consignment-label">Postal code</label>
+                  <label className="consignment-label">{labels.postal}</label>
                   <input
                     className="consignment-input"
                     value={form.postalCode}
                     onChange={set('postalCode')}
-                    placeholder="L8E 1A1"
                     autoCapitalize="characters"
                     autoComplete="postal-code"
                   />
@@ -236,6 +331,25 @@ export default function ConsignorFormScreen({
             </div>
 
             <div className="consignment-form-section-body">
+              {/* STORE LOCATION (only when the store has more than one) */}
+              {showLocation && (
+                <div className="consignment-form-field">
+                  <label className="consignment-label">Store location</label>
+                  <select
+                    className="consignment-select"
+                    value={form.locationId}
+                    onChange={set('locationId')}
+                  >
+                    <option value="">Choose a store</option>
+                    {locationOptions.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="consignment-form-grid consignment-form-grid-2">
                 {/* COMMISSION */}
                 <div className="consignment-form-field">
@@ -292,9 +406,7 @@ export default function ConsignorFormScreen({
           <button
             className="consignment-btn"
             disabled={!valid}
-            onClick={() =>
-              editing ? onSave(consignor.id, form) : onSave(form)
-            }
+            onClick={save}
           >
             <Check size={18} />
             {editing ? 'Save changes' : 'Save consignor'}

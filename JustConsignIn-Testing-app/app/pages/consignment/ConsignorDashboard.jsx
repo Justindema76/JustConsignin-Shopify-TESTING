@@ -6,8 +6,9 @@ import AllListView from '../../components/consignment/AllListView';
 import ItemGridCardContainer from '../../components/consignment/ItemGridCardContainer';
 import ConsignmentFilterBar from '../../components/consignment/ConsignmentFilterBar';
 import { isSold, money, paidToDate, recordedPayoutGroups } from '../../lib/consignmentHelpers';
+import { countryName } from '../../lib/addressFormats';
 
-export default function ConsignorDashboard({ consignor, items, onBack, onStartIntake, onOpenItem, onDeleteConsignor, onEditConsignor, onStartPayout, onOpenPayoutReceipt }) {
+export default function ConsignorDashboard({ consignor, storeSetup = {}, items, onBack, onStartIntake, onOpenItem, onDeleteConsignor, onEditConsignor, onStartPayout, onOpenPayoutReceipt }) {
   const [viewMode, setViewMode] = useState('grid');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Available');
@@ -53,9 +54,18 @@ export default function ConsignorDashboard({ consignor, items, onBack, onStartIn
 
     return itemDate(b).localeCompare(itemDate(a));
   });
-  const fullAddress = [consignor.address, consignor.city, consignor.province, consignor.postalCode]
+  // The store's own country is left off, like a local mailing address.
+  const country = consignor.country && consignor.country !== storeSetup.countryCode
+    ? countryName(consignor.country)
+    : '';
+  const fullAddress = [consignor.address, consignor.city, consignor.province, consignor.postalCode, country]
     .filter(Boolean)
     .join(', ');
+  const showLocation = (storeSetup.enabledLocationIds || []).length > 1 || Boolean(
+    consignor.locationId && !(storeSetup.enabledLocationIds || []).includes(consignor.locationId),
+  );
+  const locationName = (storeSetup.locations || [])
+    .find((location) => location.id === consignor.locationId)?.name || 'Not set';
 
   return (
     <>
@@ -108,6 +118,7 @@ export default function ConsignorDashboard({ consignor, items, onBack, onStartIn
                 {fullAddress ? <a className="consignment-profile-value consignment-profile-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`} target="_blank" rel="noopener noreferrer">{fullAddress}</a> : <span className="consignment-profile-value">—</span>}
               </span>
             </div>
+            {showLocation && <div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Store location</span><span className="consignment-profile-value">{locationName}</span></span></div>}
             <div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Commission split</span><span className="consignment-profile-value">Consignor gets {consignor.commissionPct}%</span></span></div>
             <div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Joined</span><span className="consignment-profile-value">{consignor.dateJoined || '—'}</span></span></div>
             <div className="consignment-profile-row detail"><span className="consignment-profile-copy"><span className="consignment-profile-label">Unsold items</span><span className="consignment-profile-value">{consignor.unsoldPreference || 'Please return'}</span></span></div>

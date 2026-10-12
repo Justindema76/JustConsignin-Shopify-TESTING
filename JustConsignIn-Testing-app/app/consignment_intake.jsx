@@ -64,6 +64,12 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
   const [consignors, setConsignors] = useState([]);
   const [items, setItems] = useState([]);
   const [shopCurrency, setShopCurrency] = useState('CAD');
+  const [storeSetup, setStoreSetup] = useState({
+    countryCode: '',
+    province: '',
+    locations: [],
+    enabledLocationIds: [],
+  });
   const [view, setView] = useState('dashboard');
   const [activeId, setActiveId] = useState(null);
   const [activeItemId, setActiveItemId] = useState(null);
@@ -85,6 +91,12 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
   async function refreshData() {
     const data = await getConsignmentData();
     setShopCurrency(data.shop?.currencyCode || 'CAD');
+    setStoreSetup({
+      countryCode: data.shop?.countryCode || '',
+      province: data.shop?.province || '',
+      locations: data.locations || [],
+      enabledLocationIds: data.enabledLocationIds || [],
+    });
     setConsignors(data.consignors);
     setItems(data.items);
     return data;
@@ -603,6 +615,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
           onBack={() => setView(newConsignorBack)}
           onSave={handleNewConsignor}
           nextNumber={nextConsignorNumber}
+          storeSetup={storeSetup}
         />
       )}
       {ready && view === 'chooseConsignor' && (
@@ -619,6 +632,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
       {ready && view === 'consignor' && activeConsignor && (
         <ConsignorDashboard
           consignor={activeConsignor}
+          storeSetup={storeSetup}
           items={items}
           onOpenPayoutReceipt={(payoutId) => openPayoutReceipt(payoutId, 'consignor')}
           onBack={() => setView('home')}
@@ -637,6 +651,7 @@ export default function ConsignmentIntakeApp({ activePlan = null }) {
           consignor={activeConsignor}
           onBack={() => setView('consignor')}
           onSave={handleUpdateConsignor}
+          storeSetup={storeSetup}
         />
       )}
       {ready && view === 'intake' && activeConsignor && (

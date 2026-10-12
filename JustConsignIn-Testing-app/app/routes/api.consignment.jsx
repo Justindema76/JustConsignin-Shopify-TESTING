@@ -1,12 +1,25 @@
 import { authenticate } from '../shopify.server';
 import { ensureMetaobjectsInstalled } from '../metaobjects.server';
 import { requireTier2 } from '../billing.server';
+import { resolveEnabledIds, toLocation } from '../locations.server';
+import { toCountryCode } from '../lib/addressFormats';
 
 const DATA_QUERY = `#graphql
   query ConsignmentData {
     shop {
       name
       currencyCode
+      shopAddress { countryCodeV2 province }
+      locationsSetting: metafield(namespace: "justconsignin", key: "consignment_locations") { value }
+    }
+    locations(first: 100, includeInactive: true, includeLegacy: true, sortKey: NAME) {
+      nodes {
+        id
+        name
+        isActive
+        fulfillmentService { id serviceName }
+        address { formatted city provinceCode countryCode }
+      }
     }
     consignors: metaobjects(type: "consignor", first: 250) {
       nodes {
@@ -463,7 +476,7 @@ function references(node) {
 }
 
 function parseConsignorDetails(rawValue) {
-  const fallback = { notes: rawValue || '', address: '', city: '', province: '', postalCode: '', unsoldPreference: 'Please return', importKey: '' };
+  const fallback = { notes: rawValue || '', address: '', city: '', province: '', postalCode: '', country: '', locationId: '', unsoldPreference: 'Please return', importKey: '' };
   if (!rawValue) return fallback;
   try {
     const parsed = JSON.parse(rawValue);
@@ -482,6 +495,8 @@ function consignorDetails(value) {
     city: value.city || '',
     province: value.province || '',
     postalCode: value.postalCode || '',
+    country: value.country || '',
+    locationId: value.locationId || '',
     unsoldPreference: value.unsoldPreference || 'Please return',
     importKey: value.importKey || '',
   });
@@ -505,6 +520,8 @@ function mapConsignor(node) {
     city: details.city,
     province: details.province,
     postalCode: details.postalCode,
+    country: details.country || '',
+    locationId: details.locationId || '',
     unsoldPreference: details.unsoldPreference || 'Please return',
     importKey: details.importKey || '',
   };
@@ -1178,10 +1195,38 @@ async function loadData(admin) {
     throw new Error(payload.errors.map((error) => error.message).join(', '));
   }
 
+  const { shop } = payload.data;
+  const locations = (payload.data.locations?.nodes || []).map(toLocation);
+  const { enabledIds } = resolveEnabledIds(locations, shop.locationsSetting?.value);
+  const defaultLocationId = singleLocationId(enabledIds);
+
   return {
-    shop: payload.data.shop,
-    consignors: payload.data.consignors.nodes.map(mapConsignor),
+    shop: {
+      name: shop.name,
+      currencyCode: shop.currencyCode,
+      countryCode: shop.shopAddress?.countryCodeV2 || '',
+      province: shop.shopAddress?.province || '',
+    },
+    locations: locations.map(({ id, name, isActive }) => ({ id, name, isActive })),
+    enabledLocationIds: enabledIds,
+    // Consignors saved before a location was picked belong to the store's
+    // only location, when it has just one.
+    consignors: payload.data.consignors.nodes
+      .map(mapConsignor)
+      .map((entry) => ({ ...entry, locationId: entry.locationId || defaultLocationId })),
     items: payload.data.items.nodes.map(mapItem),
+  };
+}
+
+function singleLocationId(enabledIds) {
+  return enabledIds.length === 1 ? enabledIds[0] : '';
+}
+
+// A store with one enabled location uses it for every consignor.
+function withDefaultLocation(input, current) {
+  return {
+    ...input,
+    locationId: input.locationId || singleLocationId(current.enabledLocationIds),
   };
 }
 
@@ -1328,7 +1373,7 @@ export async function action({ request }) {
 
     if (request.method === 'POST' && body.operation === 'createConsignor') {
       const suggestedNumber = Math.max(0, ...current.consignors.map((entry) => entry.number)) + 1;
-      const input = body.consignor;
+      const input = withDefaultLocation(body.consignor, current);
       const requestedNumber = Number(input.number);
       const nextNumber = Number.isInteger(requestedNumber) && requestedNumber > 0
         ? requestedNumber
@@ -1355,7 +1400,7 @@ export async function action({ request }) {
       if (!existing) {
         return Response.json({ error: 'Consignor not found' }, { status: 404 });
       }
-      const input = body.consignor;
+      const input = withDefaultLocation(body.consignor, current);
       const requestedNumber = Number(input.number);
       const nextNumber = Number.isInteger(requestedNumber) && requestedNumber > 0
         ? requestedNumber
@@ -1456,6 +1501,8 @@ export async function action({ request }) {
             city: text(row.city),
             province: text(row.province),
             postalCode: text(row.postal_code || row.postalCode),
+            country: toCountryCode(text(row.country)) || existing?.country || '',
+            locationId: existing?.locationId || singleLocationId(current.enabledLocationIds),
             dateJoined: text(row.date_joined || row.dateJoined) || today(),
             commissionPct: Number(row.commission_pct || row.commissionPct || existing?.commissionPct || 50),
             unsoldPreference: text(row.unsold_preference || row.unsoldPreference) || 'Please return',

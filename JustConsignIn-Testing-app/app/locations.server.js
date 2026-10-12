@@ -56,7 +56,7 @@ function parseSavedIds(value) {
   }
 }
 
-function toLocation(node) {
+export function toLocation(node) {
   return {
     id: node.id,
     name: node.name,
@@ -79,16 +79,18 @@ export async function getConsignmentLocations(admin) {
   });
 
   const locations = (data.locations?.nodes || []).map(toLocation);
-  const savedIds = parseSavedIds(data.shop?.metafield?.value);
 
-  if (savedIds) {
-    return {
-      shopId: data.shop.id,
-      locations,
-      enabledIds: savedIds,
-      isDefault: false,
-    };
-  }
+  return {
+    shopId: data.shop.id,
+    locations,
+    ...resolveEnabledIds(locations, data.shop?.metafield?.value),
+  };
+}
+
+// Returns { enabledIds, isDefault } from the saved metafield value.
+export function resolveEnabledIds(locations, savedValue) {
+  const savedIds = parseSavedIds(savedValue);
+  if (savedIds) return { enabledIds: savedIds, isDefault: false };
 
   // Default: a store with exactly one active retail location gets it enabled
   // automatically, so single-store merchants see no change. Multi-store
@@ -98,8 +100,6 @@ export async function getConsignmentLocations(admin) {
   );
 
   return {
-    shopId: data.shop.id,
-    locations,
     enabledIds: retail.length === 1 ? [retail[0].id] : [],
     isDefault: true,
   };
